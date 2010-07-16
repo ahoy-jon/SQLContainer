@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 
+import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
@@ -14,10 +15,12 @@ public class TableQuery implements QueryDelegate {
     private String versionColumn;
 
     private SQLGenerator sqlGenerator;
+    private JDBCConnectionPool connectionPool;
 
-    public TableQuery(String tableName) {
+    public TableQuery(String tableName, JDBCConnectionPool connectionPool) {
         setTableName(tableName);
         setSqlGenerator(new DefaultSQLGenerator());
+        this.connectionPool = connectionPool;
     }
 
     public ResultSet getResults(int offset, int pagelength) {
