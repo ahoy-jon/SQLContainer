@@ -1,5 +1,12 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+/**
+ * Filter represents a filtering rule to be applied to a query made by the
+ * SQLContainer's QueryDelegate.
+ * 
+ * Filter adds a few features on top of what the default sorting methods of
+ * containers offer.
+ */
 public class Filter {
 
     public enum ComparisonType {
@@ -9,10 +16,13 @@ public class Filter {
     private String column;
     private String value;
     private ComparisonType comparisonType;
-    private boolean isCaseSensitive;
+    private boolean isCaseSensitive = true;
+    private boolean needsQuotes = false;
 
-    public Filter() {
-
+    /**
+     * Prevent instantiation without required parameters.
+     */
+    private Filter() {
     }
 
     public Filter(String column, ComparisonType comparisonType, String value) {
@@ -51,5 +61,13 @@ public class Filter {
 
     public boolean isCaseSensitive() {
         return isCaseSensitive;
+    }
+
+    public boolean isNeedsQuotes() {
+        return needsQuotes;
+    }
+
+    public void setNeedsQuotes(boolean needsQuotes) {
+        this.needsQuotes = needsQuotes;
     }
 }

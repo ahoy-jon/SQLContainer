@@ -1,10 +1,31 @@
 package com.vaadin.addon.sqlcontainer.query;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
+
+import com.vaadin.addon.sqlcontainer.RowItem;
 
 public interface QueryDelegate {
+    /**
+     * Generates and executes a query to determine the current row count from
+     * the DB. Row count will be fetched using filters that are currently set to
+     * the QueryDelegate.
+     * 
+     * @return row count
+     * @throws SQLException
+     */
+    public int getCount() throws SQLException;
+
+    /**
+     * Generates and executes a query to fetch a complete list of IDs from the
+     * DB. In practice this executes a SELECT query which selects column(s)
+     * defined as primary key column(s).
+     * 
+     * @return a ResultSet containing values of primary key column(s)
+     * @throws SQLException
+     */
+    public ResultSet getIdList() throws SQLException;
 
     /**
      * Executes a paged SQL query and returns the ResultSet. The query is
@@ -15,8 +36,10 @@ public interface QueryDelegate {
      * @param pagelength
      *            the length of the page to load
      * @return a ResultSet containing the rows of the page
+     * @throws SQLException
+     *             if the database access fails.
      */
-    public ResultSet getResults(int offset, int pagelength);
+    public ResultSet getResults(int offset, int pagelength) throws SQLException;
 
     /**
      * Sets the filters to apply when performing the SQL query. These are
@@ -56,31 +79,63 @@ public interface QueryDelegate {
      * @throws UnsupportedOperationException
      *             if the implementation is read only.
      */
-    public void storeRow(Map<String, String> columnToValueMap)
-            throws UnsupportedOperationException;
+    public int storeRow(RowItem row) throws UnsupportedOperationException,
+            SQLException;
+
+    /**
+     * Removes the given RowItem from the database.
+     * 
+     * @param row
+     *            RowItem to be removed
+     * @return true on success
+     * @throws UnsupportedOperationException
+     * @throws SQLException
+     */
+    public boolean removeRow(RowItem row) throws UnsupportedOperationException,
+            SQLException;
 
     /**
      * Starts a new database transaction. Used when storing multiple changes.
      * 
-     * @throws UnsupportedOperationException
-     *             if the implementation is read only.
-     */
-    public void beginTransaction() throws UnsupportedOperationException;
-
-    /**
-     * Commits a transaction.
+     * Note that if a transaction is already open, it will be rolled back when a
+     * new transaction is started.
      * 
      * @throws UnsupportedOperationException
      *             if the implementation is read only.
+     * @throws SQLException
+     *             if the database access fails.
      */
-    public void commit() throws UnsupportedOperationException;
+    public void beginTransaction() throws UnsupportedOperationException,
+            SQLException;
 
     /**
-     * Rolls a transaction back.
+     * Commits a transaction. If a transaction is not open nothing should
+     * happen.
      * 
      * @throws UnsupportedOperationException
      *             if the implementation is read only.
+     * @throws SQLException
+     *             if the database access fails.
      */
-    public void rollback() throws UnsupportedOperationException;
+    public void commit() throws UnsupportedOperationException, SQLException;
 
+    /**
+     * Rolls a transaction back. If a transaction is not open nothing should
+     * happen.
+     * 
+     * @throws UnsupportedOperationException
+     *             if the implementation is read only.
+     * @throws SQLException
+     *             if the database access fails.
+     */
+    public void rollback() throws UnsupportedOperationException, SQLException;
+
+    /**
+     * Returns a list of primary key column names. The list is either fetched
+     * from the database (TableQuery) or given as an argument depending on
+     * implementation.
+     * 
+     * @return
+     */
+    public List<String> getPrimaryKeyColumns();
 }

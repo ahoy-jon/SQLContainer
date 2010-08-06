@@ -1,28 +1,45 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
 import java.util.List;
-import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
-public class MSSQLGenerator implements SQLGenerator {
+public class MSSQLGenerator extends DefaultSQLGenerator {
 
-    public String generateSelectQuery(List<Filter> filters,
-            List<OrderBy> orderBys, int offset, int pagelength) {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    @Override
+    public String generateSelectQuery(String tableName, List<Filter> filters,
+            List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
+        if (tableName == null || tableName.trim().equals("")) {
+            throw new IllegalArgumentException("Table name must be given.");
+        }
 
-    public String generateUpdateQuery(Map<String, String> columnToValueMap,
-            Map<String, String> rowIdentifiers) {
-        // TODO Auto-generated method stub
-        return null;
-    }
+        StringBuffer query = new StringBuffer();
+        query.append("SELECT * FROM (SELECT row_number() OVER (");
+        if (orderBys != null) {
+            for (OrderBy o : orderBys) {
+                generateOrderBy(query, o, orderBys.indexOf(o) == 0);
+            }
+        }
+        if (toSelect == null) {
+            query.append(") AS rownum, * FROM ");
+        } else {
+            query.append(") AS rownum, " + toSelect + " FROM ");
+        }
 
-    public String generateInsertQuery(Map<String, String> columnToValueMap) {
-        // TODO Auto-generated method stub
-        return null;
+        query.append(tableName);
+
+        if (filters != null) {
+            for (Filter f : filters) {
+                generateFilter(query, f, filters.indexOf(f) == 0);
+            }
+        }
+
+        query.append(") AS a WHERE a.rownum BETWEEN ");
+        query.append(offset);
+        query.append(" AND ");
+        query.append(Integer.toString(offset + pagelength));
+        return query.toString();
     }
 
 }

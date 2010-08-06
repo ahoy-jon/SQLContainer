@@ -1,8 +1,21 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+/**
+ * OrderBy represents a sorting rule to be applied to a query made by the
+ * SQLContainer's QueryDelegate.
+ * 
+ * The sorting rule is simple and contains only the affected column's name and
+ * the direction of the sort.
+ */
 public class OrderBy {
     private String column;
     private boolean isAscending;
+
+    /**
+     * Prevent instantiation without required parameters.
+     */
+    private OrderBy() {
+    }
 
     public OrderBy(String column, boolean isAscending) {
         setColumn(column);

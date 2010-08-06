@@ -1,10 +1,10 @@
 package com.vaadin.addon.sqlcontainer.query;
 
 import java.util.List;
-import java.util.Map;
+
+import com.vaadin.addon.sqlcontainer.RowItem;
 
 public interface FreeformQueryDelegate {
-
     /**
      * Should return the SQL query string to be performed. This method is
      * responsible for gluing together the select query from the filters and the
@@ -44,12 +44,10 @@ public interface FreeformQueryDelegate {
      * decides how to identify whether to store a new row or update an existing
      * one.
      * 
-     * @param columnToValueMap
-     *            A map containing the values for all columns to be stored or
-     *            updated.
+     * @param row
+     *            RowItem to be stored or updated.
      * @throws UnsupportedOperationException
      *             if the implementation is read only.
      */
-    public void storeRow(Map<String, String> columnToValueMap)
-            throws UnsupportedOperationException;
+    public int storeRow(RowItem row) throws UnsupportedOperationException;
 }

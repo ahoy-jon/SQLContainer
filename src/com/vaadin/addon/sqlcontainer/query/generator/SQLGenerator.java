@@ -1,8 +1,8 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
 import java.util.List;
-import java.util.Map;
 
+import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
@@ -14,10 +14,11 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
  * @author Jonatan Kronqvist / IT Mill Ltd
  */
 public interface SQLGenerator {
-
     /**
      * Generates a SELECT query with the provided parameters.
      * 
+     * @param tableName
+     *            Name of the table queried
      * @param filters
      *            The filters, converted into a WHERE clause
      * @param orderBys
@@ -26,33 +27,54 @@ public interface SQLGenerator {
      *            The offset of the first row to be included
      * @param pagelength
      *            The number of rows to be returned when the query executes
+     * @param toSelect
+     *            String containing what to select, e.g. "*", "COUNT(*)"
      * @return a string with the SQL query that will return the wanted results.
      */
-    public String generateSelectQuery(List<Filter> filters,
-            List<OrderBy> orderBys, int offset, int pagelength);
+    public String generateSelectQuery(String tableName, List<Filter> filters,
+            List<OrderBy> orderBys, int offset, int pagelength, String toSelect);
 
     /**
      * Generates an UPDATE query with the provided parameters.
      * 
-     * @param columnToValueMap
-     *            The columns to update along with their (new) values.
-     * @param rowIdentifiers
-     *            the columns and values that make up the primary key for the
-     *            row to be updated.
+     * @param tableName
+     *            Name of the table queried
+     * @param item
+     *            RowItem containing the updated values update.
      * @return a string with the SQL query that will update a specific row's
      *         values.
      */
-    public String generateUpdateQuery(Map<String, String> columnToValueMap,
-            Map<String, String> rowIdentifiers);
+    public String generateUpdateQuery(String tableName, RowItem item);
 
     /**
      * Generates an INSERT query for inserting a new row with the provided
      * values.
      * 
-     * @param columnToValueMap
-     *            The columns of the row along with their values.
+     * @param tableName
+     *            Name of the table queried
+     * @param item
+     *            New RowItem to be inserted into the database.
      * @return a string with the SQL query that will insert a new row with the
      *         given values.
      */
-    public String generateInsertQuery(Map<String, String> columnToValueMap);
+    public String generateInsertQuery(String tableName, RowItem item);
+
+    /**
+     * Generates a DELETE query for deleting data related to the given RowItem
+     * from the database.
+     * 
+     * @param tableName
+     *            Name of the table queried
+     * @param item
+     *            Item to be deleted from the database
+     * @return a string with the SQL query that will delete the given row.
+     */
+    public String generateDeleteQuery(String tableName, RowItem item);
+
+    /**
+     * Sets the escape string used with this database.
+     * 
+     * @param searchStringEscape
+     */
+    public void setSearchStringEscape(String searchStringEscape);
 }
