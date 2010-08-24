@@ -13,6 +13,10 @@ import java.util.Set;
  */
 public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
 
+    public static class NoFreeConnectionException extends Exception {
+        private static final long serialVersionUID = -2575886583616358485L;
+    }
+
     private int initialConnections = 5;
     private int maxConnections = 20;
 
@@ -78,11 +82,10 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
             initializeConnections();
         }
         if (availableConnections.isEmpty()) {
-            if (reservedConnections.size() <= maxConnections) {
+            if (reservedConnections.size() < maxConnections) {
                 availableConnections.add(createConnection());
             } else {
-                throw new IllegalStateException(
-                        "Connection limit has been reached.");
+                throw new SQLException("Connection limit has been reached.");
             }
         }
 
