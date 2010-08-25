@@ -5,8 +5,8 @@ import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
 /**
  * Generates generic SQL that is supported by HSQLDB, MySQL and PostgreSQL.

@@ -16,9 +16,8 @@ public class SimpleJDBCConnectionPoolTest {
     public void setUp() {
         try {
             connectionPool = new SimpleJDBCConnectionPool(
-                    "com.mysql.jdbc.Driver",
-                    "jdbc:mysql://localhost:3306/sqlcontainer", "sqlcontainer",
-                    "sqlcontainer", 2, 2);
+                    "org.hsqldb.jdbc.JDBCDriver",
+                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 2);
         } catch (SQLException e) {
             e.printStackTrace();
             Assert.fail(e.getMessage());

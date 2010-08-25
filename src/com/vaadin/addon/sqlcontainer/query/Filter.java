@@ -10,7 +10,7 @@ package com.vaadin.addon.sqlcontainer.query;
 public class Filter {
 
     public enum ComparisonType {
-        EQUALS, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, STARTS_WITH, ENDS_WITH, CONTAINS;
+        EQUALS, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, STARTS_WITH, ENDS_WITH, CONTAINS, LIKE;
     }
 
     private String column;

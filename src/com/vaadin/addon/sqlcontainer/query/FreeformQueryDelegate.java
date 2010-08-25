@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.sql.SQLException;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
@@ -9,8 +10,25 @@ public interface FreeformQueryDelegate {
      * Should return the SQL query string to be performed. This method is
      * responsible for gluing together the select query from the filters and the
      * order by conditions if these are supported.
+     * 
+     * @param offset
+     *            the first record (row) to fetch.
+     * @param pagelength
+     *            the number of records (rows) to fetch. 0 means all records
+     *            starting from offset.
      */
-    public void getQueryString();
+    public String getQueryString(int offset, int limit)
+            throws UnsupportedOperationException;
+
+    /**
+     * Generates and executes a query to determine the current row count from
+     * the DB. Row count will be fetched using filters that are currently set to
+     * the QueryDelegate.
+     * 
+     * @return row count
+     * @throws SQLException
+     */
+    public String getCountQuery() throws UnsupportedOperationException;
 
     /**
      * Sets the filters to apply when performing the SQL query. These are
@@ -50,4 +68,16 @@ public interface FreeformQueryDelegate {
      *             if the implementation is read only.
      */
     public int storeRow(RowItem row) throws UnsupportedOperationException;
+
+    /**
+     * Removes the given RowItem from the database.
+     * 
+     * @param row
+     *            RowItem to be removed
+     * @return true on success
+     * @throws UnsupportedOperationException
+     * @throws SQLException
+     */
+    public boolean removeRow(RowItem row) throws UnsupportedOperationException,
+            SQLException;
 }
