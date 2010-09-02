@@ -3,7 +3,6 @@ package com.vaadin.addon.sqlcontainer.query;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -11,6 +10,8 @@ import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
 /**
@@ -51,6 +52,10 @@ public class TableQuery implements QueryDelegate {
         fetchMetaData();
     }
 
+    public TableQuery(String tableName, JDBCConnectionPool connectionPool) {
+        this(tableName, connectionPool, new DefaultSQLGenerator());
+    }
+
     public int getCount() throws SQLException {
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
                 orderBys, 0, 0, "COUNT(*)");
@@ -76,6 +81,10 @@ public class TableQuery implements QueryDelegate {
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
                 orderBys, offset, pagelength, null);
         return executeQuery(query);
+    }
+
+    public boolean implementationRespectsPagingLimits() {
+        return true;
     }
 
     public int storeRow(RowItem row) throws UnsupportedOperationException,
@@ -215,15 +224,12 @@ public class TableQuery implements QueryDelegate {
             if (dbmd != null) {
                 ResultSet rs = dbmd.getPrimaryKeys(null, null, tableName);
                 if (rs != null) {
-                    ResultSetMetaData rsmd = rs.getMetaData();
-                    if (rsmd != null) {
-                        List<String> names = new ArrayList<String>();
-                        while (rs.next()) {
-                            names.add(rs.getString("COLUMN_NAME"));
-                        }
-                        if (!names.isEmpty()) {
-                            primaryKeyColumns = names;
-                        }
+                    List<String> names = new ArrayList<String>();
+                    while (rs.next()) {
+                        names.add(rs.getString("COLUMN_NAME"));
+                    }
+                    if (!names.isEmpty()) {
+                        primaryKeyColumns = names;
                     }
                 }
             }
@@ -242,5 +248,24 @@ public class TableQuery implements QueryDelegate {
             return true;
         }
         return false;
+    }
+
+    public boolean containsRowWithKey(Object... keys) throws SQLException {
+        ArrayList<Filter> filtersAndKeys = new ArrayList<Filter>();
+        if (filters != null) {
+            filtersAndKeys.addAll(filters);
+        }
+        int ix = 0;
+        for (String colName : primaryKeyColumns) {
+            filtersAndKeys.add(new Filter(colName, ComparisonType.EQUALS,
+                    String.valueOf(keys[ix])));
+            ix++;
+        }
+        String query = sqlGenerator.generateSelectQuery(tableName,
+                filtersAndKeys, orderBys, 0, 0, "*");
+        ResultSet rs = executeQuery(query);
+        boolean contains = rs.next();
+        rs.close();
+        return contains;
     }
 }

@@ -8,7 +8,8 @@ import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPoolTest;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryTest;
 
 @RunWith(Suite.class)
-@SuiteClasses({ SimpleJDBCConnectionPoolTest.class, FreeformQueryTest.class })
+@SuiteClasses({ SimpleJDBCConnectionPoolTest.class, FreeformQueryTest.class,
+        RowIdTest.class, SQLContainerTest.class, ColumnPropertyTest.class })
 public class AllTests {
 
 }

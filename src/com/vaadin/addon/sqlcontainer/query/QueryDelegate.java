@@ -42,6 +42,16 @@ public interface QueryDelegate {
     public ResultSet getResults(int offset, int pagelength) throws SQLException;
 
     /**
+     * Allows the SQLContainer implementation to check whether the QueryDelegate
+     * implementation implements paging in the getResults method.
+     * 
+     * @see QueryDelegate#getResults(int, int)
+     * 
+     * @return true if the delegate implements paging
+     */
+    public boolean implementationRespectsPagingLimits();
+
+    /**
      * Sets the filters to apply when performing the SQL query. These are
      * translated into a WHERE clause.
      * 
@@ -100,35 +110,28 @@ public interface QueryDelegate {
      * Note that if a transaction is already open, it will be rolled back when a
      * new transaction is started.
      * 
-     * @throws UnsupportedOperationException
-     *             if the implementation is read only.
      * @throws SQLException
      *             if the database access fails.
      */
-    public void beginTransaction() throws UnsupportedOperationException,
-            SQLException;
+    public void beginTransaction() throws SQLException;
 
     /**
      * Commits a transaction. If a transaction is not open nothing should
      * happen.
      * 
-     * @throws UnsupportedOperationException
-     *             if the implementation is read only.
      * @throws SQLException
      *             if the database access fails.
      */
-    public void commit() throws UnsupportedOperationException, SQLException;
+    public void commit() throws SQLException;
 
     /**
      * Rolls a transaction back. If a transaction is not open nothing should
      * happen.
      * 
-     * @throws UnsupportedOperationException
-     *             if the implementation is read only.
      * @throws SQLException
      *             if the database access fails.
      */
-    public void rollback() throws UnsupportedOperationException, SQLException;
+    public void rollback() throws SQLException;
 
     /**
      * Returns a list of primary key column names. The list is either fetched
@@ -138,4 +141,15 @@ public interface QueryDelegate {
      * @return
      */
     public List<String> getPrimaryKeyColumns();
+
+    /**
+     * Performs a query to find out whether the SQL table contains a row with
+     * the given set of primary keys.
+     * 
+     * @param keys
+     *            the primary keys
+     * @return true if the SQL table contains a row with the provided keys
+     * @throws SQLException
+     */
+    public boolean containsRowWithKey(Object... keys) throws SQLException;
 }

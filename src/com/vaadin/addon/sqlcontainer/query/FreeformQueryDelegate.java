@@ -80,4 +80,19 @@ public interface FreeformQueryDelegate {
      */
     public boolean removeRow(RowItem row) throws UnsupportedOperationException,
             SQLException;
+
+    /**
+     * Generates an SQL Query string that allows the user of the FreeformQuery
+     * class to customize the query string used by the
+     * FreeformQuery.containsRowWithKeys() method. This is useful for cases when
+     * the logic in the containsRowWithKeys method is not enough to support more
+     * complex free form queries.
+     * 
+     * @param keys
+     *            the values of the primary keys
+     * @throws UnsupportedOperationException
+     *             to use the default logic in FreeformQuery
+     */
+    public String getContainsRowQueryString(Object... keys)
+            throws UnsupportedOperationException;
 }

@@ -21,6 +21,7 @@ public class FreeformQuery implements QueryDelegate {
     /**
      * Prevent no-parameters instantiation of FreeformQuery
      */
+    @SuppressWarnings("unused")
     private FreeformQuery() {
     }
 
@@ -32,6 +33,12 @@ public class FreeformQuery implements QueryDelegate {
         } else if (primaryKeyColumns.contains("")) {
             throw new IllegalArgumentException(
                     "The primary key columns contain an empty string!");
+        } else if (queryString == null || "".equals(queryString)) {
+            throw new IllegalArgumentException(
+                    "The query string may not be empty or null!");
+        } else if (connectionPool == null) {
+            throw new IllegalArgumentException(
+                    "The connectionPool may not be null!");
         }
         this.queryString = queryString;
         this.primaryKeyColumns = Collections
@@ -42,21 +49,52 @@ public class FreeformQuery implements QueryDelegate {
     /**
      * This implementation of getCount() actually fetches all records from the
      * database, which might be a performance issue. Override this method with a
-     * SELECT COUNT() ... query if this is too slow for your needs.
+     * SELECT COUNT(*) ... query if this is too slow for your needs.
      * 
-     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#getCount()
+     * {@inheritDoc}
      */
     public int getCount() throws SQLException {
-        // TODO: try with the delegate first before doing it as below!
-        Connection conn = getConnection();
-        Statement statement = conn.createStatement(
-                ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-        ResultSet rs = statement.executeQuery(queryString);
-        if (!rs.last()) {
-            throw new SQLException(
-                    "There were no records in the recordset - cannot count.");
+        // First try the delegate
+        int count = countByDelegate();
+        if (count < 0) {
+            // Couldn't use the delegate, use the bad way.
+            Connection conn = getConnection();
+            Statement statement = conn.createStatement(
+                    ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_READ_ONLY);
+            ResultSet rs = statement.executeQuery(queryString);
+            if (rs.last()) {
+                count = rs.getRow();
+            } else {
+                count = 0;
+            }
+            rs.close();
+            releaseConnection(conn);
         }
-        return rs.getRow();
+        return count;
+    }
+
+    private int countByDelegate() throws SQLException {
+        int count = -1;
+        if (delegate != null) {
+            try {
+                String countQuery = delegate.getCountQuery();
+                if (countQuery != null) {
+                    Connection conn = getConnection();
+                    Statement statement = conn.createStatement();
+                    ResultSet rs = statement.executeQuery(countQuery);
+                    rs.next();
+                    count = rs.getInt(1);
+                    rs.close();
+                    releaseConnection(conn);
+                    return count;
+                }
+            } catch (UnsupportedOperationException e) {
+                // No go, the count query wasn't implemented.
+                // Do it all below...
+            }
+        }
+        return count;
     }
 
     private Connection getConnection() throws SQLException {
@@ -77,8 +115,8 @@ public class FreeformQuery implements QueryDelegate {
      * 
      * @see com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate#getQueryString(int,
      *      int)
-     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#getResults(int,
-     *      int)
+     * 
+     *      {@inheritDoc}
      */
     public ResultSet getResults(int offset, int pagelength) throws SQLException {
         String query = queryString;
@@ -92,8 +130,19 @@ public class FreeformQuery implements QueryDelegate {
         Connection conn = getConnection();
         Statement statement = conn.createStatement();
         ResultSet rs = statement.executeQuery(query);
-        statement.close();
         return rs;
+    }
+
+    public boolean implementationRespectsPagingLimits() {
+        if (delegate == null) {
+            return false;
+        }
+        try {
+            String queryString = delegate.getQueryString(0, 50);
+            return queryString != null && queryString.length() > 0;
+        } catch (UnsupportedOperationException e) {
+            return false;
+        }
     }
 
     public void setFilters(List<Filter> filters)
@@ -137,9 +186,6 @@ public class FreeformQuery implements QueryDelegate {
 
     public synchronized void beginTransaction()
             throws UnsupportedOperationException, SQLException {
-        if (delegate == null) {
-            throw new UnsupportedOperationException();
-        }
         if (activeConnection != null) {
             connectionPool.releaseConnection(activeConnection);
         }
@@ -149,9 +195,6 @@ public class FreeformQuery implements QueryDelegate {
 
     public synchronized void commit() throws UnsupportedOperationException,
             SQLException {
-        if (delegate == null) {
-            throw new UnsupportedOperationException();
-        }
         if (activeConnection == null) {
             throw new SQLException("No active transaction");
         }
@@ -164,9 +207,6 @@ public class FreeformQuery implements QueryDelegate {
 
     public synchronized void rollback() throws UnsupportedOperationException,
             SQLException {
-        if (delegate == null) {
-            throw new UnsupportedOperationException();
-        }
         if (activeConnection == null) {
             throw new SQLException("No active transaction");
         }
@@ -195,6 +235,81 @@ public class FreeformQuery implements QueryDelegate {
         // TODO This method should be removed from the interface and not used in
         // any way in any implementation.
         return null;
+    }
+
+    /**
+     * This implementation of the containsRowWithKey method rewrites existing
+     * WHERE clauses in the query string. The logic is, however, not very
+     * complex and some times can do the Wrong Thing<sup>TM</sup>. For the
+     * situations where this logic is not enough, you can implement the
+     * getContainsRowQueryString method in FreeformQueryDelegate and this will
+     * be used instead of the logic.
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate#getContainsRowQueryString(Object...)
+     * 
+     *      {@inheritDoc}
+     */
+    public boolean containsRowWithKey(Object... keys) throws SQLException {
+        String query = null;
+        if (delegate != null) {
+            try {
+                query = delegate.getContainsRowQueryString(keys);
+            } catch (UnsupportedOperationException e) {
+                query = modifyWhereClause(keys);
+            }
+        } else {
+            query = modifyWhereClause(keys);
+        }
+
+        boolean contains = false;
+        Connection conn = getConnection();
+        try {
+            Statement statement = conn.createStatement();
+            ResultSet rs = statement.executeQuery(query);
+            contains = rs.next();
+            rs.close();
+            statement.close();
+        } finally {
+            releaseConnection(conn);
+        }
+        return contains;
+    }
+
+    /**
+     * Releases the connection if it is not part of an active transaction.
+     * 
+     * @param conn
+     *            the connection to release
+     */
+    private void releaseConnection(Connection conn) {
+        if (conn != activeConnection) {
+            connectionPool.releaseConnection(conn);
+        }
+    }
+
+    private String modifyWhereClause(Object... keys) {
+        // Build the where rules for the provided keys
+        StringBuffer where = new StringBuffer();
+        for (int ix = 0; ix < primaryKeyColumns.size(); ix++) {
+            where.append(primaryKeyColumns.get(ix)).append("=");
+            if (keys[ix] == null) {
+                where.append("null");
+            } else {
+                where.append("'").append(keys[ix]).append("'");
+            }
+            if (ix < primaryKeyColumns.size() - 1) {
+                where.append(" AND ");
+            }
+        }
+
+        // Is there already a WHERE clause in the query string?
+        if (queryString.toLowerCase().contains("where")) {
+            // Rewrite the where clause
+            return queryString.toLowerCase().replaceFirst("where\\s",
+                    "where " + where + " and ");
+        }
+        // Append a where clause
+        return queryString + " WHERE " + where;
     }
 
 }

@@ -27,9 +27,12 @@ final public class ColumnProperty implements Property {
     private Object changedValue;
     private Class<?> type;
 
+    private boolean modified = false;
+
     /**
      * Prevent instantiation without required parameters.
      */
+    @SuppressWarnings("unused")
     private ColumnProperty() {
     }
 
@@ -52,6 +55,9 @@ final public class ColumnProperty implements Property {
     }
 
     public Object getValue() {
+        if (isModified()) {
+            return changedValue;
+        }
         return value;
     }
 
@@ -78,6 +84,7 @@ final public class ColumnProperty implements Property {
         }
         changedValue = newValue;
         owner.getContainer().itemChangeNotification(owner);
+        modified = true;
     }
 
     public Class<?> getType() {
@@ -118,9 +125,6 @@ final public class ColumnProperty implements Property {
     }
 
     public boolean isModified() {
-        if (changedValue != null && !changedValue.equals(value)) {
-            return true;
-        }
-        return false;
+        return modified;
     }
 }

@@ -34,7 +34,7 @@ public class SQLContainer implements Container, Container.Filterable,
     public static final int DEFAULT_PAGE_LENGTH = 100;
     private int pageLength = DEFAULT_PAGE_LENGTH;
 
-    /* Cache ratio = number of items to cache = CACHE_RATIO pageLength */
+    /* Number of items to cache = CACHE_RATIO * pageLength */
     public static final int CACHE_RATIO = 2;
 
     /* Item and index caches */
@@ -71,12 +71,13 @@ public class SQLContainer implements Container, Container.Filterable,
 
     /* Temporary storage for items to be removed and added */
     private Map<RowId, RowItem> removedItems = new HashMap<RowId, RowItem>();
-    private Map<RowId, RowItem> addedItems = new HashMap<RowId, RowItem>();
-    private Map<RowId, RowItem> modifiedItems = new HashMap<RowId, RowItem>();
+    private List<RowItem> addedItems = new ArrayList<RowItem>();
+    private List<RowItem> modifiedItems = new ArrayList<RowItem>();
 
     /**
      * Prevent instantiation without a QueryDelegate.
      */
+    @SuppressWarnings("unused")
     private SQLContainer() {
     }
 
@@ -101,25 +102,52 @@ public class SQLContainer implements Container, Container.Filterable,
     /** Methods from interface Container **/
     /**************************************/
     public Object addItem() throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-        // TODO Implement write support
+        Object emptyKey[] = new Object[delegate.getPrimaryKeyColumns().size()];
+        TemporaryRowId itemId = new TemporaryRowId(emptyKey);
+        // New empty column properties for the row item.
+        List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
+        for (String propertyId : propertyIds) {
+            boolean readOnly = false;
+            boolean allowReadOnlyChange = true;
+            boolean nullable = true;
+            itemProperties.add(new ColumnProperty(propertyId, readOnly,
+                    allowReadOnlyChange, nullable, null, getType(propertyId)));
+        }
+        addedItems.add(new RowItem(this, itemId, itemProperties));
+        fireContentsChange();
+        return itemId;
     }
 
     public boolean containsId(Object itemId) {
-        if (!cachedItems.containsKey(itemId)) {
-            updateOffsetAndCache(indexOfId(itemId));
+        if (cachedItems.containsKey(itemId)) {
+            return true;
+        } else {
+            for (RowItem item : addedItems) {
+                if (item.getId().equals(itemId)) {
+                    return true;
+                }
+            }
         }
-        return cachedItems.containsKey(itemId);
+
+        if (removedItems.containsKey(itemId)) {
+            return false;
+        }
+
+        try {
+            return delegate.containsRowWithKey(((RowId) itemId).getId());
+        } catch (SQLException e) {
+            // TODO: log this somehow
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public Property getContainerProperty(Object itemId, Object propertyId) {
-        if (!cachedItems.containsKey(itemId)) {
-            updateOffsetAndCache(indexOfId(itemId));
+        Item item = getItem(itemId);
+        if (item == null) {
+            return null;
         }
-        if (cachedItems.containsKey(itemId)) {
-            return cachedItems.get(itemId).getItemProperty(propertyId);
-        }
-        return null;
+        return item.getItemProperty(propertyId);
     }
 
     public Collection<?> getContainerPropertyIds() {
@@ -128,14 +156,54 @@ public class SQLContainer implements Container, Container.Filterable,
 
     public Item getItem(Object itemId) {
         if (!cachedItems.containsKey(itemId)) {
-            updateOffsetAndCache(indexOfId(itemId));
+            int index = indexOfId(itemId);
+            if (index >= size) {
+                // The index is in the added items
+                int offset = index - size;
+                return addedItems.get(offset);
+            } else {
+                // load the item into cache
+                updateOffsetAndCache(index);
+            }
         }
         return cachedItems.get(itemId);
     }
 
+    /**
+     * NOTE! Do not use this method if in any way avoidable. This method doesn't
+     * (and cannot) use lazy loading, which means that all rows in the database
+     * will be loaded into memory.
+     * 
+     * {@inheritDoc}
+     */
     public Collection<?> getItemIds() {
-        getRowIdentifiers();
-        return Collections.unmodifiableCollection(itemIndexes.values());
+        updateCount();
+        ArrayList<RowId> ids = new ArrayList<RowId>();
+        ResultSet rs = null;
+        try {
+            delegate.beginTransaction();
+            // Load ALL rows :(
+            rs = delegate.getResults(0, 0);
+            List<String> pKeys = delegate.getPrimaryKeyColumns();
+            while (rs.next()) {
+                /* Generate itemId for the row based on primary key(s) */
+                Object[] itemId = new Object[pKeys.size()];
+                for (int i = 0; i < pKeys.size(); i++) {
+                    itemId[i] = rs.getObject(pKeys.get(i));
+                }
+                RowId id = new RowId(itemId);
+                if (!removedItems.containsKey(id)) {
+                    ids.add(id);
+                }
+            }
+            delegate.commit();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to fetch item indexes.", e);
+        }
+        for (RowItem item : addedItems) {
+            ids.add(item.getId());
+        }
+        return Collections.unmodifiableCollection(ids);
     }
 
     public Class<?> getType(Object propertyId) {
@@ -147,7 +215,7 @@ public class SQLContainer implements Container, Container.Filterable,
 
     public int size() {
         updateCount();
-        return size;
+        return size + addedItems.size() - removedItems.size();
     }
 
     public boolean removeItem(Object itemId)
@@ -155,6 +223,15 @@ public class SQLContainer implements Container, Container.Filterable,
         if (!containsId(itemId)) {
             return false;
         }
+
+        for (RowItem item : addedItems) {
+            if (item.getId().equals(itemId)) {
+                addedItems.remove(item);
+                fireContentsChange();
+                return true;
+            }
+        }
+
         /* If auto commit mode is enabled, the row will be instantly removed. */
         if (autoCommit) {
             Item i = getItem(itemId);
@@ -269,27 +346,56 @@ public class SQLContainer implements Container, Container.Filterable,
     /** Methods from interface Container.Indexed **/
     /**********************************************/
     public int indexOfId(Object itemId) {
-        if (!itemIndexes.containsValue(itemId)) {
-            getRowIdentifiers();
-        }
-        for (Integer i : itemIndexes.keySet()) {
-            if (itemIndexes.get(i).equals(itemId)) {
-                return i;
+        // First check if the id is in the added items
+        for (int ix = 0; ix < addedItems.size(); ix++) {
+            if (addedItems.get(ix).getId().equals(itemId)) {
+                updateCount();
+                return size + ix;
             }
         }
-        return -1;
+
+        if (!containsId(itemId)) {
+            return -1;
+        }
+        if (cachedItems.isEmpty()) {
+            getPage();
+        }
+        int size = size();
+        while (true) {
+            for (Integer i : itemIndexes.keySet()) {
+                if (itemIndexes.get(i).equals(itemId)) {
+                    return i;
+                }
+            }
+            // load in the next page.
+            int nextIndex = currentOffset
+                    + (int) (pageLength * CACHE_RATIO * 1.5f);
+            if (nextIndex >= size) {
+                // Wrap around.
+                // this will load from index 0 forward, since
+                // updateOffsetAndCache loads from index - pageLength *
+                // CACHE_RATIO / 2.
+                nextIndex = pageLength * CACHE_RATIO / 2;
+            }
+            updateOffsetAndCache(nextIndex);
+        }
     }
 
     public Object getIdByIndex(int index) {
-        updateCount();
         if (index < 0 || index > size() - 1) {
             return null;
         }
-        if (itemIndexes.keySet().contains(index)) {
+        if (index < size) {
+            if (itemIndexes.keySet().contains(index)) {
+                return itemIndexes.get(index);
+            }
+            updateOffsetAndCache(index);
             return itemIndexes.get(index);
+        } else {
+            // The index is in the added items
+            int offset = index - size;
+            return addedItems.get(offset).getId();
         }
-        updateOffsetAndCache(index);
-        return itemIndexes.get(index);
     }
 
     /**********************************************/
@@ -304,37 +410,38 @@ public class SQLContainer implements Container, Container.Filterable,
     }
 
     public Object firstItemId() {
+        updateCount();
+        if (size == 0) {
+            if (addedItems.isEmpty()) {
+                return null;
+            } else {
+                return addedItems.get(0).getId();
+            }
+        }
         if (!itemIndexes.containsKey(0)) {
-            getRowIdentifiers();
+            updateOffsetAndCache(0);
         }
         return itemIndexes.get(0);
     }
 
     public Object lastItemId() {
-        if (!itemIndexes.containsKey(size - 1)) {
-            getRowIdentifiers();
+        if (addedItems.isEmpty()) {
+            int lastIx = size() - 1;
+            if (!itemIndexes.containsKey(lastIx)) {
+                updateOffsetAndCache(size - pageLength * CACHE_RATIO / 2);
+            }
+            return itemIndexes.get(lastIx);
+        } else {
+            return addedItems.get(addedItems.size() - 1).getId();
         }
-        return itemIndexes.get(size - 1);
     }
 
     public boolean isFirstId(Object itemId) {
-        if (!itemIndexes.containsKey(0)) {
-            getRowIdentifiers();
-        }
-        if (itemIndexes.get(0).equals(itemId)) {
-            return true;
-        }
-        return false;
+        return firstItemId().equals(itemId);
     }
 
     public boolean isLastId(Object itemId) {
-        if (!itemIndexes.containsKey(size - 1)) {
-            getRowIdentifiers();
-        }
-        if (itemIndexes.get(size - 1).equals(itemId)) {
-            return true;
-        }
-        return false;
+        return lastItemId().equals(itemId);
     }
 
     /***********************************************/
@@ -387,11 +494,8 @@ public class SQLContainer implements Container, Container.Filterable,
      * @return true if contents of this container have been modified
      */
     public boolean isModified() {
-        if (!removedItems.isEmpty() || !addedItems.isEmpty()
-                || !modifiedItems.isEmpty()) {
-            return true;
-        }
-        return false;
+        return !removedItems.isEmpty() || !addedItems.isEmpty()
+                || !modifiedItems.isEmpty();
     }
 
     /**
@@ -455,6 +559,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     "The column given for sorting does not exist in this container.");
         }
         filters.add(filter);
+        refresh();
     }
 
     /**
@@ -488,17 +593,20 @@ public class SQLContainer implements Container, Container.Filterable,
      */
     public void commit() throws UnsupportedOperationException, SQLException {
         try {
-            delegate.commit();
             delegate.beginTransaction();
             /* Perform buffered deletions */
-            for (RowItem id : removedItems.values()) {
-                if (!delegate.removeRow(id)) {
+            for (RowItem item : removedItems.values()) {
+                if (!delegate.removeRow(item)) {
                     throw new SQLException("Removal failed for row with ID: "
-                            + id.getId());
+                            + item.getId());
                 }
             }
-            // TODO: Perform updates
-            // TODO: Perform inserts
+            for (RowItem item : modifiedItems) {
+                delegate.storeRow(item);
+            }
+            for (RowItem item : addedItems) {
+                delegate.storeRow(item);
+            }
             delegate.commit();
             removedItems.clear();
             addedItems.clear();
@@ -552,8 +660,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
             }
         } else {
-            modifiedItems.put(changedItem.getId(), changedItem);
-            cachedItems.remove(changedItem.getId());
+            modifiedItems.add(changedItem);
         }
     }
 
@@ -566,11 +673,13 @@ public class SQLContainer implements Container, Container.Filterable,
      *            Index of the item that was requested, but not found in cache
      */
     private void updateOffsetAndCache(int index) {
-        if (index < 0) {
+        if (itemIndexes.containsKey(index)) {
             return;
         }
-        currentOffset = index / pageLength;
-        currentOffset *= pageLength;
+        currentOffset = index - (pageLength * CACHE_RATIO) / 2;
+        if (currentOffset < 0) {
+            currentOffset = 0;
+        }
         getPage();
     }
 
@@ -590,8 +699,18 @@ public class SQLContainer implements Container, Container.Filterable,
             return;
         }
         try {
-            delegate.setFilters(filters);
-            delegate.setOrderBy(sorters);
+            try {
+                delegate.setFilters(filters);
+            } catch (UnsupportedOperationException e) {
+                // The query delegate doesn't support sorting or filtering.
+                // TODO: log this?
+            }
+            try {
+                delegate.setOrderBy(sorters);
+            } catch (UnsupportedOperationException e) {
+                // The query delegate doesn't support sorting or filtering.
+                // TODO: log this?
+            }
             int newSize = delegate.getCount();
             if (newSize != size) {
                 size = newSize;
@@ -601,34 +720,6 @@ public class SQLContainer implements Container, Container.Filterable,
             sizeDirty = false;
         } catch (SQLException e) {
             throw new RuntimeException("Failed to update item set size.", e);
-        }
-    }
-
-    /**
-     * Fetches all the row identifiers from the data source.
-     */
-    private void getRowIdentifiers() {
-        // TODO: Discard removed item id's from the identifier list
-        updateCount();
-        if (itemIndexes.size() != size) {
-            ResultSet rs = null;
-            try {
-                rs = delegate.getIdList();
-                List<String> pKeys = delegate.getPrimaryKeyColumns();
-                int rowCount = 0;
-                while (rs.next()) {
-                    /* Generate itemId for the row based on primary key(s) */
-                    Object[] itemId = new Object[pKeys.size()];
-                    for (int i = 0; i < pKeys.size(); i++) {
-                        itemId[i] = rs.getObject(pKeys.get(i));
-                    }
-                    RowId id = new RowId(itemId);
-                    itemIndexes.put(rowCount, id);
-                    rowCount++;
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to fetch item indexes.", e);
-            }
         }
     }
 
@@ -647,6 +738,7 @@ public class SQLContainer implements Container, Container.Filterable,
         ResultSet rs = null;
         ResultSetMetaData rsmd = null;
         try {
+            delegate.beginTransaction();
             rs = delegate.getResults(0, 1);
             boolean resultExists = rs.next();
             rsmd = rs.getMetaData();
@@ -659,7 +751,14 @@ public class SQLContainer implements Container, Container.Filterable,
                 propertyTypes.put(rsmd.getColumnName(i),
                         o == null ? new Object().getClass() : o.getClass());
             }
+            delegate.commit();
         } catch (SQLException e) {
+            try {
+                delegate.rollback();
+            } catch (SQLException e1) {
+                // throw the exception below
+                // TODO: log
+            }
             throw new RuntimeException("Failed to fetch property id's.", e);
         }
     }
@@ -673,8 +772,19 @@ public class SQLContainer implements Container, Container.Filterable,
         updateCount();
         ResultSet rs = null;
         ResultSetMetaData rsmd = null;
+        // Clear the caches so that we don't fill up memory with (possibly)
+        // millions of records
+        cachedItems.clear();
+        itemIndexes.clear();
         try {
-            rs = delegate.getResults(currentOffset, pageLength);
+            delegate.beginTransaction();
+            try {
+                delegate.setOrderBy(sorters);
+            } catch (UnsupportedOperationException e) {
+                // No worries, this is OK.
+                // TODO: log
+            }
+            rs = delegate.getResults(currentOffset, pageLength * CACHE_RATIO);
             rsmd = rs.getMetaData();
             List<String> pKeys = delegate.getPrimaryKeyColumns();
             if (pKeys == null || pKeys.isEmpty()) {
@@ -683,6 +793,10 @@ public class SQLContainer implements Container, Container.Filterable,
             /* Create new items and column properties */
             ColumnProperty cp = null;
             int rowCount = currentOffset;
+            if (!delegate.implementationRespectsPagingLimits()) {
+                rowCount = currentOffset = 0;
+                setPageLength(size);
+            }
             while (rs.next()) {
                 List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
                 int columnNum = 1;
@@ -692,33 +806,42 @@ public class SQLContainer implements Container, Container.Filterable,
                     itemId[i] = rs.getObject(pKeys.get(i));
                 }
                 RowId id = new RowId(itemId);
-                // TODO: If the item is removed, skip adding it to cache
                 // TODO: If the item is modified, skip adding it to cache
-                for (String s : propertyIds) {
-                    /* Determine column meta data */
-                    boolean nullable = rsmd.isNullable(columnNum) == ResultSetMetaData.columnNullable;
-                    boolean allowReadOnlyChange = !rsmd.isReadOnly(columnNum)
-                            && !rsmd.isAutoIncrement(columnNum);
-                    boolean readOnly = rsmd.isReadOnly(columnNum)
-                            || rsmd.isAutoIncrement(columnNum);
-                    Object value = rs.getObject(columnNum);
-                    if (value != null) {
-                        cp = new ColumnProperty(s, readOnly,
-                                allowReadOnlyChange, nullable, value, value
-                                        .getClass());
-                    } else {
-                        cp = new ColumnProperty(s, readOnly,
-                                allowReadOnlyChange, nullable, null, null);
+                if (!removedItems.containsKey(id)) {
+                    for (String s : propertyIds) {
+                        /* Determine column meta data */
+                        boolean nullable = rsmd.isNullable(columnNum) == ResultSetMetaData.columnNullable;
+                        boolean allowReadOnlyChange = !rsmd
+                                .isReadOnly(columnNum)
+                                && !rsmd.isAutoIncrement(columnNum);
+                        boolean readOnly = rsmd.isReadOnly(columnNum)
+                                || rsmd.isAutoIncrement(columnNum);
+                        Object value = rs.getObject(columnNum);
+                        if (value != null) {
+                            cp = new ColumnProperty(s, readOnly,
+                                    allowReadOnlyChange, nullable, value,
+                                    value.getClass());
+                        } else {
+                            cp = new ColumnProperty(s, readOnly,
+                                    allowReadOnlyChange, nullable, null, null);
+                        }
+                        itemProperties.add(cp);
+                        columnNum++;
                     }
-                    itemProperties.add(cp);
-                    columnNum++;
+                    /* Cache item */
+                    itemIndexes.put(rowCount, id);
+                    cachedItems.put(id, new RowItem(this, id, itemProperties));
+                    rowCount++;
                 }
-                /* Cache item */
-                itemIndexes.put(rowCount, id);
-                cachedItems.put(id, new RowItem(this, id, itemProperties));
-                rowCount++;
             }
+            delegate.commit();
         } catch (SQLException e) {
+            try {
+                delegate.rollback();
+            } catch (SQLException e1) {
+                // throw the exception below...
+                // TODO log
+            }
             throw new RuntimeException("Failed to fetch page.", e);
         }
     }

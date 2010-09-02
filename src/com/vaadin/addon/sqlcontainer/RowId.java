@@ -11,15 +11,19 @@ import java.io.Serializable;
  */
 public class RowId implements Serializable {
     private static final long serialVersionUID = -3161778404698901258L;
-    private Object[] id;
+    protected Object[] id;
 
     /**
      * Prevent instantiation without required parameters.
      */
+    @SuppressWarnings("unused")
     private RowId() {
     }
 
     public RowId(Object[] id) {
+        if (id == null) {
+            throw new IllegalArgumentException("id parameter must not be null!");
+        }
         this.id = id;
     }
 
