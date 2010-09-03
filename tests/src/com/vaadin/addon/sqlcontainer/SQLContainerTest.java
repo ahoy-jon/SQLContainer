@@ -1009,11 +1009,14 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.storeRow(EasyMock.isA(RowItem.class)))
+        EasyMock.expect(
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class)))
                 .andAnswer(new IAnswer<Integer>() {
                     public Integer answer() throws Throwable {
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[0];
-                        Connection conn = connectionPool.reserveConnection();
+                        Connection conn = (Connection) EasyMock
+                                .getCurrentArguments()[0];
+                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
                         Statement statement = conn.createStatement();
                         statement
                                 .executeUpdate("insert into people values(default, '"
@@ -1070,11 +1073,14 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.storeRow(EasyMock.isA(RowItem.class)))
+        EasyMock.expect(
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class)))
                 .andAnswer(new IAnswer<Integer>() {
                     public Integer answer() throws Throwable {
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[0];
-                        Connection conn = connectionPool.reserveConnection();
+                        Connection conn = (Connection) EasyMock
+                                .getCurrentArguments()[0];
+                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
                         Statement statement = conn.createStatement();
                         statement
                                 .executeUpdate("insert into people values(default, '"
@@ -1137,17 +1143,18 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.removeRow(EasyMock.isA(RowItem.class)))
+        EasyMock.expect(
+                delegate.removeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class)))
                 .andAnswer(new IAnswer<Boolean>() {
                     public Boolean answer() throws Throwable {
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[0];
-                        Connection conn = connectionPool.reserveConnection();
+                        Connection conn = (Connection) EasyMock
+                                .getCurrentArguments()[0];
+                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
                         Statement statement = conn.createStatement();
                         statement.executeUpdate("DELETE FROM people WHERE ID="
                                 + item.getItemProperty("ID"));
                         statement.close();
-                        conn.commit();
-                        connectionPool.releaseConnection(conn);
                         return true;
                     }
                 }).anyTimes();
@@ -1191,11 +1198,14 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.storeRow(EasyMock.isA(RowItem.class)))
+        EasyMock.expect(
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class)))
                 .andAnswer(new IAnswer<Integer>() {
                     public Integer answer() throws Throwable {
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[0];
-                        Connection conn = connectionPool.reserveConnection();
+                        Connection conn = (Connection) EasyMock
+                                .getCurrentArguments()[0];
+                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
                         Statement statement = conn.createStatement();
                         statement.executeUpdate("UPDATE people SET NAME='"
                                 + item.getItemProperty("NAME").getValue()
@@ -1704,6 +1714,91 @@ public class SQLContainerTest {
         Assert.assertEquals(4, container.size());
 
         container.addContainerFilter("NAME", "Vi", false, false);
+
+        // Ville
+        Assert.assertEquals(1, container.size());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
+
+        EasyMock.verify(delegate);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void addContainerFilter_ignoreCase_filtersResults()
+            throws SQLException {
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
+        FreeformQueryDelegate delegate = EasyMock
+                .createMock(FreeformQueryDelegate.class);
+        final ArrayList<Filter> filters = new ArrayList<Filter>();
+        delegate.setFilters(null);
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setOrderBy(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setOrderBy(null);
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setFilters(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+            public Object answer() throws Throwable {
+                List<Filter> orders = (List<Filter>) EasyMock
+                        .getCurrentArguments()[0];
+                filters.clear();
+                filters.addAll(orders);
+                return null;
+            }
+        }).anyTimes();
+        EasyMock.expect(
+                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<String>() {
+                    public String answer() throws Throwable {
+                        Object[] args = EasyMock.getCurrentArguments();
+                        int offset = (Integer) (args[0]);
+                        int limit = (Integer) (args[1]);
+                        StringBuffer query = new StringBuffer(
+                                "SELECT * FROM people");
+                        if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
+                            query.append(" WHERE ");
+                            for (Filter filter : filters) {
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
+                            }
+                        }
+                        query.append(" LIMIT ").append(limit)
+                                .append(" OFFSET ").append(offset);
+                        return query.toString();
+                    }
+                }).anyTimes();
+        EasyMock.expect(delegate.getCountQuery())
+                .andAnswer(new IAnswer<String>() {
+                    public String answer() throws Throwable {
+                        StringBuffer query = new StringBuffer(
+                                "SELECT COUNT(*) FROM people");
+                        if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
+                            query.append(" WHERE ");
+                            for (Filter filter : filters) {
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
+                            }
+                        }
+                        return query.toString();
+                    }
+                }).anyTimes();
+
+        EasyMock.replay(delegate);
+        query.setDelegate(delegate);
+        SQLContainer container = new SQLContainer(query);
+        // Ville, Kalle, Pelle, Börje
+        Assert.assertEquals(4, container.size());
+
+        container.addContainerFilter("NAME", "vi", true, false);
 
         // Ville
         Assert.assertEquals(1, container.size());

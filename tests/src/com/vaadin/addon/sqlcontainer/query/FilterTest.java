@@ -72,4 +72,32 @@ public class FilterTest {
         Filter f = new Filter("AGE", ComparisonType.BETWEEN, 18, 65);
         Assert.assertEquals("AGE BETWEEN 18 AND 65", f.toWhereString());
     }
+
+    @Test
+    public void toWhereString_caseInsensitive_equals() {
+        Filter f = new Filter("NAME", ComparisonType.EQUALS, "Fido");
+        f.setCaseSensitive(false);
+        Assert.assertEquals("UPPER(NAME) = 'FIDO'", f.toWhereString());
+    }
+
+    @Test
+    public void toWhereString_caseInsensitive_startsWith() {
+        Filter f = new Filter("NAME", ComparisonType.STARTS_WITH, "Vi");
+        f.setCaseSensitive(false);
+        Assert.assertEquals("UPPER(NAME) LIKE 'VI%'", f.toWhereString());
+    }
+
+    @Test
+    public void toWhereString_caseInsensitive_endsWith() {
+        Filter f = new Filter("NAME", ComparisonType.ENDS_WITH, "lle");
+        f.setCaseSensitive(false);
+        Assert.assertEquals("UPPER(NAME) LIKE '%LLE'", f.toWhereString());
+    }
+
+    @Test
+    public void toWhereString_caseInsensitive_contains() {
+        Filter f = new Filter("NAME", ComparisonType.CONTAINS, "ill");
+        f.setCaseSensitive(false);
+        Assert.assertEquals("UPPER(NAME) LIKE '%ILL%'", f.toWhereString());
+    }
 }

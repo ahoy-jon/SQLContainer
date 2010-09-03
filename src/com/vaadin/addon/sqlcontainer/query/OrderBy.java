@@ -14,6 +14,7 @@ public class OrderBy {
     /**
      * Prevent instantiation without required parameters.
      */
+    @SuppressWarnings("unused")
     private OrderBy() {
     }
 

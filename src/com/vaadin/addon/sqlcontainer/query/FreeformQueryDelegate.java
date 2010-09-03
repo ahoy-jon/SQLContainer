@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -62,24 +63,30 @@ public interface FreeformQueryDelegate {
      * decides how to identify whether to store a new row or update an existing
      * one.
      * 
+     * @param conn
+     *            the JDBC connection to use
      * @param row
      *            RowItem to be stored or updated.
      * @throws UnsupportedOperationException
      *             if the implementation is read only.
+     * @throws SQLException
      */
-    public int storeRow(RowItem row) throws UnsupportedOperationException;
+    public int storeRow(Connection conn, RowItem row)
+            throws UnsupportedOperationException, SQLException;
 
     /**
      * Removes the given RowItem from the database.
      * 
+     * @param conn
+     *            the JDBC connection to use
      * @param row
      *            RowItem to be removed
      * @return true on success
      * @throws UnsupportedOperationException
      * @throws SQLException
      */
-    public boolean removeRow(RowItem row) throws UnsupportedOperationException,
-            SQLException;
+    public boolean removeRow(Connection conn, RowItem row)
+            throws UnsupportedOperationException, SQLException;
 
     /**
      * Generates an SQL Query string that allows the user of the FreeformQuery

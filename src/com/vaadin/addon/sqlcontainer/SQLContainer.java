@@ -660,7 +660,10 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
             }
         } else {
-            modifiedItems.add(changedItem);
+            if (!(changedItem.getId() instanceof TemporaryRowId)
+                    && !modifiedItems.contains(changedItem)) {
+                modifiedItems.add(changedItem);
+            }
         }
     }
 
@@ -808,7 +811,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 RowId id = new RowId(itemId);
                 // TODO: If the item is modified, skip adding it to cache
                 if (!removedItems.containsKey(id)) {
-                    for (String s : propertyIds) {
+                    for (String propId : propertyIds) {
                         /* Determine column meta data */
                         boolean nullable = rsmd.isNullable(columnNum) == ResultSetMetaData.columnNullable;
                         boolean allowReadOnlyChange = !rsmd
@@ -818,12 +821,13 @@ public class SQLContainer implements Container, Container.Filterable,
                                 || rsmd.isAutoIncrement(columnNum);
                         Object value = rs.getObject(columnNum);
                         if (value != null) {
-                            cp = new ColumnProperty(s, readOnly,
+                            cp = new ColumnProperty(propId, readOnly,
                                     allowReadOnlyChange, nullable, value,
                                     value.getClass());
                         } else {
-                            cp = new ColumnProperty(s, readOnly,
-                                    allowReadOnlyChange, nullable, null, null);
+                            cp = new ColumnProperty(propId, readOnly,
+                                    allowReadOnlyChange, nullable, null,
+                                    getType(propId));
                         }
                         itemProperties.add(cp);
                         columnNum++;

@@ -1,197 +1,243 @@
 package com.vaadin.addon.sqlcontainer.demo;
 
 import java.io.Serializable;
+import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.Statement;
+import java.util.Arrays;
 
 import com.vaadin.Application;
-import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
-import com.vaadin.addon.sqlcontainer.query.OrderBy;
-import com.vaadin.addon.sqlcontainer.query.TableQuery;
-import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
-import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
-import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
-import com.vaadin.data.Container;
-import com.vaadin.data.util.IndexedContainer;
+import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
+import com.vaadin.data.Item;
+import com.vaadin.data.Property;
+import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
+import com.vaadin.ui.Component;
+import com.vaadin.ui.DefaultFieldFactory;
+import com.vaadin.ui.Field;
+import com.vaadin.ui.Form;
+import com.vaadin.ui.HorizontalLayout;
+import com.vaadin.ui.SplitPanel;
 import com.vaadin.ui.Table;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
+import com.vaadin.ui.Window.Notification;
 
+@SuppressWarnings("serial")
 public class SQLContainerDemo extends Application implements Serializable {
-    private static final long serialVersionUID = -632539823251517114L;
-    private SimpleJDBCConnectionPool sjcp = null;
-    private Window mainWindow;
-    private TableQuery tq;
 
-    private Table t;
+    private static final String[] VISIBLE_COLS = { "FIRSTNAME", "LASTNAME",
+            "COMPANY" };
+
+    private SimpleJDBCConnectionPool connectionPool = null;
+    private SQLContainer container = null;
+    private Window mainWindow;
+
+    private Table contactList = new Table();
+    private VerticalLayout editorLayout = new VerticalLayout();
+    private Form contactEditor = new Form();
+    private HorizontalLayout bottomLeftCorner = new HorizontalLayout();
+    private Button contactRemovalButton;
 
     @Override
     public void init() {
         mainWindow = new Window("SQLContainer test");
-
-        final SQLContainer cr = sqlContainerTesting();
-
-        cr.setPageLength(18);
-        cr.setAutoCommit(false);
-        tableTesting(cr);
-
-        // testQueryGenerators();
-
         setMainWindow(mainWindow);
+        initConnectionPool();
+        initDatabase();
+        initContainer();
+        fillContainer(container);
 
-        Button b = new Button("Refresh Container");
-        b.addListener(new Button.ClickListener() {
-            private static final long serialVersionUID = -5208763132530422234L;
-
-            public void buttonClick(ClickEvent event) {
-                cr.refresh();
-                /*
-                 * try { tq.beginTransaction(); } catch (Exception e) {
-                 * e.printStackTrace(); }
-                 */
-            }
-        });
-        mainWindow.addComponent(b);
-
-        final TextField p = new TextField("Page length");
-        Button setpl = new Button("Set!");
-        setpl.addListener(new Button.ClickListener() {
-            public void buttonClick(ClickEvent event) {
-                cr.setPageLength(Integer.parseInt((String) p.getValue()));
-            }
-        });
-        mainWindow.addComponent(p);
-        mainWindow.addComponent(setpl);
-
-        Button remove = new Button("Remove selected item!");
-        remove.addListener(new Button.ClickListener() {
-            public void buttonClick(ClickEvent event) {
-                Object o = t.getValue();
-                if (o != null && o instanceof RowId) {
-                    System.err.println(cr.removeItem(o));
-                }
-            }
-        });
-        mainWindow.addComponent(remove);
-
-        Button commit = new Button("Commit changes!");
-        commit.addListener(new Button.ClickListener() {
-            public void buttonClick(ClickEvent event) {
-                try {
-                    cr.commit();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        mainWindow.addComponent(commit);
+        initLayout();
+        initContactAddRemoveButtons();
+        initAddressList();
+        initFilteringControls();
+        initFieldFactory();
     }
 
-    private SQLContainer sqlContainerTesting() {
+    private void initFieldFactory() {
+        contactEditor.setFormFieldFactory(new DefaultFieldFactory() {
+            @Override
+            public Field createField(Item item, Object propertyId,
+                    Component uiContext) {
+                Field f = super.createField(item, propertyId, uiContext);
+                if (f instanceof TextField) {
+                    ((TextField) f).setNullRepresentation("");
+                }
+                return f;
+            }
+        });
+    }
+
+    private void initLayout() {
+        SplitPanel splitPanel = new SplitPanel(
+                SplitPanel.ORIENTATION_HORIZONTAL);
+        setMainWindow(new Window("Address Book", splitPanel));
+        VerticalLayout left = new VerticalLayout();
+        left.setSizeFull();
+        left.addComponent(contactList);
+        contactList.setSizeFull();
+        left.setExpandRatio(contactList, 1);
+        splitPanel.addComponent(left);
+        splitPanel.addComponent(editorLayout);
+        contactEditor.setSizeFull();
+        contactEditor.getLayout().setMargin(true);
+        contactEditor.setImmediate(true);
+        editorLayout.addComponent(contactEditor);
+        editorLayout.addComponent(new Button("Save",
+                new Button.ClickListener() {
+                    public void buttonClick(ClickEvent event) {
+                        contactEditor.commit();
+                        try {
+                            container.commit();
+                        } catch (SQLException e) {
+                            showError("Error when saving record!");
+                            e.printStackTrace();
+                        }
+                    }
+                }));
+        bottomLeftCorner.setWidth("100%");
+        left.addComponent(bottomLeftCorner);
+    }
+
+    private void initContactAddRemoveButtons() {
+        // New item button
+        bottomLeftCorner.addComponent(new Button("+",
+                new Button.ClickListener() {
+                    public void buttonClick(ClickEvent event) {
+                        Object id = contactList.addItem();
+                        contactList.setValue(id);
+                    }
+                }));
+
+        // Remove item button
+        contactRemovalButton = new Button("-", new Button.ClickListener() {
+            public void buttonClick(ClickEvent event) {
+                contactList.removeItem(contactList.getValue());
+                contactList.select(null);
+            }
+        });
+        contactRemovalButton.setVisible(false);
+        bottomLeftCorner.addComponent(contactRemovalButton);
+    }
+
+    private void initAddressList() {
+        contactList.setContainerDataSource(container);
+        contactList.setVisibleColumns(VISIBLE_COLS);
+        contactList.setSelectable(true);
+        contactList.setImmediate(true);
+        contactList.addListener(new Property.ValueChangeListener() {
+            public void valueChange(ValueChangeEvent event) {
+                Object id = contactList.getValue();
+                contactEditor.setItemDataSource(id == null ? null : contactList
+                        .getItem(id));
+                editorLayout.setVisible(id != null);
+                contactRemovalButton.setVisible(id != null);
+            }
+        });
+    }
+
+    private void initFilteringControls() {
+        for (final String pn : VISIBLE_COLS) {
+            final TextField sf = new TextField();
+            bottomLeftCorner.addComponent(sf);
+            sf.setWidth("100%");
+            sf.setInputPrompt(pn);
+            sf.setImmediate(true);
+            bottomLeftCorner.setExpandRatio(sf, 1);
+            sf.addListener(new Property.ValueChangeListener() {
+                public void valueChange(ValueChangeEvent event) {
+                    container.removeContainerFilters(pn);
+                    if (sf.toString().length() > 0 && !pn.equals(sf.toString())) {
+                        container.addContainerFilter(pn, sf.toString(), true,
+                                false);
+                    }
+                    getMainWindow().showNotification(
+                            "" + container.size() + " matches found");
+                }
+            });
+        }
+    }
+
+    private void initConnectionPool() {
         try {
-            sjcp = new SimpleJDBCConnectionPool("com.mysql.jdbc.Driver",
-                    "jdbc:mysql://localhost:3306/database", "user", "password",
-                    2, 5);
+            connectionPool = new SimpleJDBCConnectionPool(
+                    "org.hsqldb.jdbc.JDBCDriver",
+                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 5);
         } catch (SQLException e) {
+            showError("Couldn't create the connection pool!");
             e.printStackTrace();
         }
+    }
 
-        tq = new TableQuery("users", sjcp, new DefaultSQLGenerator());
-        SQLContainer sqlc = null;
+    public void showError(String errorString) {
+        mainWindow.showNotification(errorString,
+                Notification.TYPE_ERROR_MESSAGE);
+    }
 
-        // ResultSet r = null;
+    private void initDatabase() {
         try {
-            sqlc = new SQLContainer(tq);
-            // r = tq.getIdList();
+            Connection conn = connectionPool.reserveConnection();
+            Statement statement = conn.createStatement();
+            try {
+                statement.execute("DROP TABLE PEOPLE");
+            } catch (SQLException e) {
+                // This is ok.
+            }
+            statement
+                    .execute("CREATE TABLE PEOPLE "
+                            + "(ID INTEGER GENERATED ALWAYS AS IDENTITY, "
+                            + "FIRSTNAME VARCHAR(32), LASTNAME VARCHAR(32), "
+                            + "COMPANY VARCHAR(32), MOBILE VARCHAR(20), WORKPHONE VARCHAR(20), "
+                            + "HOMEPHONE VARCHAR(20), WORKEMAIL VARCHAR(128), HOMEEMAIL VARCHAR(128), "
+                            + "STREET VARCHAR(32), ZIP VARCHAR(16), CITY VARCHAR(32), STATE VARCHAR(2), "
+                            + "COUNTRY VARCHAR(32), PRIMARY KEY(ID))");
+            statement.close();
+            conn.commit();
+            connectionPool.releaseConnection(conn);
         } catch (SQLException e) {
+            showError("Could not create people table!");
             e.printStackTrace();
         }
-        return sqlc;
     }
 
-    private void tableTesting(Container c) {
-        IndexedContainer ic = new IndexedContainer();
-        ic.addContainerProperty("name", String.class, "testing");
-        for (int i = 0; i < 2000; i++) {
-            ic.addItem(i);
+    private void initContainer() {
+        try {
+            FreeformQuery query = new FreeformQuery("SELECT * FROM PEOPLE",
+                    Arrays.asList("ID"), connectionPool);
+            query.setDelegate(new DemoFreeformQueryDelegate());
+            container = new SQLContainer(query);
+        } catch (SQLException e) {
+            showError("Could not create an instance of SQLContainer!");
+            e.printStackTrace();
         }
+    }
 
-        t = new Table();
-        t.setHeight("100%");
-        t.setSelectable(true);
-        t.setPageLength(3);
-        t.setCacheRate(1);
-        if (c == null) {
-            t.setContainerDataSource(ic);
-        } else {
-            t.setContainerDataSource(c);
+    private void fillContainer(SQLContainer container) {
+        String[] fnames = { "Peter", "Alice", "Joshua", "Mike", "Olivia",
+                "Nina", "Alex", "Rita", "Dan", "Umberto", "Henrik", "Rene",
+                "Lisa", "Marge" };
+        String[] lnames = { "Smith", "Gordon", "Simpson", "Brown", "Clavel",
+                "Simons", "Verne", "Scott", "Allison", "Gates", "Rowling",
+                "Barks", "Ross", "Schneider", "Tate" };
+
+        for (int i = 0; i < 1000; i++) {
+            Object id = container.addItem();
+            container.getContainerProperty(id, "FIRSTNAME").setValue(
+                    fnames[(int) (fnames.length * Math.random())]);
+            container.getContainerProperty(id, "LASTNAME").setValue(
+                    lnames[(int) (lnames.length * Math.random())]);
         }
-
-        mainWindow.addComponent(t);
-        ((VerticalLayout) mainWindow.getContent()).setExpandRatio(t, 1);
+        try {
+            container.commit();
+        } catch (SQLException e) {
+            showError("Could not store items!");
+            e.printStackTrace();
+        }
     }
 
-    private void testQueryGenerators() {
-        DefaultSQLGenerator dsg = new DefaultSQLGenerator();
-        OracleGenerator og = new OracleGenerator();
-        MSSQLGenerator mg = new MSSQLGenerator();
-
-        dsg.setSearchStringEscape("\\");
-        og.setSearchStringEscape("\\");
-        mg.setSearchStringEscape("\\");
-
-        String tname = "taulu";
-        List<Filter> filters = new ArrayList<Filter>(3);
-        filters.add(new Filter("ekacol", ComparisonType.CONTAINS, "ha%ku"));
-        filters.add(new Filter("tokacol", ComparisonType.GREATER_OR_EQUAL,
-                "ha__k"));
-        filters.add(new Filter("kolmascol", ComparisonType.ENDS_WITH, "ha%"));
-        List<OrderBy> orderBys = new ArrayList<OrderBy>(2);
-        orderBys.add(new OrderBy("ekacol", true));
-        orderBys.add(new OrderBy("tokacol", false));
-
-        Map<String, String> valMap = new HashMap<String, String>();
-        valMap.put("eka", "ekaVal");
-        valMap.put("toka", "tokaVal");
-        valMap.put("kolmas", "kolmasVal");
-        Map<String, String> idMap = new HashMap<String, String>();
-        idMap.put("id", "234");
-        idMap.put("ik", "567");
-
-        System.out.println("Selects:");
-        System.out.println("D: "
-                + dsg.generateSelectQuery(tname, filters, orderBys, 15, 25,
-                        null));
-        System.out.println("O: "
-                + og
-                        .generateSelectQuery(tname, filters, orderBys, 15, 25,
-                                null));
-        System.out.println("M: "
-                + mg
-                        .generateSelectQuery(tname, filters, orderBys, 15, 25,
-                                null));
-
-        System.out.println("Inserts:");
-        // System.out.println("D: " + dsg.generateInsertQuery(tname, valMap));
-        // System.out.println("O: " + og.generateInsertQuery(tname, valMap));
-        // System.out.println("M: " + mg.generateInsertQuery(tname, valMap));
-
-        System.out.println("Updates:");
-        // System.out.println("D: "
-        // + dsg.generateUpdateQuery(tname, valMap, idMap));
-        // System.out
-        // .println("O: " + og.generateUpdateQuery(tname, valMap, idMap));
-        // System.out
-        // .println("M: " + mg.generateUpdateQuery(tname, valMap, idMap));
-    }
 }

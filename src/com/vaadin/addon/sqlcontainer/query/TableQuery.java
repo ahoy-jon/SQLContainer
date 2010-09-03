@@ -37,6 +37,7 @@ public class TableQuery implements QueryDelegate {
     /**
      * Prevent no-parameters instantiation of TableQuery
      */
+    @SuppressWarnings("unused")
     private TableQuery() {
     }
 

@@ -22,6 +22,7 @@ public final class RowItem implements Item {
     /**
      * Prevent instantiation without required parameters.
      */
+    @SuppressWarnings("unused")
     private RowItem() {
     }
 

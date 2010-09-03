@@ -82,6 +82,11 @@ final public class ColumnProperty implements Property {
                 throw new ConversionException(e);
             }
         }
+
+        if (newValue != null && newValue.equals(value)) {
+            return;
+        }
+
         changedValue = newValue;
         owner.getContainer().itemChangeNotification(owner);
         modified = true;
@@ -107,10 +112,11 @@ final public class ColumnProperty implements Property {
 
     @Override
     public String toString() {
-        if (value != null) {
-            return value.toString();
+        Object val = getValue();
+        if (val == null) {
+            return null;
         }
-        return "";
+        return val.toString();
     }
 
     public void setOwner(RowItem owner) {

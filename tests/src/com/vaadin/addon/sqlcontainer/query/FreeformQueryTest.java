@@ -278,8 +278,9 @@ public class FreeformQueryTest {
         query.setOrderBy(Arrays.asList(new OrderBy("name", true)));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
-    public void storeRow_noDelegate_shouldFail() throws SQLException {
+    @Test(expected = IllegalStateException.class)
+    public void storeRow_noDelegateNoTransactionActive_shouldFail()
+            throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
         query.storeRow(new RowItem(new SQLContainer(query), new RowId(
@@ -287,11 +288,29 @@ public class FreeformQueryTest {
     }
 
     @Test(expected = UnsupportedOperationException.class)
+    public void storeRow_noDelegate_shouldFail() throws SQLException {
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
+        SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
+        EasyMock.replay(container);
+        query.beginTransaction();
+        query.storeRow(new RowItem(container, new RowId(new Object[] { 1 }),
+                null));
+        query.commit();
+        EasyMock.verify(container);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
     public void removeRow_noDelegate_shouldFail() throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        query.removeRow(new RowItem(new SQLContainer(query), new RowId(
-                new Object[] { 1 }), null));
+        SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
+        EasyMock.replay(container);
+        query.beginTransaction();
+        query.removeRow(new RowItem(container, new RowId(new Object[] { 1 }),
+                null));
+        query.commit();
+        EasyMock.verify(container);
     }
 
     @Test
@@ -563,15 +582,20 @@ public class FreeformQueryTest {
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        RowItem row = new RowItem(new SQLContainer(query), new RowId(
-                new Object[] { 1 }), null);
-        EasyMock.expect(delegate.storeRow(row)).andReturn(1);
-        EasyMock.replay(delegate);
+        EasyMock.expect(
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andReturn(1);
+        SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
+        EasyMock.replay(delegate, container);
         query.setDelegate(delegate);
 
+        query.beginTransaction();
+        RowItem row = new RowItem(container, new RowId(new Object[] { 1 }),
+                null);
         query.storeRow(row);
+        query.commit();
 
-        EasyMock.verify(delegate);
+        EasyMock.verify(delegate, container);
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -581,16 +605,21 @@ public class FreeformQueryTest {
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        RowItem row = new RowItem(new SQLContainer(query), new RowId(
-                new Object[] { 1 }), null);
-        EasyMock.expect(delegate.storeRow(row)).andThrow(
+        EasyMock.expect(
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andThrow(
                 new UnsupportedOperationException());
-        EasyMock.replay(delegate);
+        SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
+        EasyMock.replay(delegate, container);
         query.setDelegate(delegate);
 
+        query.beginTransaction();
+        RowItem row = new RowItem(container, new RowId(new Object[] { 1 }),
+                null);
         query.storeRow(row);
+        query.commit();
 
-        EasyMock.verify(delegate);
+        EasyMock.verify(delegate, container);
     }
 
     @Test
@@ -600,15 +629,20 @@ public class FreeformQueryTest {
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        RowItem row = new RowItem(new SQLContainer(query), new RowId(
-                new Object[] { 1 }), null);
-        EasyMock.expect(delegate.removeRow(row)).andReturn(true);
-        EasyMock.replay(delegate);
+        EasyMock.expect(
+                delegate.removeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andReturn(true);
+        SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
+        EasyMock.replay(delegate, container);
         query.setDelegate(delegate);
 
+        query.beginTransaction();
+        RowItem row = new RowItem(container, new RowId(new Object[] { 1 }),
+                null);
         query.removeRow(row);
+        query.commit();
 
-        EasyMock.verify(delegate);
+        EasyMock.verify(delegate, container);
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -618,16 +652,21 @@ public class FreeformQueryTest {
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        RowItem row = new RowItem(new SQLContainer(query), new RowId(
-                new Object[] { 1 }), null);
-        EasyMock.expect(delegate.removeRow(row)).andThrow(
+        EasyMock.expect(
+                delegate.removeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andThrow(
                 new UnsupportedOperationException());
-        EasyMock.replay(delegate);
+        SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
+        EasyMock.replay(delegate, container);
         query.setDelegate(delegate);
 
+        query.beginTransaction();
+        RowItem row = new RowItem(container, new RowId(new Object[] { 1 }),
+                null);
         query.removeRow(row);
+        query.commit();
 
-        EasyMock.verify(delegate);
+        EasyMock.verify(delegate, container);
     }
 
     @Test
@@ -640,6 +679,16 @@ public class FreeformQueryTest {
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
 
+        query.beginTransaction();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void beginTransaction_transactionAlreadyActive_shouldFail()
+            throws SQLException {
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
+
+        query.beginTransaction();
         query.beginTransaction();
     }
 

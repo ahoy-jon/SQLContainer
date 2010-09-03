@@ -165,19 +165,24 @@ public class FreeformQuery implements QueryDelegate {
         }
     }
 
-    public int storeRow(RowItem row) throws UnsupportedOperationException {
+    public int storeRow(RowItem row) throws SQLException {
+        if (activeConnection == null) {
+            throw new IllegalStateException("No transaction is active!");
+        }
         if (delegate != null) {
-            return delegate.storeRow(row);
+            return delegate.storeRow(activeConnection, row);
         } else {
             throw new UnsupportedOperationException(
                     "FreeFormQueryDelegate not set!");
         }
     }
 
-    public boolean removeRow(RowItem row) throws UnsupportedOperationException,
-            SQLException {
+    public boolean removeRow(RowItem row) throws SQLException {
+        if (activeConnection == null) {
+            throw new IllegalStateException("No transaction is active!");
+        }
         if (delegate != null) {
-            return delegate.removeRow(row);
+            return delegate.removeRow(activeConnection, row);
         } else {
             throw new UnsupportedOperationException(
                     "FreeFormQueryDelegate not set!");
@@ -187,7 +192,7 @@ public class FreeformQuery implements QueryDelegate {
     public synchronized void beginTransaction()
             throws UnsupportedOperationException, SQLException {
         if (activeConnection != null) {
-            connectionPool.releaseConnection(activeConnection);
+            throw new IllegalStateException("A transaction is already active!");
         }
         activeConnection = connectionPool.reserveConnection();
         activeConnection.setAutoCommit(false);
