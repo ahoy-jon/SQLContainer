@@ -2,7 +2,7 @@
 <project name="Calendar" basedir="../" default="all">
 
     <!-- Main target that does all -->
-    <target name="all" depends="compile, widgetset, tests, manual, package-jar, package-zip, demo.war"/>
+    <target name="all" depends="compile, tests, manual, package-jar, package-zip, demo.war"/>
 
     <!-- Non-project specific settings. -->
 	<property file="build/build.properties" />
@@ -39,6 +39,10 @@
 		    <fileset dir="build/lib">
 			    <include name="**/*.jar" />
             </fileset>
+	    	
+	    	<fileset dir="tests/lib">
+	    		<include name="**/*.jar" />
+	    	</fileset>
 
             <fileset dir="WebContent/WEB-INF/lib">
                 <include name="**/*.jar" />
@@ -89,47 +93,10 @@
 
 	</target>
 
-    <!-- Check if there are new modifications to widgetset sources -->
-	<target name="check-widgetset-uptodate">
-		<echo>Checking if widgetset needs to be rebuilt</echo>
-		<uptodate targetfile="WebContent/VAADIN/widgetsets/.widgetset" property="widgetset.uptodate">
-			<srcfiles dir="src" includes="**/gwt/**/*" />
-		</uptodate>
-	</target>
-
     <!-- Refresh the project in a locally running Eclipse. -->
 	<target name="refresh-eclipse" if="eclipse.running">
 		<echo>Refreshing project folder</echo>
 		<eclipse.refreshLocal resource="ColorPickerTest" depth="infinite" />
-	</target>
-
-    <!-- Compile client-side Java -->
-	<target name="widgetset" depends="init,check-widgetset-uptodate" unless="widgetset.uptodate, run.no-tests">
-		<echo>Compiling widgetset</echo>
-
-		<java classname="com.vaadin.tools.WidgetsetCompiler" failonerror="yes" fork="yes" maxmemory="512m">
-			<arg value="-out" />
-			<arg value="WebContent/VAADIN/widgetsets" />
-			<arg value="${addon.widgetset}" />
-			<jvmarg value="-Xss1024k" />
-			<jvmarg value="-Xmx1024M" />
-			<jvmarg value="-Djava.awt.headless=true" />
-			<classpath>
-				<path path="src" />
-				<path path="${basedir}/${result-path}/war/WEB-INF/classes" />
-				<path path="WebContent/WEB-INF/classes" />			
-				<fileset dir="${gwt.lib.dir}">
-					<include name="**/gwt-*.jar" />
-				</fileset>
-				<fileset dir="WebContent/WEB-INF/lib">
-					<include name="**/*.jar" />
-				</fileset>
-			</classpath>
-		</java>
-
-		<touch file="WebContent/VAADIN/widgetsets/.widgetset" verbose="true" />
-
-		<antcall target="refresh-eclipse" />
 	</target>
 
     <!-- ================================================================== -->
@@ -151,15 +118,13 @@
         <echo>Test source dir:  ${test.src.dir}</echo>
 
 		<junit printsummary="yes" showoutput="true"> 
+<!--			<formatter type="brief" usefile="false" />-->
 			<classpath>
 				<pathelement path="${result.classes}" />
 				<path refid="compile.classpath"/>
                 <path refid="test.classpath"/>
 			</classpath>
-
-			<batchtest fork="yes">
-				<fileset dir="${test.src.base}" includes="${test.src.dir}/**/*.java"/>
-			</batchtest>
+		    <test fork="yes" name="com.vaadin.addon.sqlcontainer.AllTests" />
 		</junit>
     </target>
 
@@ -205,7 +170,7 @@
         <jar jarfile="${jar.path}" compress="true">
             <manifest>
                 <attribute name="Vaadin-Package-Version" value="1" />
-                <attribute name="Vaadin-Widgetsets" value="${addon.widgetset}" />
+<!--                <attribute name="Vaadin-Widgetsets" value="${addon.widgetset}" />-->
                 <attribute name="Implementation-Title" value="${addon.title}" />
                 <attribute name="Implementation-Version" value="${version}" />
                 <attribute name="Implementation-Vendor" value="${addon.vendor}" />
@@ -233,7 +198,7 @@
 	</target>		
 
     <!-- Create the ZIP distribution package. -->
-    <target name="package-zip" depends="package-jar, manual" unless="run.no-package-jar">
+    <target name="package-zip" depends="package-jar, manual" unless="run.no-package-zip">
         <property name="zip.name" value="${result-path}/${addon.name}-${version}.zip"/>
 
     	<!-- Make the zip manifest -->

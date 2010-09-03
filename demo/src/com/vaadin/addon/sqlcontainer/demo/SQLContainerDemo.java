@@ -100,6 +100,7 @@ public class SQLContainerDemo extends Application implements Serializable {
                         }
                     }
                 }));
+        editorLayout.setVisible(false);
         bottomLeftCorner.setWidth("100%");
         left.addComponent(bottomLeftCorner);
     }
@@ -167,7 +168,7 @@ public class SQLContainerDemo extends Application implements Serializable {
         try {
             connectionPool = new SimpleJDBCConnectionPool(
                     "org.hsqldb.jdbc.JDBCDriver",
-                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 5);
+                    "jdbc:hsqldb:file:sqlcontainer", "SA", "", 2, 5);
         } catch (SQLException e) {
             showError("Couldn't create the connection pool!");
             e.printStackTrace();
@@ -184,18 +185,18 @@ public class SQLContainerDemo extends Application implements Serializable {
             Connection conn = connectionPool.reserveConnection();
             Statement statement = conn.createStatement();
             try {
-                statement.execute("DROP TABLE PEOPLE");
+                statement.executeQuery("SELECT * FROM PEOPLE");
             } catch (SQLException e) {
-                // This is ok.
+                // Failed, which means that we should init the database
+                statement
+                        .execute("CREATE TABLE PEOPLE "
+                                + "(ID INTEGER GENERATED ALWAYS AS IDENTITY, "
+                                + "FIRSTNAME VARCHAR(32), LASTNAME VARCHAR(32), "
+                                + "COMPANY VARCHAR(32), MOBILE VARCHAR(20), WORKPHONE VARCHAR(20), "
+                                + "HOMEPHONE VARCHAR(20), WORKEMAIL VARCHAR(128), HOMEEMAIL VARCHAR(128), "
+                                + "STREET VARCHAR(32), ZIP VARCHAR(16), CITY VARCHAR(32), STATE VARCHAR(2), "
+                                + "COUNTRY VARCHAR(32), PRIMARY KEY(ID))");
             }
-            statement
-                    .execute("CREATE TABLE PEOPLE "
-                            + "(ID INTEGER GENERATED ALWAYS AS IDENTITY, "
-                            + "FIRSTNAME VARCHAR(32), LASTNAME VARCHAR(32), "
-                            + "COMPANY VARCHAR(32), MOBILE VARCHAR(20), WORKPHONE VARCHAR(20), "
-                            + "HOMEPHONE VARCHAR(20), WORKEMAIL VARCHAR(128), HOMEEMAIL VARCHAR(128), "
-                            + "STREET VARCHAR(32), ZIP VARCHAR(16), CITY VARCHAR(32), STATE VARCHAR(2), "
-                            + "COUNTRY VARCHAR(32), PRIMARY KEY(ID))");
             statement.close();
             conn.commit();
             connectionPool.releaseConnection(conn);
@@ -218,25 +219,27 @@ public class SQLContainerDemo extends Application implements Serializable {
     }
 
     private void fillContainer(SQLContainer container) {
-        String[] fnames = { "Peter", "Alice", "Joshua", "Mike", "Olivia",
-                "Nina", "Alex", "Rita", "Dan", "Umberto", "Henrik", "Rene",
-                "Lisa", "Marge" };
-        String[] lnames = { "Smith", "Gordon", "Simpson", "Brown", "Clavel",
-                "Simons", "Verne", "Scott", "Allison", "Gates", "Rowling",
-                "Barks", "Ross", "Schneider", "Tate" };
+        if (container.size() == 0) {
+            String[] fnames = { "Peter", "Alice", "Joshua", "Mike", "Olivia",
+                    "Nina", "Alex", "Rita", "Dan", "Umberto", "Henrik", "Rene",
+                    "Lisa", "Marge" };
+            String[] lnames = { "Smith", "Gordon", "Simpson", "Brown",
+                    "Clavel", "Simons", "Verne", "Scott", "Allison", "Gates",
+                    "Rowling", "Barks", "Ross", "Schneider", "Tate" };
 
-        for (int i = 0; i < 1000; i++) {
-            Object id = container.addItem();
-            container.getContainerProperty(id, "FIRSTNAME").setValue(
-                    fnames[(int) (fnames.length * Math.random())]);
-            container.getContainerProperty(id, "LASTNAME").setValue(
-                    lnames[(int) (lnames.length * Math.random())]);
-        }
-        try {
-            container.commit();
-        } catch (SQLException e) {
-            showError("Could not store items!");
-            e.printStackTrace();
+            for (int i = 0; i < 1000; i++) {
+                Object id = container.addItem();
+                container.getContainerProperty(id, "FIRSTNAME").setValue(
+                        fnames[(int) (fnames.length * Math.random())]);
+                container.getContainerProperty(id, "LASTNAME").setValue(
+                        lnames[(int) (lnames.length * Math.random())]);
+            }
+            try {
+                container.commit();
+            } catch (SQLException e) {
+                showError("Could not store items!");
+                e.printStackTrace();
+            }
         }
     }
 
