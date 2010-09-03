@@ -10,11 +10,13 @@ package com.vaadin.addon.sqlcontainer.query;
 public class Filter {
 
     public enum ComparisonType {
-        EQUALS, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, STARTS_WITH, ENDS_WITH, CONTAINS, LIKE;
+        EQUALS, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, STARTS_WITH, ENDS_WITH, CONTAINS, BETWEEN;
     }
 
     private String column;
-    private String value;
+    private Object value;
+    private Object secondValue;
+
     private ComparisonType comparisonType;
     private boolean isCaseSensitive = true;
     private boolean needsQuotes = false;
@@ -22,13 +24,20 @@ public class Filter {
     /**
      * Prevent instantiation without required parameters.
      */
+    @SuppressWarnings("unused")
     private Filter() {
     }
 
-    public Filter(String column, ComparisonType comparisonType, String value) {
+    public Filter(String column, ComparisonType comparisonType, Object value) {
         setColumn(column);
         setComparisonType(comparisonType);
         setValue(value);
+    }
+
+    public Filter(String column, ComparisonType comparisonType, Object value,
+            Object secondValue) {
+        this(column, comparisonType, value);
+        setSecondValue(secondValue);
     }
 
     public void setColumn(String column) {
@@ -39,12 +48,20 @@ public class Filter {
         return column;
     }
 
-    public void setValue(String value) {
+    public void setValue(Object value) {
         this.value = value;
     }
 
-    public String getValue() {
+    public Object getValue() {
         return value;
+    }
+
+    public Object getSecondValue() {
+        return secondValue;
+    }
+
+    public void setSecondValue(Object secondValue) {
+        this.secondValue = secondValue;
     }
 
     public void setComparisonType(ComparisonType comparisonType) {
@@ -69,5 +86,46 @@ public class Filter {
 
     public void setNeedsQuotes(boolean needsQuotes) {
         this.needsQuotes = needsQuotes;
+    }
+
+    public String toWhereString() {
+        StringBuffer where = new StringBuffer(getColumn());
+        switch (getComparisonType()) {
+        case EQUALS:
+            where.append(" = ").append(format(getValue()));
+            break;
+        case GREATER:
+            where.append(" > ").append(format(getValue()));
+            break;
+        case LESS:
+            where.append(" < ").append(format(getValue()));
+            break;
+        case GREATER_OR_EQUAL:
+            where.append(" >= ").append(format(getValue()));
+            break;
+        case LESS_OR_EQUAL:
+            where.append(" <= ").append(format(getValue()));
+            break;
+        case STARTS_WITH:
+            where.append(" LIKE ").append("'").append(getValue()).append("%'");
+            break;
+        case ENDS_WITH:
+            where.append(" LIKE ").append("'%").append(getValue()).append("'");
+            break;
+        case CONTAINS:
+            where.append(" LIKE ").append("'%").append(getValue()).append("%'");
+            break;
+        case BETWEEN:
+            where.append(" BETWEEN ").append(format(getValue()))
+                    .append(" AND ").append(format(getSecondValue()));
+        }
+        return where.toString();
+    }
+
+    private String format(Object value) {
+        if (value instanceof String) {
+            return "'" + value + "'";
+        }
+        return String.valueOf(value);
     }
 }

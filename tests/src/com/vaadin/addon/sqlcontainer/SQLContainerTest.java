@@ -92,8 +92,8 @@ public class SQLContainerTest {
     @Test
     public void constructor_withFreeformQuery_shouldSucceed()
             throws SQLException {
-        SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+        new SQLContainer(new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool));
     }
 
     // @Test
@@ -275,7 +275,7 @@ public class SQLContainerTest {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Item item = container.getItem(new RowId(new Object[] { 1337 }));
+        container.getItem(new RowId(new Object[] { 1337 }));
         Assert.assertEquals(1337,
                 container.indexOfId(new RowId(new Object[] { 1337 })));
     }
@@ -1467,6 +1467,7 @@ public class SQLContainerTest {
         container.addOrderBy(new OrderBy("asdf", true));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void sort_freeform_sortsByName() throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
@@ -1576,12 +1577,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT * FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'").append(filter.getValue())
-                                        .append("'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         query.append(" LIMIT ").append(limit)
@@ -1595,12 +1597,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'").append(filter.getValue())
-                                        .append("'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         return query.toString();
@@ -1616,7 +1619,8 @@ public class SQLContainerTest {
                 container.getContainerProperty(container.lastItemId(), "NAME")
                         .getValue());
 
-        container.addFilter(new Filter("NAME", ComparisonType.LIKE, "%lle"));
+        container
+                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
         // Ville, Kalle, Pelle
         Assert.assertEquals(3, container.size());
         Assert.assertEquals("Pelle",
@@ -1626,6 +1630,7 @@ public class SQLContainerTest {
         EasyMock.verify(delegate);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void addContainerFilter_filtersResults() throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
@@ -1659,12 +1664,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT * FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'%").append(filter.getValue())
-                                        .append("%'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         query.append(" LIMIT ").append(limit)
@@ -1678,12 +1684,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'%").append(filter.getValue())
-                                        .append("%'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         return query.toString();
@@ -1742,12 +1749,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT * FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'%").append(filter.getValue())
-                                        .append("%'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         query.append(" LIMIT ").append(limit)
@@ -1761,12 +1769,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'%").append(filter.getValue())
-                                        .append("%'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         return query.toString();
@@ -1832,12 +1841,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT * FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'%").append(filter.getValue())
-                                        .append("%'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         query.append(" LIMIT ").append(limit)
@@ -1851,12 +1861,13 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
                             query.append(" WHERE ");
                             for (Filter filter : filters) {
-                                query.append(filter.getColumn());
-                                query.append(" LIKE ");
-                                query.append("'%").append(filter.getValue())
-                                        .append("%'");
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
                             }
                         }
                         return query.toString();

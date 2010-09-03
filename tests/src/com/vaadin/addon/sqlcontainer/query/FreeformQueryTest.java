@@ -268,7 +268,7 @@ public class FreeformQueryTest {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
         query.setFilters(Arrays.asList(new Filter("name",
-                Filter.ComparisonType.LIKE, "%lle")));
+                Filter.ComparisonType.ENDS_WITH, "lle")));
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -481,7 +481,7 @@ public class FreeformQueryTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         List<Filter> filters = Arrays.asList(new Filter("name",
-                ComparisonType.LIKE, "%lle"));
+                ComparisonType.ENDS_WITH, "lle"));
         delegate.setFilters(filters);
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
@@ -498,7 +498,7 @@ public class FreeformQueryTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         List<Filter> filters = Arrays.asList(new Filter("name",
-                ComparisonType.LIKE, "%lle"));
+                ComparisonType.ENDS_WITH, "lle"));
         delegate.setFilters(filters);
         EasyMock.expectLastCall().andThrow(new UnsupportedOperationException());
         EasyMock.replay(delegate);

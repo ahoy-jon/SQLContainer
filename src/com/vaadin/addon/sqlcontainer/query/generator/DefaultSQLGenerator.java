@@ -156,16 +156,16 @@ public class DefaultSQLGenerator implements SQLGenerator {
         }
         String name, value;
         if (f.getComparisonType() == ComparisonType.STARTS_WITH) {
-            value = escapeWildCards(f.getValue()) + "%";
+            value = escapeWildCards(String.valueOf(f.getValue())) + "%";
             f.setNeedsQuotes(true);
         } else if (f.getComparisonType() == ComparisonType.CONTAINS) {
-            value = "%" + escapeWildCards(f.getValue()) + "%";
+            value = "%" + escapeWildCards(String.valueOf(f.getValue())) + "%";
             f.setNeedsQuotes(true);
         } else if (f.getComparisonType() == ComparisonType.ENDS_WITH) {
-            value = "%" + escapeWildCards(f.getValue());
+            value = "%" + escapeWildCards(String.valueOf(f.getValue()));
             f.setNeedsQuotes(true);
         } else {
-            value = f.getValue();
+            value = String.valueOf(f.getValue());
         }
         if (!f.isCaseSensitive()) {
             name = "LOWER(" + f.getColumn() + ")";
@@ -291,7 +291,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         query.append("DELETE FROM ");
         query.append(tableName);
         query.append(" WHERE");
-        Collection propIds = item.getItemPropertyIds();
+        Collection<?> propIds = item.getItemPropertyIds();
         int count = 1;
         for (Object p : propIds) {
             if (item.getItemProperty(p).getValue() != null) {
