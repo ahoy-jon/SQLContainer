@@ -168,7 +168,7 @@ public class SQLContainerDemo extends Application implements Serializable {
         try {
             connectionPool = new SimpleJDBCConnectionPool(
                     "org.hsqldb.jdbc.JDBCDriver",
-                    "jdbc:hsqldb:file:sqlcontainer", "SA", "", 2, 5);
+                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 5);
         } catch (SQLException e) {
             showError("Couldn't create the connection pool!");
             e.printStackTrace();
