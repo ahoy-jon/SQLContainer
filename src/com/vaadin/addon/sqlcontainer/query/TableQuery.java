@@ -6,18 +6,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
+import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
-/**
- * 
- *
- */
 public class TableQuery implements QueryDelegate {
 
     private String tableName;
@@ -34,6 +33,8 @@ public class TableQuery implements QueryDelegate {
     private Connection activeConnection;
     private boolean transactionOpen;
 
+    private boolean debug = false;
+
     /**
      * Prevent no-parameters instantiation of TableQuery
      */
@@ -43,9 +44,10 @@ public class TableQuery implements QueryDelegate {
 
     public TableQuery(String tableName, JDBCConnectionPool connectionPool,
             SQLGenerator sqlGenerator) {
-        if (tableName == null || connectionPool == null || sqlGenerator == null) {
+        if (tableName == null || tableName.trim().length() < 1
+                || connectionPool == null || sqlGenerator == null) {
             throw new IllegalArgumentException(
-                    "All parameters must be non-null.");
+                    "All parameters must be non-null and a table name must be given.");
         }
         this.tableName = tableName;
         this.sqlGenerator = sqlGenerator;
@@ -90,68 +92,79 @@ public class TableQuery implements QueryDelegate {
 
     public int storeRow(RowItem row) throws UnsupportedOperationException,
             SQLException {
-        if (versionColumn == null || versionColumn.trim().equals("")) {
-            throw new IllegalStateException(
-                    "Version column must be set prior to writing.");
-        }
         if (row == null) {
             throw new IllegalArgumentException("Row argument must be non-null.");
         }
         String query = null;
-        // TODO: Generate UPDATE or INSERT query
+        if (row.getId() instanceof TemporaryRowId) {
+            query = sqlGenerator.generateInsertQuery(tableName, row);
+        } else {
+            try {
+                ((ColumnProperty) row.getItemProperty(versionColumn))
+                        .setVersionColumn(true);
+            } catch (Exception e) {
+                throw new IllegalStateException(
+                        "Version column not set or does not exist.", e);
+            }
+            query = sqlGenerator.generateUpdateQuery(tableName, row);
+        }
         return executeUpdate(query);
     }
 
     public void setFilters(List<Filter> filters)
             throws UnsupportedOperationException {
-        this.filters = filters;
+        if (filters == null) {
+            this.filters = null;
+            return;
+        }
+        this.filters = Collections.unmodifiableList(filters);
     }
 
     public void setOrderBy(List<OrderBy> orderBys)
             throws UnsupportedOperationException {
-        this.orderBys = orderBys;
+        if (orderBys == null) {
+            this.orderBys = null;
+            return;
+        }
+        this.orderBys = Collections.unmodifiableList(orderBys);
     }
 
     public void beginTransaction() throws UnsupportedOperationException,
             SQLException {
-        if (activeConnection != null) {
-            connectionPool.releaseConnection(activeConnection);
+        if (transactionOpen && activeConnection != null) {
+            throw new IllegalStateException();
         }
-        System.err.println("DB -> begin transaction");
+        debug("DB -> begin transaction");
         activeConnection = connectionPool.reserveConnection();
         activeConnection.setAutoCommit(false);
         transactionOpen = true;
     }
 
     public void commit() throws UnsupportedOperationException, SQLException {
-        if (transactionOpen && activeConnection != null
-                && !activeConnection.getAutoCommit()) {
-            System.err.println("DB -> commit");
+        if (transactionOpen && activeConnection != null) {
+            debug("DB -> commit");
             activeConnection.commit();
             connectionPool.releaseConnection(activeConnection);
+        } else {
+            throw new SQLException("No active transaction");
         }
         transactionOpen = false;
     }
 
     public void rollback() throws UnsupportedOperationException, SQLException {
-        if (transactionOpen && activeConnection != null
-                && !activeConnection.getAutoCommit()) {
-            System.err.println("DB -> rollback");
+        if (transactionOpen && activeConnection != null) {
+            debug("DB -> rollback");
             activeConnection.rollback();
             connectionPool.releaseConnection(activeConnection);
+        } else {
+            throw new SQLException("No active transaction");
         }
         transactionOpen = false;
     }
 
     public List<String> getPrimaryKeyColumns() {
-        return primaryKeyColumns;
+        return Collections.unmodifiableList(primaryKeyColumns);
     }
-
-    /*
-     * public void setPrimaryKeyColumns(List<String> columns) throws
-     * UnsupportedOperationException { throw new
-     * UnsupportedOperationException(); }
-     */
 
     public String getVersionColumn() {
         return versionColumn;
@@ -172,8 +185,7 @@ public class TableQuery implements QueryDelegate {
     private ResultSet executeQuery(String query) throws SQLException {
         Connection c = null;
         try {
-            if (transactionOpen && activeConnection != null
-                    && !activeConnection.getAutoCommit()) {
+            if (transactionOpen && activeConnection != null) {
                 c = activeConnection;
             } else {
                 c = connectionPool.reserveConnection();
@@ -181,7 +193,7 @@ public class TableQuery implements QueryDelegate {
             Statement statement = c.createStatement(
                     ResultSet.TYPE_SCROLL_INSENSITIVE,
                     ResultSet.CONCUR_READ_ONLY);
-            System.err.println("DB -> " + query);
+            debug("DB -> " + query);
             return statement.executeQuery(query);
         } finally {
             if (!transactionOpen) {
@@ -193,8 +205,7 @@ public class TableQuery implements QueryDelegate {
     private int executeUpdate(String query) throws SQLException {
         Connection c = null;
         try {
-            if (transactionOpen && activeConnection != null
-                    && !activeConnection.getAutoCommit()) {
+            if (transactionOpen && activeConnection != null) {
                 c = activeConnection;
             } else {
                 c = connectionPool.reserveConnection();
@@ -202,7 +213,7 @@ public class TableQuery implements QueryDelegate {
             Statement statement = c.createStatement(
                     ResultSet.TYPE_SCROLL_INSENSITIVE,
                     ResultSet.CONCUR_READ_ONLY);
-            System.err.println("DB -> " + query);
+            debug("DB -> " + query);
             return statement.executeUpdate(query);
         } finally {
             if (!transactionOpen) {
@@ -223,28 +234,43 @@ public class TableQuery implements QueryDelegate {
             getSqlGenerator().setSearchStringEscape(
                     dbmd.getSearchStringEscape());
             if (dbmd != null) {
+                ResultSet tables = dbmd.getTables(null, null, tableName, null);
+                if (!tables.next()) {
+                    throw new IllegalArgumentException("Table with the name \""
+                            + tableName
+                            + "\" was not found. Check your database contents.");
+                }
                 ResultSet rs = dbmd.getPrimaryKeys(null, null, tableName);
-                if (rs != null) {
-                    List<String> names = new ArrayList<String>();
-                    while (rs.next()) {
-                        names.add(rs.getString("COLUMN_NAME"));
-                    }
-                    if (!names.isEmpty()) {
-                        primaryKeyColumns = names;
-                    }
+                List<String> names = new ArrayList<String>();
+                while (rs.next()) {
+                    names.add(rs.getString("COLUMN_NAME"));
+                }
+                if (!names.isEmpty()) {
+                    primaryKeyColumns = names;
+                }
+                if (primaryKeyColumns == null || primaryKeyColumns.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Primary key constraints have not been defined for the table \""
+                                    + tableName
+                                    + "\". Use FreeFormQuery to access this table.");
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {
             connectionPool.releaseConnection(c);
         }
     }
 
+    private void debug(String message) {
+        if (debug) {
+            System.out.println(message);
+        }
+    }
+
     public boolean removeRow(RowItem row) throws UnsupportedOperationException,
             SQLException {
-        System.err.println("Removing row with id: "
-                + row.getId().getId()[0].toString());
+        debug("Removing row with id: " + row.getId().getId()[0].toString());
         if (executeUpdate(sqlGenerator.generateDeleteQuery(getTableName(), row)) == 1) {
             return true;
         }
