@@ -27,7 +27,9 @@ final public class ColumnProperty implements Property {
     private Object changedValue;
     private Class<?> type;
 
-    private boolean modified = false;
+    private boolean modified;
+
+    private boolean versionColumn;
 
     /**
      * Prevent instantiation without required parameters.
@@ -100,6 +102,10 @@ final public class ColumnProperty implements Property {
         return readOnly;
     }
 
+    public boolean isReadOnlyChangeAllowed() {
+        return allowReadOnlyChange;
+    }
+
     public void setReadOnly(boolean newStatus) {
         if (allowReadOnlyChange) {
             readOnly = newStatus;
@@ -132,5 +138,13 @@ final public class ColumnProperty implements Property {
 
     public boolean isModified() {
         return modified;
+    }
+
+    public boolean isVersionColumn() {
+        return versionColumn;
+    }
+
+    public void setVersionColumn(boolean versionColumn) {
+        this.versionColumn = versionColumn;
     }
 }
