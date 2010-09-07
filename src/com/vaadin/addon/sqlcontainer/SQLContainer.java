@@ -34,7 +34,7 @@ public class SQLContainer implements Container, Container.Filterable,
     public static final int DEFAULT_PAGE_LENGTH = 100;
     private int pageLength = DEFAULT_PAGE_LENGTH;
 
-    /* Number of items to cache = CACHE_RATIO * pageLength */
+    /* Number of items to cache = CACHE_RATIO x pageLength */
     public static final int CACHE_RATIO = 2;
 
     /* Item and index caches */
@@ -109,6 +109,14 @@ public class SQLContainer implements Container, Container.Filterable,
         for (String propertyId : propertyIds) {
             boolean readOnly = false;
             boolean allowReadOnlyChange = true;
+            // TODO: Primary key columns are set as read-only and changes are
+            // not allowed, but what about auto-increment columns and other
+            // read-only columns? Need to find a way to determine which columns
+            // are such.
+            if (delegate.getPrimaryKeyColumns().contains(propertyId)) {
+                readOnly = true;
+                allowReadOnlyChange = false;
+            }
             boolean nullable = true;
             itemProperties.add(new ColumnProperty(propertyId, readOnly,
                     allowReadOnlyChange, nullable, null, getType(propertyId)));
@@ -135,7 +143,7 @@ public class SQLContainer implements Container, Container.Filterable,
 
         try {
             return delegate.containsRowWithKey(((RowId) itemId).getId());
-        } catch (SQLException e) {
+        } catch (Exception e) {
             // TODO: log this somehow
             e.printStackTrace();
         }
@@ -822,8 +830,8 @@ public class SQLContainer implements Container, Container.Filterable,
                         Object value = rs.getObject(columnNum);
                         if (value != null) {
                             cp = new ColumnProperty(propId, readOnly,
-                                    allowReadOnlyChange, nullable, value,
-                                    value.getClass());
+                                    allowReadOnlyChange, nullable, value, value
+                                            .getClass());
                         } else {
                             cp = new ColumnProperty(propId, readOnly,
                                     allowReadOnlyChange, nullable, null,
