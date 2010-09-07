@@ -1,12 +1,16 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
+import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 
 /**
  * Generates generic SQL that is supported by HSQLDB, MySQL and PostgreSQL.
@@ -29,7 +33,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             query.append("SELECT " + toSelect + " FROM ");
         }
-        query.append(tableName);
+        query.append(escapeQuotes(tableName));
 
         if (filters != null) {
             for (Filter f : filters) {
@@ -60,35 +64,53 @@ public class DefaultSQLGenerator implements SQLGenerator {
         query.append(tableName);
         query.append(" SET");
 
-        // TODO: Extract properties from item and generate rest of the query
-        // TODO: Input sanitation ??
+        /* Generate column<->value map */
+        Map<String, String> columnToValueMap = new HashMap<String, String>();
+        Map<String, String> rowIdentifiers = new HashMap<String, String>();
+        for (Object id : item.getItemPropertyIds()) {
+            ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
+            String value = cp.getValue() == null ? null : cp.getValue()
+                    .toString();
+            /*
+             * Only include properties whose read-only status can be altered,
+             * and which are not set as version columns. The rest of the columns
+             * are used as identifiers.
+             */
+            if (cp.isReadOnlyChangeAllowed() && !cp.isVersionColumn()) {
+                columnToValueMap.put(cp.getPropertyId(), value);
+            } else {
+                rowIdentifiers.put(cp.getPropertyId(), value);
+            }
+        }
 
-        // boolean first = true;
-        // for (String column : columnToValueMap.keySet()) {
-        // if (first) {
-        // query.append(" ");
-        // } else {
-        // query.append(", ");
-        // }
-        // query.append(column);
-        // query.append(" = '");
-        // query.append(columnToValueMap.get(column));
-        // query.append("'");
-        // first = false;
-        // }
-        //
-        // first = true;
-        // for (String column : rowIdentifiers.keySet()) {
-        // if (first) {
-        // query.append(" WHERE ");
-        // } else {
-        // query.append(" AND ");
-        // }
-        // query.append(column);
-        // query.append(" = ");
-        // query.append(rowIdentifiers.get(column));
-        // first = false;
-        // }
+        /* Generate columns and values to update */
+        boolean first = true;
+        for (String column : columnToValueMap.keySet()) {
+            if (first) {
+                query.append(" ");
+            } else {
+                query.append(", ");
+            }
+            query.append(column);
+            query.append(" = '");
+            query.append(escapeQuotes(columnToValueMap.get(column)));
+            query.append("'");
+            first = false;
+        }
+
+        /* Generate identifiers for the row to be updated */
+        first = true;
+        for (String column : rowIdentifiers.keySet()) {
+            if (first) {
+                query.append(" WHERE ");
+            } else {
+                query.append(" AND ");
+            }
+            query.append(column);
+            query.append(" = ");
+            query.append(escapeQuotes(rowIdentifiers.get(column)));
+            first = false;
+        }
 
         return query.toString();
     }
@@ -100,38 +122,50 @@ public class DefaultSQLGenerator implements SQLGenerator {
         if (item == null) {
             throw new IllegalArgumentException("New item must be given.");
         }
+        if (!(item.getId() instanceof TemporaryRowId)) {
+            throw new IllegalArgumentException(
+                    "Cannot generate an insert query for item already in database.");
+        }
         StringBuffer query = new StringBuffer();
         query.append("INSERT INTO ");
         query.append(tableName);
         query.append(" (");
 
-        // TODO: Extract properties from item and generate rest of the query
-        // TODO: Input sanitation ??
+        /* Generate column<->value map */
+        Map<String, String> columnToValueMap = new HashMap<String, String>();
+        for (Object id : item.getItemPropertyIds()) {
+            ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
+            String value = cp.getValue() == null ? null : cp.getValue()
+                    .toString();
+            /* Only include properties whose read-only status can be altered */
+            if (cp.isReadOnlyChangeAllowed()) {
+                columnToValueMap.put(cp.getPropertyId(), value);
+            }
+        }
 
-        // item.getItemPropertyIds()
+        /* Generate column names for insert query */
+        boolean first = true;
+        for (String column : columnToValueMap.keySet()) {
+            if (!first) {
+                query.append(", ");
+            }
+            query.append(column);
+            first = false;
+        }
 
-        // boolean first = true;
-        // for (String column : columnToValueMap.keySet()) {
-        // if (!first) {
-        // query.append(", ");
-        // }
-        // query.append(column);
-        // first = false;
-        // }
-        //
-        // query.append(") VALUES (");
-        //
-        // first = true;
-        // for (String column : columnToValueMap.keySet()) {
-        // if (!first) {
-        // query.append(", ");
-        // }
-        // query.append("'");
-        // query.append(columnToValueMap.get(column));
-        // query.append("'");
-        // first = false;
-        // }
-        // query.append(")");
+        /* Generate values for insert query */
+        query.append(") VALUES (");
+        first = true;
+        for (String column : columnToValueMap.keySet()) {
+            if (!first) {
+                query.append(", ");
+            }
+            query.append("'");
+            query.append(escapeQuotes(columnToValueMap.get(column)));
+            query.append("'");
+            first = false;
+        }
+        query.append(")");
 
         return query.toString();
     }
@@ -154,6 +188,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             sb.append(" AND ");
         }
+
         String name, value;
         if (f.getComparisonType() == ComparisonType.STARTS_WITH) {
             value = escapeWildCards(String.valueOf(f.getValue())) + "%";
@@ -167,6 +202,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             value = String.valueOf(f.getValue());
         }
+        value = escapeQuotes(value);
         if (!f.isCaseSensitive()) {
             name = "LOWER(" + f.getColumn() + ")";
             value = "LOWER('" + value + "')";
@@ -275,6 +311,33 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return null;
     }
 
+    /**
+     * Replaces single quotes (') with two single quotes ('').
+     * 
+     * Note! If escaping a single quote is attempted by the user with e.g. (\'),
+     * both the single quote and the escape character(s) preceding it will be
+     * removed completely.
+     * 
+     * Also note! The escaping done here may or may not be enough to prevent any
+     * and all SQL injections so it is recommended to check user input before
+     * giving it to the SQLContainer/TableQuery.
+     * 
+     * @param constant
+     * @return \\\'\'
+     */
+    protected String escapeQuotes(String constant) {
+        String fixedConstant;
+        if (constant != null) {
+            fixedConstant = constant;
+            while (fixedConstant.contains("\\\'")) {
+                fixedConstant = fixedConstant.replace("\\\'", "");
+            }
+            fixedConstant = fixedConstant.replace("\'", "\'\'");
+            return fixedConstant;
+        }
+        return null;
+    }
+
     public void setSearchStringEscape(String searchStringEscape) {
         this.searchStringEscape = searchStringEscape;
     }
@@ -298,7 +361,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(" ");
                 query.append(p.toString());
                 query.append(" = '");
-                query.append(item.getItemProperty(p).getValue().toString());
+                query.append(escapeQuotes(item.getItemProperty(p).getValue()
+                        .toString()));
                 query.append("'");
             }
             if (count < propIds.size()) {
