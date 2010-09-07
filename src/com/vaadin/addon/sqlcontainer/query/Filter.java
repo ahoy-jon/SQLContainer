@@ -32,6 +32,9 @@ public class Filter {
         setColumn(column);
         setComparisonType(comparisonType);
         setValue(value);
+        if (value instanceof String || value instanceof CharSequence) {
+            setNeedsQuotes(true);
+        }
     }
 
     public Filter(String column, ComparisonType comparisonType, Object value,
@@ -112,22 +115,19 @@ public class Filter {
             where.append(" <= ").append(format(getValue()));
             break;
         case STARTS_WITH:
-            where.append(" LIKE ")
-                    .append("'")
-                    .append(upperCaseIfCaseInsensitive(String
-                            .valueOf(getValue()))).append("%'");
+            where.append(" LIKE ").append("'").append(
+                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
+                    .append("%'");
             break;
         case ENDS_WITH:
-            where.append(" LIKE ")
-                    .append("'%")
-                    .append(upperCaseIfCaseInsensitive(String
-                            .valueOf(getValue()))).append("'");
+            where.append(" LIKE ").append("'%").append(
+                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
+                    .append("'");
             break;
         case CONTAINS:
-            where.append(" LIKE ")
-                    .append("'%")
-                    .append(upperCaseIfCaseInsensitive(String
-                            .valueOf(getValue()))).append("%'");
+            where.append(" LIKE ").append("'%").append(
+                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
+                    .append("%'");
             break;
         case BETWEEN:
             where.append(" BETWEEN ").append(format(getValue()))
