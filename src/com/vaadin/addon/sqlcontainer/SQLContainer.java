@@ -101,6 +101,12 @@ public class SQLContainer implements Container, Container.Filterable,
     /**************************************/
     /** Methods from interface Container **/
     /**************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#addItem()
+     */
     public Object addItem() throws UnsupportedOperationException {
         Object emptyKey[] = new Object[delegate.getPrimaryKeyColumns().size()];
         TemporaryRowId itemId = new TemporaryRowId(emptyKey);
@@ -117,6 +123,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 readOnly = true;
                 allowReadOnlyChange = false;
             }
+            // TODO: There is now clear knowledge of nullability at this point
             boolean nullable = true;
             itemProperties.add(new ColumnProperty(propertyId, readOnly,
                     allowReadOnlyChange, nullable, null, getType(propertyId)));
@@ -126,6 +133,11 @@ public class SQLContainer implements Container, Container.Filterable,
         return itemId;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#containsId(java.lang.Object)
+     */
     public boolean containsId(Object itemId) {
         if (cachedItems.containsKey(itemId)) {
             return true;
@@ -144,12 +156,17 @@ public class SQLContainer implements Container, Container.Filterable,
         try {
             return delegate.containsRowWithKey(((RowId) itemId).getId());
         } catch (Exception e) {
-            // TODO: log this somehow
-            e.printStackTrace();
+            /* Query failed, just return false. */
         }
         return false;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#getContainerProperty(java.lang.Object,
+     * java.lang.Object)
+     */
     public Property getContainerProperty(Object itemId, Object propertyId) {
         Item item = getItem(itemId);
         if (item == null) {
@@ -158,10 +175,20 @@ public class SQLContainer implements Container, Container.Filterable,
         return item.getItemProperty(propertyId);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#getContainerPropertyIds()
+     */
     public Collection<?> getContainerPropertyIds() {
         return Collections.unmodifiableCollection(propertyIds);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#getItem(java.lang.Object)
+     */
     public Item getItem(Object itemId) {
         if (!cachedItems.containsKey(itemId)) {
             int index = indexOfId(itemId);
@@ -214,7 +241,7 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
-                // TODO: log
+                /* Rollback failed, original exception will be thrown. */
             }
             throw new RuntimeException("Failed to fetch item indexes.", e);
         }
@@ -224,6 +251,11 @@ public class SQLContainer implements Container, Container.Filterable,
         return Collections.unmodifiableCollection(ids);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#getType(java.lang.Object)
+     */
     public Class<?> getType(Object propertyId) {
         if (!propertyIds.contains(propertyId)) {
             return null;
@@ -231,37 +263,21 @@ public class SQLContainer implements Container, Container.Filterable,
         return propertyTypes.get(propertyId);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#size()
+     */
     public int size() {
         updateCount();
         return size + sizeOfAddedItems() - removedItems.size();
     }
 
-    private int sizeOfAddedItems() {
-        return getFilteredAddedItems().size();
-    }
-
-    private List<RowItem> getFilteredAddedItems() {
-        ArrayList<RowItem> filtered = new ArrayList<RowItem>(addedItems);
-        if (filters != null && !filters.isEmpty()) {
-            for (RowItem item : addedItems) {
-                if (!itemPassesFilters(item)) {
-                    filtered.remove(item);
-                }
-            }
-        }
-        return filtered;
-    }
-
-    private boolean itemPassesFilters(RowItem item) {
-        for (Filter filter : filters) {
-            if (!filter.passes(item.getItemProperty(filter.getColumn())
-                    .getValue())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#removeItem(java.lang.Object)
+     */
     public boolean removeItem(Object itemId)
             throws UnsupportedOperationException {
         if (!containsId(itemId)) {
@@ -305,6 +321,11 @@ public class SQLContainer implements Container, Container.Filterable,
         }
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#removeAllItems()
+     */
     public boolean removeAllItems() throws UnsupportedOperationException {
         /*
          * If auto commit mode is enabled, all the rows will be instantly
@@ -349,6 +370,14 @@ public class SQLContainer implements Container, Container.Filterable,
     /*************************************************/
     /** Methods from interface Container.Filterable **/
     /*************************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.data.Container.Filterable#addContainerFilter(java.lang.Object,
+     * java.lang.String, boolean, boolean)
+     */
     public void addContainerFilter(Object propertyId, String filterString,
             boolean ignoreCase, boolean onlyMatchPrefix) {
         if (propertyId == null || !propertyIds.contains(propertyId)) {
@@ -366,11 +395,23 @@ public class SQLContainer implements Container, Container.Filterable,
         refresh();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Filterable#removeAllContainerFilters()
+     */
     public void removeAllContainerFilters() {
         filters.clear();
         refresh();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.data.Container.Filterable#removeContainerFilters(java.lang
+     * .Object)
+     */
     public void removeContainerFilters(Object propertyId) {
         List<Filter> toRemove = new ArrayList<Filter>();
         for (Filter f : filters) {
@@ -389,6 +430,12 @@ public class SQLContainer implements Container, Container.Filterable,
     /**********************************************/
     /** Methods from interface Container.Indexed **/
     /**********************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Indexed#indexOfId(java.lang.Object)
+     */
     public int indexOfId(Object itemId) {
         // First check if the id is in the added items
         for (int ix = 0; ix < addedItems.size(); ix++) {
@@ -430,6 +477,11 @@ public class SQLContainer implements Container, Container.Filterable,
         }
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Indexed#getIdByIndex(int)
+     */
     public Object getIdByIndex(int index) {
         if (index < 0 || index > size() - 1) {
             return null;
@@ -450,14 +502,30 @@ public class SQLContainer implements Container, Container.Filterable,
     /**********************************************/
     /** Methods from interface Container.Ordered **/
     /**********************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#nextItemId(java.lang.Object)
+     */
     public Object nextItemId(Object itemId) {
         return getIdByIndex(indexOfId(itemId) + 1);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#prevItemId(java.lang.Object)
+     */
     public Object prevItemId(Object itemId) {
         return getIdByIndex(indexOfId(itemId) - 1);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#firstItemId()
+     */
     public Object firstItemId() {
         updateCount();
         if (size == 0) {
@@ -480,6 +548,11 @@ public class SQLContainer implements Container, Container.Filterable,
         return itemIndexes.get(0);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#lastItemId()
+     */
     public Object lastItemId() {
         if (addedItems.isEmpty()) {
             int lastIx = size() - 1;
@@ -500,10 +573,20 @@ public class SQLContainer implements Container, Container.Filterable,
         }
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#isFirstId(java.lang.Object)
+     */
     public boolean isFirstId(Object itemId) {
         return firstItemId().equals(itemId);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#isLastId(java.lang.Object)
+     */
     public boolean isLastId(Object itemId) {
         return lastItemId().equals(itemId);
     }
@@ -511,6 +594,13 @@ public class SQLContainer implements Container, Container.Filterable,
     /***********************************************/
     /** Methods from interface Container.Sortable **/
     /***********************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Sortable#sort(java.lang.Object[],
+     * boolean[])
+     */
     public void sort(Object[] propertyId, boolean[] ascending) {
         sorters.clear();
         if (propertyId == null || propertyId.length == 0) {
@@ -533,6 +623,11 @@ public class SQLContainer implements Container, Container.Filterable,
         refresh();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Sortable#getSortableContainerPropertyIds()
+     */
     public Collection<?> getSortableContainerPropertyIds() {
         return getContainerPropertyIds();
     }
@@ -769,14 +864,18 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.setFilters(filters);
             } catch (UnsupportedOperationException e) {
-                // The query delegate doesn't support sorting or filtering.
-                // TODO: log this?
+                /*
+                 * The query delegate doesn't support filtering. No need to do
+                 * anything.
+                 */
             }
             try {
                 delegate.setOrderBy(sorters);
             } catch (UnsupportedOperationException e) {
-                // The query delegate doesn't support sorting or filtering.
-                // TODO: log this?
+                /*
+                 * The query delegate doesn't support sorting. No need to do
+                 * anything.
+                 */
             }
             int newSize = delegate.getCount();
             if (newSize != size) {
@@ -823,8 +922,7 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
-                // throw the exception below
-                // TODO: log
+                /* Rollback failed, original exception will be thrown. */
             }
             throw new RuntimeException("Failed to fetch property id's.", e);
         }
@@ -848,8 +946,10 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.setOrderBy(sorters);
             } catch (UnsupportedOperationException e) {
-                // No worries, this is OK.
-                // TODO: log
+                /*
+                 * The query delegate doesn't support sorting. No need to do
+                 * anything.
+                 */
             }
             rs = delegate.getResults(currentOffset, pageLength * CACHE_RATIO);
             rsmd = rs.getMetaData();
@@ -886,8 +986,8 @@ public class SQLContainer implements Container, Container.Filterable,
                         Object value = rs.getObject(columnNum);
                         if (value != null) {
                             cp = new ColumnProperty(propId, readOnly,
-                                    allowReadOnlyChange, nullable, value,
-                                    value.getClass());
+                                    allowReadOnlyChange, nullable, value, value
+                                            .getClass());
                         } else {
                             cp = new ColumnProperty(propId, readOnly,
                                     allowReadOnlyChange, nullable, null,
@@ -907,44 +1007,107 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
-                // throw the exception below...
-                // TODO log
+                /* Rollback failed, original exception will be thrown. */
             }
             throw new RuntimeException("Failed to fetch page.", e);
         }
     }
 
+    private int sizeOfAddedItems() {
+        return getFilteredAddedItems().size();
+    }
+
+    private List<RowItem> getFilteredAddedItems() {
+        ArrayList<RowItem> filtered = new ArrayList<RowItem>(addedItems);
+        if (filters != null && !filters.isEmpty()) {
+            for (RowItem item : addedItems) {
+                if (!itemPassesFilters(item)) {
+                    filtered.remove(item);
+                }
+            }
+        }
+        return filtered;
+    }
+
+    private boolean itemPassesFilters(RowItem item) {
+        for (Filter filter : filters) {
+            if (!filter.passes(item.getItemProperty(filter.getColumn())
+                    .getValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /************************************/
     /** UNSUPPORTED CONTAINER FEATURES **/
     /************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#addContainerProperty(java.lang.Object,
+     * java.lang.Class, java.lang.Object)
+     */
     public boolean addContainerProperty(Object propertyId, Class<?> type,
             Object defaultValue) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#removeContainerProperty(java.lang.Object)
+     */
     public boolean removeContainerProperty(Object propertyId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container#addItem(java.lang.Object)
+     */
     public Item addItem(Object itemId) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#addItemAfter(java.lang.Object,
+     * java.lang.Object)
+     */
     public Item addItemAfter(Object previousItemId, Object newItemId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Indexed#addItemAt(int, java.lang.Object)
+     */
     public Item addItemAt(int index, Object newItemId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Indexed#addItemAt(int)
+     */
     public Object addItemAt(int index) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.data.Container.Ordered#addItemAfter(java.lang.Object)
+     */
     public Object addItemAfter(Object previousItemId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
@@ -953,6 +1116,14 @@ public class SQLContainer implements Container, Container.Filterable,
     /******************************************/
     /** ITEMSETCHANGENOTIFIER IMPLEMENTATION **/
     /******************************************/
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.data.Container.ItemSetChangeNotifier#addListener(com.vaadin
+     * .data.Container.ItemSetChangeListener)
+     */
     public void addListener(Container.ItemSetChangeListener listener) {
         if (itemSetChangeListeners == null) {
             itemSetChangeListeners = new LinkedList<Container.ItemSetChangeListener>();
@@ -960,6 +1131,13 @@ public class SQLContainer implements Container, Container.Filterable,
         itemSetChangeListeners.add(listener);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.data.Container.ItemSetChangeNotifier#removeListener(com.vaadin
+     * .data.Container.ItemSetChangeListener)
+     */
     public void removeListener(Container.ItemSetChangeListener listener) {
         if (itemSetChangeListeners != null) {
             itemSetChangeListeners.remove(listener);

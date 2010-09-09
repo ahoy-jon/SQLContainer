@@ -30,9 +30,11 @@ public class TableQuery implements QueryDelegate {
 
     private JDBCConnectionPool connectionPool;
 
+    /** Transaction handling */
     private Connection activeConnection;
     private boolean transactionOpen;
 
+    /** Set to true to output generated SQL Queries to System.out */
     private boolean debug = false;
 
     /**
@@ -42,6 +44,17 @@ public class TableQuery implements QueryDelegate {
     private TableQuery() {
     }
 
+    /**
+     * Creates a new TableQuery using the given connection pool, SQL generator
+     * and table name to fetch the data from. All parameters must be non-null.
+     * 
+     * @param tableName
+     *            Name of the database table to connect to
+     * @param connectionPool
+     *            Connection pool for accessing the database
+     * @param sqlGenerator
+     *            SQL query generator implementation
+     */
     public TableQuery(String tableName, JDBCConnectionPool connectionPool,
             SQLGenerator sqlGenerator) {
         if (tableName == null || tableName.trim().length() < 1
@@ -55,13 +68,26 @@ public class TableQuery implements QueryDelegate {
         fetchMetaData();
     }
 
+    /**
+     * Creates a new TableQuery using the given connection pool and table name
+     * to fetch the data from. All parameters must be non-null. The default SQL
+     * generator will be used for queries.
+     * 
+     * @param tableName
+     *            Name of the database table to connect to
+     * @param connectionPool
+     *            Connection pool for accessing the database
+     */
     public TableQuery(String tableName, JDBCConnectionPool connectionPool) {
         this(tableName, connectionPool, new DefaultSQLGenerator());
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#getCount()
+     */
     public int getCount() throws SQLException {
-        // OrderBys are not given to generator since when counting rows the
-        // order does not matter.
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
                 null, 0, 0, "COUNT(*)");
         ResultSet r = executeQuery(query);
@@ -69,6 +95,11 @@ public class TableQuery implements QueryDelegate {
         return r.getInt(1);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#getIdList()
+     */
     public ResultSet getIdList() throws SQLException {
         StringBuffer keys = new StringBuffer();
         for (String colName : primaryKeyColumns) {
@@ -82,16 +113,35 @@ public class TableQuery implements QueryDelegate {
         return executeQuery(query);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#getResults(int,
+     * int)
+     */
     public ResultSet getResults(int offset, int pagelength) throws SQLException {
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
                 orderBys, offset, pagelength, null);
         return executeQuery(query);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#
+     * implementationRespectsPagingLimits()
+     */
     public boolean implementationRespectsPagingLimits() {
         return true;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#storeRow(com.vaadin
+     * .addon.sqlcontainer.RowItem)
+     */
     public int storeRow(RowItem row) throws UnsupportedOperationException,
             SQLException {
         if (row == null) {
@@ -113,6 +163,13 @@ public class TableQuery implements QueryDelegate {
         return executeUpdate(query);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setFilters(java.util
+     * .List)
+     */
     public void setFilters(List<Filter> filters)
             throws UnsupportedOperationException {
         if (filters == null) {
@@ -122,6 +179,13 @@ public class TableQuery implements QueryDelegate {
         this.filters = Collections.unmodifiableList(filters);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setOrderBy(java.util
+     * .List)
+     */
     public void setOrderBy(List<OrderBy> orderBys)
             throws UnsupportedOperationException {
         if (orderBys == null) {
@@ -131,6 +195,11 @@ public class TableQuery implements QueryDelegate {
         this.orderBys = Collections.unmodifiableList(orderBys);
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#beginTransaction()
+     */
     public void beginTransaction() throws UnsupportedOperationException,
             SQLException {
         if (transactionOpen && activeConnection != null) {
@@ -142,6 +211,11 @@ public class TableQuery implements QueryDelegate {
         transactionOpen = true;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#commit()
+     */
     public void commit() throws UnsupportedOperationException, SQLException {
         if (transactionOpen && activeConnection != null) {
             debug("DB -> commit");
@@ -153,6 +227,11 @@ public class TableQuery implements QueryDelegate {
         transactionOpen = false;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#rollback()
+     */
     public void rollback() throws UnsupportedOperationException, SQLException {
         if (transactionOpen && activeConnection != null) {
             debug("DB -> rollback");
@@ -164,6 +243,12 @@ public class TableQuery implements QueryDelegate {
         transactionOpen = false;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#getPrimaryKeyColumns()
+     */
     public List<String> getPrimaryKeyColumns() {
         return Collections.unmodifiableList(primaryKeyColumns);
     }
@@ -184,6 +269,16 @@ public class TableQuery implements QueryDelegate {
         return sqlGenerator;
     }
 
+    /**
+     * Executes the given query string using either the active connection if a
+     * transaction is already open, or a new connection from this query's
+     * connection pool.
+     * 
+     * @param query
+     *            Query to execute
+     * @return ResultSet of the query
+     * @throws SQLException
+     */
     private ResultSet executeQuery(String query) throws SQLException {
         Connection c = null;
         try {
@@ -204,6 +299,16 @@ public class TableQuery implements QueryDelegate {
         }
     }
 
+    /**
+     * Executes the given update query string using either the active connection
+     * if a transaction is already open, or a new connection from this query's
+     * connection pool.
+     * 
+     * @param query
+     *            Query to execute
+     * @return Number of affected rows
+     * @throws SQLException
+     */
     private int executeUpdate(String query) throws SQLException {
         Connection c = null;
         try {
@@ -225,8 +330,9 @@ public class TableQuery implements QueryDelegate {
     }
 
     /**
-     * Fetches name(s) of primary key column(s) from DB metadata. Also gets the
-     * escape string to be used in search strings.
+     * Fetches name(s) of primary key column(s) from DB metadata.
+     * 
+     * Also tries to get the escape string to be used in search strings.
      */
     private void fetchMetaData() {
         Connection c = null;
@@ -264,12 +370,13 @@ public class TableQuery implements QueryDelegate {
         }
     }
 
-    private void debug(String message) {
-        if (debug) {
-            System.out.println(message);
-        }
-    }
-
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#removeRow(com.vaadin
+     * .addon.sqlcontainer.RowItem)
+     */
     public boolean removeRow(RowItem row) throws UnsupportedOperationException,
             SQLException {
         debug("Removing row with id: " + row.getId().getId()[0].toString());
@@ -279,6 +386,13 @@ public class TableQuery implements QueryDelegate {
         return false;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#containsRowWithKey(
+     * java.lang.Object[])
+     */
     public boolean containsRowWithKey(Object... keys) throws SQLException {
         ArrayList<Filter> filtersAndKeys = new ArrayList<Filter>();
         if (filters != null) {
@@ -298,10 +412,22 @@ public class TableQuery implements QueryDelegate {
         return contains;
     }
 
-    public boolean isDebug() {
-        return debug;
+    /**
+     * Output a debug message
+     * 
+     * @param message
+     */
+    private void debug(String message) {
+        if (debug) {
+            System.out.println(message);
+        }
     }
 
+    /**
+     * Enable or disable debug mode.
+     * 
+     * @param debug
+     */
     public void setDebug(boolean debug) {
         this.debug = debug;
     }
