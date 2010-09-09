@@ -7,6 +7,13 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
 public class MSSQLGenerator extends DefaultSQLGenerator {
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator#
+     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
+     * int, int, java.lang.String)
+     */
     @Override
     public String generateSelectQuery(String tableName, List<Filter> filters,
             List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {

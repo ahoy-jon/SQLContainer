@@ -10,7 +10,6 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 
 /**
  * Generates generic SQL that is supported by HSQLDB, MySQL and PostgreSQL.
@@ -19,8 +18,18 @@ import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
  */
 public class DefaultSQLGenerator implements SQLGenerator {
 
+    /**
+     * Escape character used by the underlying database.
+     */
     protected String searchStringEscape;
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
+     * int, int, java.lang.String)
+     */
     public String generateSelectQuery(String tableName, List<Filter> filters,
             List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
         if (tableName == null || tableName.trim().equals("")) {
@@ -51,6 +60,13 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return query.toString();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * generateUpdateQuery(java.lang.String,
+     * com.vaadin.addon.sqlcontainer.RowItem)
+     */
     public String generateUpdateQuery(String tableName, RowItem item) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
@@ -115,6 +131,13 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return query.toString();
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * generateInsertQuery(java.lang.String,
+     * com.vaadin.addon.sqlcontainer.RowItem)
+     */
     public String generateInsertQuery(String tableName, RowItem item) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
@@ -188,27 +211,46 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             sb.append(" AND ");
         }
-
-        String name, value;
-        if (f.getComparisonType() == ComparisonType.STARTS_WITH) {
-            value = escapeWildCards(String.valueOf(f.getValue())) + "%";
-            f.setNeedsQuotes(true);
-        } else if (f.getComparisonType() == ComparisonType.CONTAINS) {
-            value = "%" + escapeWildCards(String.valueOf(f.getValue())) + "%";
-            f.setNeedsQuotes(true);
-        } else if (f.getComparisonType() == ComparisonType.ENDS_WITH) {
-            value = "%" + escapeWildCards(String.valueOf(f.getValue()));
-            f.setNeedsQuotes(true);
-        } else {
-            value = String.valueOf(f.getValue());
+        /* Null filter equates to 1=1 where clause */
+        if (f.getValue() == null) {
+            sb.append("1=1");
+            return sb;
         }
-        value = escapeQuotes(value);
-        if (!f.isCaseSensitive()) {
-            name = "LOWER(" + f.getColumn() + ")";
-            value = "LOWER('" + value + "')";
-        } else {
-            name = f.getColumn();
-            if (f.isNeedsQuotes()) {
+
+        String name = f.getColumn();
+        String value = String.valueOf(f.getValue());
+        f.setNeedsQuotes(false);
+
+        if (f.getValue() instanceof String) {
+            // Try to determine if the filter value is numeric
+            try {
+                Long.parseLong(String.valueOf(f.getValue()));
+                Double.parseDouble(String.valueOf(f.getValue()));
+                value = String.valueOf(f.getValue());
+            } catch (NumberFormatException nfe) {
+                // The filter value is indeed a String and thus needs wild card
+                // removal, quote escaping and quotes around it in the query
+                value = escapeQuotes(escapeWildCards((String) f.getValue()));
+                f.setNeedsQuotes(true);
+                switch (f.getComparisonType()) {
+                case STARTS_WITH:
+                    value += "%";
+                    break;
+                case CONTAINS:
+                    value = "%" + value + "%";
+                    break;
+                case ENDS_WITH:
+                    value = "%" + value;
+                    break;
+                }
+            }
+        }
+
+        if (f.isNeedsQuotes()) {
+            if (!f.isCaseSensitive()) {
+                name = "LOWER(" + f.getColumn() + ")";
+                value = "LOWER('" + value + "')";
+            } else {
                 value = "'" + value + "'";
             }
         }
@@ -219,7 +261,16 @@ public class DefaultSQLGenerator implements SQLGenerator {
         case STARTS_WITH:
         case CONTAINS:
         case ENDS_WITH:
-            sb.append(" LIKE ");
+            /*
+             * LIKE for Strings, = for numeric types. Prevents starts/ends_with
+             * filtering with numeric types, which would not be very functional
+             * anyway.
+             */
+            if (f.isNeedsQuotes()) {
+                sb.append(" LIKE ");
+            } else {
+                sb.append(" = ");
+            }
             break;
         case LESS:
             sb.append(" < ");
@@ -338,10 +389,23 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return null;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * setSearchStringEscape(java.lang.String)
+     */
     public void setSearchStringEscape(String searchStringEscape) {
         this.searchStringEscape = searchStringEscape;
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * generateDeleteQuery(java.lang.String,
+     * com.vaadin.addon.sqlcontainer.RowItem)
+     */
     public String generateDeleteQuery(String tableName, RowItem item) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
