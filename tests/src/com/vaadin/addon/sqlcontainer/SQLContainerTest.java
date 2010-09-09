@@ -2113,4 +2113,92 @@ public class SQLContainerTest {
 
         EasyMock.verify(delegate);
     }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void sort_freeformBufferedItems_sortsBufferedItemsLastInOrderAdded()
+            throws SQLException {
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
+        FreeformQueryDelegate delegate = EasyMock
+                .createMock(FreeformQueryDelegate.class);
+        final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
+        delegate.setFilters(null);
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setFilters(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setOrderBy(null);
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setOrderBy(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+            public Object answer() throws Throwable {
+                List<OrderBy> orders = (List<OrderBy>) EasyMock
+                        .getCurrentArguments()[0];
+                orderBys.clear();
+                orderBys.addAll(orders);
+                return null;
+            }
+        }).anyTimes();
+        EasyMock.expect(
+                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<String>() {
+                    public String answer() throws Throwable {
+                        Object[] args = EasyMock.getCurrentArguments();
+                        int offset = (Integer) (args[0]);
+                        int limit = (Integer) (args[1]);
+                        StringBuffer query = new StringBuffer(
+                                "SELECT * FROM people");
+                        if (!orderBys.isEmpty()) {
+                            query.append(" ORDER BY ");
+                            for (OrderBy orderBy : orderBys) {
+                                query.append(orderBy.getColumn());
+                                if (orderBy.isAscending()) {
+                                    query.append(" ASC");
+                                } else {
+                                    query.append(" DESC");
+                                }
+                            }
+                        }
+                        query.append(" LIMIT ").append(limit)
+                                .append(" OFFSET ").append(offset);
+                        return query.toString();
+                    }
+                }).anyTimes();
+        EasyMock.expect(delegate.getCountQuery())
+                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.replay(delegate);
+
+        query.setDelegate(delegate);
+        SQLContainer container = new SQLContainer(query);
+        // Ville, Kalle, Pelle, Börje
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
+
+        Object id1 = container.addItem();
+        container.getContainerProperty(id1, "NAME").setValue("Wilbert");
+        Object id2 = container.addItem();
+        container.getContainerProperty(id2, "NAME").setValue("Albert");
+
+        container.sort(new Object[] { "NAME" }, new boolean[] { true });
+
+        // Börje, Kalle, Pelle, Ville, Wilbert, Albert
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals(
+                "Wilbert",
+                container.getContainerProperty(
+                        container.getIdByIndex(container.size() - 2), "NAME")
+                        .getValue());
+        Assert.assertEquals("Albert",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
+
+        EasyMock.verify(delegate);
+    }
+
 }
