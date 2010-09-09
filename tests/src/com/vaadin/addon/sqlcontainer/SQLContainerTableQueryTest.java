@@ -1265,4 +1265,75 @@ public class SQLContainerTableQueryTest {
         Assert.assertEquals("Börje", container.getContainerProperty(
                 container.lastItemId(), "NAME").getValue());
     }
+
+    @Test
+    public void addFilter_tableBufferedItems_alsoFiltersBufferedItems()
+            throws SQLException {
+        TableQuery query = new TableQuery("PEOPLE", connectionPool);
+        SQLContainer container = new SQLContainer(query);
+        // Ville, Kalle, Pelle, Börje
+        Assert.assertEquals(4, container.size());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
+
+        Object id1 = container.addItem();
+        container.getContainerProperty(id1, "NAME").setValue("Palle");
+        Object id2 = container.addItem();
+        container.getContainerProperty(id2, "NAME").setValue("Bengt");
+
+        container
+                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
+
+        // Ville, Kalle, Pelle, Palle
+        Assert.assertEquals(4, container.size());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.getIdByIndex(0), "NAME").getValue());
+        Assert.assertEquals("Kalle", container.getContainerProperty(
+                container.getIdByIndex(1), "NAME").getValue());
+        Assert.assertEquals("Pelle", container.getContainerProperty(
+                container.getIdByIndex(2), "NAME").getValue());
+        Assert.assertEquals("Palle", container.getContainerProperty(
+                container.getIdByIndex(3), "NAME").getValue());
+
+        Assert.assertNull(container.getIdByIndex(4));
+        Assert.assertNull(container.nextItemId(container.getIdByIndex(3)));
+
+        Assert.assertFalse(container.containsId(id2));
+        Assert.assertFalse(container.getItemIds().contains(id2));
+
+        Assert.assertNull(container.getItem(id2));
+        Assert.assertEquals(-1, container.indexOfId(id2));
+
+        Assert.assertNotSame(id2, container.lastItemId());
+        Assert.assertSame(id1, container.lastItemId());
+    }
+
+    @Test
+    public void sort_tableBufferedItems_sortsBufferedItemsLastInOrderAdded()
+            throws SQLException {
+        TableQuery query = new TableQuery("PEOPLE", connectionPool);
+        SQLContainer container = new SQLContainer(query);
+        // Ville, Kalle, Pelle, Börje
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
+
+        Object id1 = container.addItem();
+        container.getContainerProperty(id1, "NAME").setValue("Wilbert");
+        Object id2 = container.addItem();
+        container.getContainerProperty(id2, "NAME").setValue("Albert");
+
+        container.sort(new Object[] { "NAME" }, new boolean[] { true });
+
+        // Börje, Kalle, Pelle, Ville, Wilbert, Albert
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Wilbert", container.getContainerProperty(
+                container.getIdByIndex(container.size() - 2), "NAME")
+                .getValue());
+        Assert.assertEquals("Albert", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
+    }
+
 }
