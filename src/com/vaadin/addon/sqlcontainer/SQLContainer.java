@@ -132,7 +132,7 @@ public class SQLContainer implements Container, Container.Filterable,
         } else {
             for (RowItem item : addedItems) {
                 if (item.getId().equals(itemId)) {
-                    return true;
+                    return itemPassesFilters(item);
                 }
             }
         }
@@ -168,7 +168,12 @@ public class SQLContainer implements Container, Container.Filterable,
             if (index >= size) {
                 // The index is in the added items
                 int offset = index - size;
-                return addedItems.get(offset);
+                RowItem item = addedItems.get(offset);
+                if (itemPassesFilters(item)) {
+                    return item;
+                } else {
+                    return null;
+                }
             } else {
                 // load the item into cache
                 updateOffsetAndCache(index);
@@ -206,9 +211,14 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             delegate.commit();
         } catch (SQLException e) {
+            try {
+                delegate.rollback();
+            } catch (SQLException e1) {
+                // TODO: log
+            }
             throw new RuntimeException("Failed to fetch item indexes.", e);
         }
-        for (RowItem item : addedItems) {
+        for (RowItem item : getFilteredAddedItems()) {
             ids.add(item.getId());
         }
         return Collections.unmodifiableCollection(ids);
@@ -223,7 +233,33 @@ public class SQLContainer implements Container, Container.Filterable,
 
     public int size() {
         updateCount();
-        return size + addedItems.size() - removedItems.size();
+        return size + sizeOfAddedItems() - removedItems.size();
+    }
+
+    private int sizeOfAddedItems() {
+        return getFilteredAddedItems().size();
+    }
+
+    private List<RowItem> getFilteredAddedItems() {
+        ArrayList<RowItem> filtered = new ArrayList<RowItem>(addedItems);
+        if (filters != null && !filters.isEmpty()) {
+            for (RowItem item : addedItems) {
+                if (!itemPassesFilters(item)) {
+                    filtered.remove(item);
+                }
+            }
+        }
+        return filtered;
+    }
+
+    private boolean itemPassesFilters(RowItem item) {
+        for (Filter filter : filters) {
+            if (!filter.passes(item.getItemProperty(filter.getColumn())
+                    .getValue())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean removeItem(Object itemId)
@@ -356,9 +392,14 @@ public class SQLContainer implements Container, Container.Filterable,
     public int indexOfId(Object itemId) {
         // First check if the id is in the added items
         for (int ix = 0; ix < addedItems.size(); ix++) {
-            if (addedItems.get(ix).getId().equals(itemId)) {
-                updateCount();
-                return size + ix;
+            RowItem item = addedItems.get(ix);
+            if (item.getId().equals(itemId)) {
+                if (itemPassesFilters(item)) {
+                    updateCount();
+                    return size + ix;
+                } else {
+                    return -1;
+                }
             }
         }
 
@@ -423,7 +464,14 @@ public class SQLContainer implements Container, Container.Filterable,
             if (addedItems.isEmpty()) {
                 return null;
             } else {
-                return addedItems.get(0).getId();
+                int ix = -1;
+                do {
+                    ix++;
+                } while (!itemPassesFilters(addedItems.get(ix))
+                        && ix < addedItems.size());
+                if (ix < addedItems.size()) {
+                    return addedItems.get(ix).getId();
+                }
             }
         }
         if (!itemIndexes.containsKey(0)) {
@@ -440,7 +488,15 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             return itemIndexes.get(lastIx);
         } else {
-            return addedItems.get(addedItems.size() - 1).getId();
+            int ix = addedItems.size();
+            do {
+                ix--;
+            } while (!itemPassesFilters(addedItems.get(ix)) && ix >= 0);
+            if (ix >= 0) {
+                return addedItems.get(ix).getId();
+            } else {
+                return null;
+            }
         }
     }
 
@@ -830,8 +886,8 @@ public class SQLContainer implements Container, Container.Filterable,
                         Object value = rs.getObject(columnNum);
                         if (value != null) {
                             cp = new ColumnProperty(propId, readOnly,
-                                    allowReadOnlyChange, nullable, value, value
-                                            .getClass());
+                                    allowReadOnlyChange, nullable, value,
+                                    value.getClass());
                         } else {
                             cp = new ColumnProperty(propId, readOnly,
                                     allowReadOnlyChange, nullable, null,

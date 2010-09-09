@@ -115,23 +115,27 @@ public class Filter {
             where.append(" <= ").append(format(getValue()));
             break;
         case STARTS_WITH:
-            where.append(" LIKE ").append("'").append(
-                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
-                    .append("%'");
+            where.append(" LIKE ")
+                    .append("'")
+                    .append(upperCaseIfCaseInsensitive(String
+                            .valueOf(getValue()))).append("%'");
             break;
         case ENDS_WITH:
-            where.append(" LIKE ").append("'%").append(
-                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
-                    .append("'");
+            where.append(" LIKE ")
+                    .append("'%")
+                    .append(upperCaseIfCaseInsensitive(String
+                            .valueOf(getValue()))).append("'");
             break;
         case CONTAINS:
-            where.append(" LIKE ").append("'%").append(
-                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
-                    .append("%'");
+            where.append(" LIKE ")
+                    .append("'%")
+                    .append(upperCaseIfCaseInsensitive(String
+                            .valueOf(getValue()))).append("%'");
             break;
         case BETWEEN:
             where.append(" BETWEEN ").append(format(getValue()))
                     .append(" AND ").append(format(getSecondValue()));
+            break;
         }
         return where.toString();
     }
@@ -149,5 +153,78 @@ public class Filter {
             return value;
         }
         return value.toUpperCase();
+    }
+
+    public boolean passes(Object testValue) {
+        switch (getComparisonType()) {
+        case EQUALS:
+            return compareValues(testValue, value) == 0;
+        case GREATER:
+            return compareValues(testValue, value) > 0;
+        case LESS:
+            return compareValues(testValue, value) < 0;
+        case GREATER_OR_EQUAL:
+            return compareValues(testValue, value) >= 0;
+        case LESS_OR_EQUAL:
+            return compareValues(testValue, value) <= 0;
+        case STARTS_WITH:
+            if (testValue instanceof String) {
+                if (isCaseSensitive) {
+                    return ((String) testValue).startsWith(String
+                            .valueOf(value));
+                } else {
+                    return ((String) testValue).toUpperCase().startsWith(
+                            String.valueOf(value).toUpperCase());
+                }
+            }
+            break;
+        case ENDS_WITH:
+            if (testValue instanceof String) {
+                if (isCaseSensitive) {
+                    return ((String) testValue).endsWith(String.valueOf(value));
+                } else {
+                    return ((String) testValue).toUpperCase().endsWith(
+                            String.valueOf(value).toUpperCase());
+                }
+            }
+            break;
+        case CONTAINS:
+            if (testValue instanceof String) {
+                if (isCaseSensitive) {
+                    return ((String) testValue).contains(String.valueOf(value));
+                } else {
+                    return ((String) testValue).toUpperCase().contains(
+                            String.valueOf(value).toUpperCase());
+                }
+            }
+            break;
+        case BETWEEN:
+            break;
+        }
+        return false;
+    }
+
+    private int compareValues(Object value1, Object value2) {
+        if (value1 instanceof String) {
+            if (isCaseSensitive) {
+                return ((String) value1).compareTo((String) value2);
+            } else {
+                return ((String) value1).compareToIgnoreCase((String) value2);
+            }
+        } else if (value1 instanceof Integer) {
+            return ((Integer) value1).compareTo((Integer) value2);
+        } else if (value1 instanceof Long) {
+            return ((Long) value1).compareTo((Long) value2);
+        } else if (value1 instanceof Double) {
+            return ((Double) value1).compareTo((Double) value2);
+        } else if (value1 instanceof Float) {
+            return ((Float) value1).compareTo((Float) value2);
+        } else if (value1 instanceof Short) {
+            return ((Short) value1).compareTo((Short) value2);
+        } else if (value1 instanceof Byte) {
+            return ((Byte) value1).compareTo((Byte) value2);
+        }
+        throw new IllegalArgumentException("Could not compare the arguments: "
+                + value1 + ", " + value2);
     }
 }

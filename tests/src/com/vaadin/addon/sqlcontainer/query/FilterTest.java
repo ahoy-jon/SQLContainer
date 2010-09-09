@@ -8,9 +8,6 @@ import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 
 public class FilterTest {
 
-    // EQUALS, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, STARTS_WITH,
-    // ENDS_WITH, CONTAINS, BETWEEN;
-
     // escape bad characters and wildcards
 
     @Test
@@ -99,5 +96,238 @@ public class FilterTest {
         Filter f = new Filter("NAME", ComparisonType.CONTAINS, "ill");
         f.setCaseSensitive(false);
         Assert.assertEquals("UPPER(NAME) LIKE '%ILL%'", f.toWhereString());
+    }
+
+    @Test
+    public void passes_equals_equalStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.EQUALS, "Ville");
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_equals_equalStringsCaseInsensitive_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.EQUALS, "Ville");
+        f.setCaseSensitive(false);
+        Assert.assertTrue(f.passes("ViLLE"));
+    }
+
+    @Test
+    public void passes_equals_differentStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.EQUALS, "Ville");
+        Assert.assertFalse(f.passes("Börje"));
+    }
+
+    @Test
+    public void passes_equals_equalNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.EQUALS, 18);
+        Assert.assertTrue(f.passes(18));
+    }
+
+    @Test
+    public void passes_equals_differentNumbers_returnsFalse() {
+        Filter f = new Filter("AGE", ComparisonType.EQUALS, 18);
+        Assert.assertFalse(f.passes(65));
+    }
+
+    @Test
+    public void passes_greater_greaterStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.GREATER, "Ville");
+        Assert.assertTrue(f.passes("Wilbert"));
+    }
+
+    @Test
+    public void passes_greater_lessStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.GREATER, "Ville");
+        Assert.assertFalse(f.passes("Albert"));
+    }
+
+    @Test
+    public void passes_greater_sameStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.GREATER, "Ville");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_greater_greaterNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.GREATER, 18);
+        Assert.assertTrue(f.passes(19));
+    }
+
+    @Test
+    public void passes_greater_lessNumbers_returnsFalse() {
+        Filter f = new Filter("AGE", ComparisonType.GREATER, 18);
+        Assert.assertFalse(f.passes(17));
+    }
+
+    @Test
+    public void passes_less_lessStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.LESS, "Ville");
+        Assert.assertTrue(f.passes("Albert"));
+    }
+
+    @Test
+    public void passes_less_greaterStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.LESS, "Ville");
+        Assert.assertFalse(f.passes("Wilbert"));
+    }
+
+    @Test
+    public void passes_less_sameStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.LESS, "Ville");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_less_lessNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.LESS, 18);
+        Assert.assertTrue(f.passes(17));
+    }
+
+    @Test
+    public void passes_less_greaterNumbers_returnsFalse() {
+        Filter f = new Filter("AGE", ComparisonType.LESS, 18);
+        Assert.assertFalse(f.passes(19));
+    }
+
+    @Test
+    public void passes_greaterOrEqual_greaterStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.GREATER_OR_EQUAL, "Ville");
+        Assert.assertTrue(f.passes("Wilbert"));
+    }
+
+    @Test
+    public void passes_greaterOrEqual_lessStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.GREATER_OR_EQUAL, "Ville");
+        Assert.assertFalse(f.passes("Albert"));
+    }
+
+    @Test
+    public void passes_greaterOrEqual_sameStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.GREATER_OR_EQUAL, "Ville");
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_greaterOrEqual_greaterNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.GREATER_OR_EQUAL, 18);
+        Assert.assertTrue(f.passes(19));
+    }
+
+    @Test
+    public void passes_greaterOrEqual_lessNumbers_returnsFalse() {
+        Filter f = new Filter("AGE", ComparisonType.GREATER_OR_EQUAL, 18);
+        Assert.assertFalse(f.passes(17));
+    }
+
+    @Test
+    public void passes_greaterOrEqual_equalNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.GREATER_OR_EQUAL, 18);
+        Assert.assertTrue(f.passes(18));
+    }
+
+    @Test
+    public void passes_lessOrEqual_greaterStrings_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.LESS_OR_EQUAL, "Ville");
+        Assert.assertFalse(f.passes("Wilbert"));
+    }
+
+    @Test
+    public void passes_lessOrEqual_lessStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.LESS_OR_EQUAL, "Ville");
+        Assert.assertTrue(f.passes("Albert"));
+    }
+
+    @Test
+    public void passes_lessOrEqual_sameStrings_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.LESS_OR_EQUAL, "Ville");
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_lessOrEqual_greaterNumbers_returnsFalse() {
+        Filter f = new Filter("AGE", ComparisonType.LESS_OR_EQUAL, 18);
+        Assert.assertFalse(f.passes(19));
+    }
+
+    @Test
+    public void passes_lessOrEqual_lessNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.LESS_OR_EQUAL, 18);
+        Assert.assertTrue(f.passes(17));
+    }
+
+    @Test
+    public void passes_lessOrEqual_equalNumbers_returnsTrue() {
+        Filter f = new Filter("AGE", ComparisonType.LESS_OR_EQUAL, 18);
+        Assert.assertTrue(f.passes(18));
+    }
+
+    @Test
+    public void passes_startsWith_stringStartsWithValue_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.STARTS_WITH, "Vi");
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_startsWith_stringStartsWithValueCaseSensitive_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.STARTS_WITH, "vi");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_startsWith_stringStartsWithValueCaseInsensitive_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.STARTS_WITH, "vi");
+        f.setCaseSensitive(false);
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_startsWith_stringDoesntStartWithValueCaseInsensitive_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.STARTS_WITH, "bö");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_endsWith_stringEndsWithValue_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.ENDS_WITH, "lle");
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_endsWith_stringEndsWithValueCaseSensitive_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.ENDS_WITH, "LLE");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_endsWith_stringEndsWithValueCaseInsensitive_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.ENDS_WITH, "LLE");
+        f.setCaseSensitive(false);
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    // CONTAINS, BETWEEN;
+    @Test
+    public void passes_contains_stringContainsValue_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.CONTAINS, "ill");
+        Assert.assertTrue(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_contains_stringDoesNotContainValue_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.CONTAINS, "örj");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_contains_stringContainsValueCaseSensitive_returnsFalse() {
+        Filter f = new Filter("NAME", ComparisonType.CONTAINS, "IlL");
+        Assert.assertFalse(f.passes("Ville"));
+    }
+
+    @Test
+    public void passes_contains_stringContainsValueCaseInsensitive_returnsTrue() {
+        Filter f = new Filter("NAME", ComparisonType.CONTAINS, "IlL");
+        f.setCaseSensitive(false);
+        Assert.assertTrue(f.passes("Ville"));
     }
 }

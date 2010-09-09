@@ -1993,4 +1993,124 @@ public class SQLContainerTest {
         EasyMock.verify(delegate);
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    public void addFilter_freeformBufferedItems_alsoFiltersBufferedItems()
+            throws SQLException {
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
+        FreeformQueryDelegate delegate = EasyMock
+                .createMock(FreeformQueryDelegate.class);
+        final ArrayList<Filter> filters = new ArrayList<Filter>();
+        delegate.setFilters(null);
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setOrderBy(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setOrderBy(null);
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setFilters(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+            public Object answer() throws Throwable {
+                List<Filter> orders = (List<Filter>) EasyMock
+                        .getCurrentArguments()[0];
+                filters.clear();
+                filters.addAll(orders);
+                return null;
+            }
+        }).anyTimes();
+        EasyMock.expect(
+                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<String>() {
+                    public String answer() throws Throwable {
+                        Object[] args = EasyMock.getCurrentArguments();
+                        int offset = (Integer) (args[0]);
+                        int limit = (Integer) (args[1]);
+                        StringBuffer query = new StringBuffer(
+                                "SELECT * FROM people");
+                        if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
+                            query.append(" WHERE ");
+                            for (Filter filter : filters) {
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
+                            }
+                        }
+                        if (limit > 0) {
+                            query.append(" LIMIT ").append(limit)
+                                    .append(" OFFSET ").append(offset);
+                        }
+                        return query.toString();
+                    }
+                }).anyTimes();
+        EasyMock.expect(delegate.getCountQuery())
+                .andAnswer(new IAnswer<String>() {
+                    public String answer() throws Throwable {
+                        StringBuffer query = new StringBuffer(
+                                "SELECT COUNT(*) FROM people");
+                        if (!filters.isEmpty()) {
+                            Filter lastFilter = filters.get(filters.size() - 1);
+                            query.append(" WHERE ");
+                            for (Filter filter : filters) {
+                                query.append(filter.toWhereString());
+                                if (lastFilter != filter) {
+                                    query.append(" AND ");
+                                }
+                            }
+                        }
+                        return query.toString();
+                    }
+                }).anyTimes();
+
+        EasyMock.replay(delegate);
+        query.setDelegate(delegate);
+        SQLContainer container = new SQLContainer(query);
+        // Ville, Kalle, Pelle, Börje
+        Assert.assertEquals(4, container.size());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
+
+        Object id1 = container.addItem();
+        container.getContainerProperty(id1, "NAME").setValue("Palle");
+        Object id2 = container.addItem();
+        container.getContainerProperty(id2, "NAME").setValue("Bengt");
+
+        container
+                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
+
+        // Ville, Kalle, Pelle, Palle
+        Assert.assertEquals(4, container.size());
+        Assert.assertEquals(
+                "Ville",
+                container.getContainerProperty(container.getIdByIndex(0),
+                        "NAME").getValue());
+        Assert.assertEquals(
+                "Kalle",
+                container.getContainerProperty(container.getIdByIndex(1),
+                        "NAME").getValue());
+        Assert.assertEquals(
+                "Pelle",
+                container.getContainerProperty(container.getIdByIndex(2),
+                        "NAME").getValue());
+        Assert.assertEquals(
+                "Palle",
+                container.getContainerProperty(container.getIdByIndex(3),
+                        "NAME").getValue());
+
+        Assert.assertNull(container.getIdByIndex(4));
+        Assert.assertNull(container.nextItemId(container.getIdByIndex(3)));
+
+        Assert.assertFalse(container.containsId(id2));
+        Assert.assertFalse(container.getItemIds().contains(id2));
+
+        Assert.assertNull(container.getItem(id2));
+        Assert.assertEquals(-1, container.indexOfId(id2));
+
+        Assert.assertNotSame(id2, container.lastItemId());
+        Assert.assertSame(id1, container.lastItemId());
+
+        EasyMock.verify(delegate);
+    }
 }
