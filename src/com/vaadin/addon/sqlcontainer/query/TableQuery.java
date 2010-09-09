@@ -60,8 +60,10 @@ public class TableQuery implements QueryDelegate {
     }
 
     public int getCount() throws SQLException {
+        // OrderBys are not given to generator since when counting rows the
+        // order does not matter.
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
-                orderBys, 0, 0, "COUNT(*)");
+                null, 0, 0, "COUNT(*)");
         ResultSet r = executeQuery(query);
         r.next();
         return r.getInt(1);
@@ -294,5 +296,13 @@ public class TableQuery implements QueryDelegate {
         boolean contains = rs.next();
         rs.close();
         return contains;
+    }
+
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
     }
 }
