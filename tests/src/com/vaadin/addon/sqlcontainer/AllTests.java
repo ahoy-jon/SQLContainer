@@ -11,7 +11,8 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
 
 @RunWith(Suite.class)
 @SuiteClasses( { SimpleJDBCConnectionPoolTest.class, FreeformQueryTest.class,
-        RowIdTest.class, SQLContainerTest.class, ColumnPropertyTest.class,
+        RowIdTest.class, SQLContainerTest.class,
+        SQLContainerTableQueryTest.class, ColumnPropertyTest.class,
         TableQueryTest.class, SQLGeneratorsTest.class })
 public class AllTests {
 
