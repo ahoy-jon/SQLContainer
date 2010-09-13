@@ -94,9 +94,9 @@ public class Filter {
     public String toWhereString() {
         StringBuffer where = new StringBuffer();
         if (isCaseSensitive()) {
-            where.append(getColumn());
+            where.append("\"" + getColumn() + "\"");
         } else {
-            where.append("UPPER(").append(getColumn()).append(")");
+            where.append("UPPER(\"").append(getColumn()).append("\")");
         }
         switch (getComparisonType()) {
         case EQUALS:
@@ -115,22 +115,19 @@ public class Filter {
             where.append(" <= ").append(format(getValue()));
             break;
         case STARTS_WITH:
-            where.append(" LIKE ")
-                    .append("'")
-                    .append(upperCaseIfCaseInsensitive(String
-                            .valueOf(getValue()))).append("%'");
+            where.append(" LIKE ").append("'").append(
+                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
+                    .append("%'");
             break;
         case ENDS_WITH:
-            where.append(" LIKE ")
-                    .append("'%")
-                    .append(upperCaseIfCaseInsensitive(String
-                            .valueOf(getValue()))).append("'");
+            where.append(" LIKE ").append("'%").append(
+                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
+                    .append("'");
             break;
         case CONTAINS:
-            where.append(" LIKE ")
-                    .append("'%")
-                    .append(upperCaseIfCaseInsensitive(String
-                            .valueOf(getValue()))).append("%'");
+            where.append(" LIKE ").append("'%").append(
+                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
+                    .append("%'");
             break;
         case BETWEEN:
             where.append(" BETWEEN ").append(format(getValue()))

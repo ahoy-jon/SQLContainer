@@ -114,9 +114,7 @@ public class FreeformQuery implements QueryDelegate {
      * @throws SQLException
      * 
      * @see com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate#getQueryString(int,
-     *      int)
-     * 
-     *      {@inheritDoc}
+     *      int) {@inheritDoc}
      */
     public ResultSet getResults(int offset, int pagelength) throws SQLException {
         String query = queryString;
@@ -296,7 +294,7 @@ public class FreeformQuery implements QueryDelegate {
         // Build the where rules for the provided keys
         StringBuffer where = new StringBuffer();
         for (int ix = 0; ix < primaryKeyColumns.size(); ix++) {
-            where.append(primaryKeyColumns.get(ix)).append("=");
+            where.append("\"" + primaryKeyColumns.get(ix) + "\"").append("=");
             if (keys[ix] == null) {
                 where.append("null");
             } else {
@@ -306,12 +304,12 @@ public class FreeformQuery implements QueryDelegate {
                 where.append(" AND ");
             }
         }
-
         // Is there already a WHERE clause in the query string?
-        if (queryString.toLowerCase().contains("where")) {
+        int index = queryString.toLowerCase().indexOf("where ");
+        if (index > -1) {
             // Rewrite the where clause
-            return queryString.toLowerCase().replaceFirst("where\\s",
-                    "where " + where + " and ");
+            return queryString.substring(0, index) + "WHERE " + where + " AND "
+                    + queryString.substring(index + 6);
         }
         // Append a where clause
         return queryString + " WHERE " + where;

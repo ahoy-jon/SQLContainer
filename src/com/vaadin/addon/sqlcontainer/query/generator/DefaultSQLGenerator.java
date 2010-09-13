@@ -107,7 +107,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
             } else {
                 query.append(", ");
             }
-            query.append(column);
+            query.append("\"" + column + "\"");
             query.append(" = '");
             query.append(escapeQuotes(columnToValueMap.get(column)));
             query.append("'");
@@ -122,7 +122,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
             } else {
                 query.append(" AND ");
             }
-            query.append(column);
+            query.append("\"" + column + "\"");
             query.append(" = ");
             query.append(escapeQuotes(rowIdentifiers.get(column)));
             first = false;
@@ -172,7 +172,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
             if (!first) {
                 query.append(", ");
             }
-            query.append(column);
+            query.append("\"" + column + "\"");
             first = false;
         }
 
@@ -248,11 +248,14 @@ public class DefaultSQLGenerator implements SQLGenerator {
 
         if (f.isNeedsQuotes()) {
             if (!f.isCaseSensitive()) {
-                name = "LOWER(" + f.getColumn() + ")";
+                name = "LOWER(\"" + f.getColumn() + "\")";
                 value = "LOWER('" + value + "')";
             } else {
                 value = "'" + value + "'";
             }
+        }
+        if (f.isCaseSensitive()) {
+            name = "\"" + name + "\"";
         }
 
         sb.append(name);
@@ -310,7 +313,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             sb.append(", ");
         }
-        sb.append(o.getColumn());
+        sb.append("\"" + o.getColumn() + "\"");
         if (o.isAscending()) {
             sb.append(" ASC");
         } else {
@@ -423,7 +426,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         for (Object p : propIds) {
             if (item.getItemProperty(p).getValue() != null) {
                 query.append(" ");
-                query.append(p.toString());
+                query.append("\"" + p.toString() + "\"");
                 query.append(" = '");
                 query.append(escapeQuotes(item.getItemProperty(p).getValue()
                         .toString()));
