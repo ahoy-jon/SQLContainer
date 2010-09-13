@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,23 +20,24 @@ import com.vaadin.addon.sqlcontainer.SQLContainer.ItemSetChangeEvent;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
-import com.vaadin.data.Container.ItemSetChangeListener;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.data.Item;
+import com.vaadin.data.Container.ItemSetChangeListener;
 
 public class SQLContainerTest {
-
+    private static final int offset = AllTests.offset;
+    private static final String createGarbage = AllTests.createGarbage;
     private JDBCConnectionPool connectionPool;
 
     @Before
     public void setUp() {
+
         try {
-            connectionPool = new SimpleJDBCConnectionPool(
-                    "org.hsqldb.jdbc.JDBCDriver",
-                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 2);
+            connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
+                    AllTests.dbURL, AllTests.dbUser, AllTests.dbPwd, 2, 2);
         } catch (SQLException e) {
             e.printStackTrace();
             Assert.fail(e.getMessage());
@@ -44,28 +46,50 @@ public class SQLContainerTest {
         addPeopleToDatabase();
     }
 
+    @After
+    public void tearDown() {
+        if (connectionPool != null) {
+            connectionPool.destroy();
+        }
+    }
+
     private void addPeopleToDatabase() {
         try {
             Connection conn = connectionPool.reserveConnection();
             Statement statement = conn.createStatement();
             try {
-                statement.execute("drop table people");
+                statement.execute("drop table PEOPLE");
             } catch (SQLException e) {
                 // Will fail if table doesn't exist, which is OK.
+                conn.rollback();
             }
-            statement
-                    .execute("create table people (id integer generated always as identity, name varchar(32), PRIMARY KEY(id))");
-            statement
-                    .executeUpdate("insert into people values(default, 'Ville')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Kalle')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Pelle')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Börje')");
             statement.close();
             statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery("select * from people");
+            statement.execute(AllTests.peopleFirst);
+            statement.close();
+            if (AllTests.peopleSecond != null) {
+                statement = conn.createStatement();
+                statement.execute(AllTests.peopleSecond);
+                statement.close();
+            }
+            statement = conn.createStatement();
+            statement
+                    .executeUpdate("insert into PEOPLE values(default, 'Ville')");
+            statement.close();
+            statement = conn.createStatement();
+            statement
+                    .executeUpdate("insert into PEOPLE values(default, 'Kalle')");
+            statement.close();
+            statement = conn.createStatement();
+            statement
+                    .executeUpdate("insert into PEOPLE values(default, 'Pelle')");
+            statement.close();
+            statement = conn.createStatement();
+            statement
+                    .executeUpdate("insert into PEOPLE values(default, 'Börje')");
+            statement.close();
+            statement = conn.createStatement();
+            ResultSet rs = statement.executeQuery("select * from PEOPLE");
             Assert.assertTrue(rs.next());
             statement.close();
             conn.commit();
@@ -92,8 +116,8 @@ public class SQLContainerTest {
     @Test
     public void constructor_withFreeformQuery_shouldSucceed()
             throws SQLException {
-        new SQLContainer(new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool));
+        new SQLContainer(new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool));
     }
 
     // @Test
@@ -142,10 +166,8 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(
-                "Ville",
-                container.getContainerProperty(new RowId(new Object[] { 0 }),
-                        "NAME").getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                new RowId(new Object[] { 0 + offset }), "NAME").getValue());
     }
 
     @Test
@@ -154,7 +176,7 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Assert.assertNull(container.getContainerProperty(new RowId(
-                new Object[] { 1 }), "asdf"));
+                new Object[] { 1 + offset }), "asdf"));
     }
 
     @Test
@@ -163,7 +185,7 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Assert.assertNull(container.getContainerProperty(new RowId(
-                new Object[] { 1337 }), "NAME"));
+                new Object[] { 1337 + offset }), "NAME"));
     }
 
     @Test
@@ -173,8 +195,8 @@ public class SQLContainerTest {
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Collection<?> propertyIds = container.getContainerPropertyIds();
         Assert.assertEquals(2, propertyIds.size());
-        Assert.assertArrayEquals(new String[] { "ID", "NAME" },
-                propertyIds.toArray());
+        Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
+                .toArray());
     }
 
     @Test
@@ -182,7 +204,7 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Item item = container.getItem(new RowId(new Object[] { 0 }));
+        Item item = container.getItem(new RowId(new Object[] { 0 + offset }));
         Assert.assertNotNull(item);
         Assert.assertEquals("Ville", item.getItemProperty("NAME").getValue());
     }
@@ -193,9 +215,11 @@ public class SQLContainerTest {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Item item = container.getItem(new RowId(new Object[] { 1337 }));
+        Item item = container
+                .getItem(new RowId(new Object[] { 1337 + offset }));
         Assert.assertNotNull(item);
-        Assert.assertEquals(1337, item.getItemProperty("ID").getValue());
+        Assert.assertEquals(1337 + offset, item.getItemProperty("ID")
+                .getValue());
         Assert.assertEquals("Person 1337", item.getItemProperty("NAME")
                 .getValue());
     }
@@ -207,10 +231,10 @@ public class SQLContainerTest {
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Collection<?> itemIds = container.getItemIds();
         Assert.assertEquals(4, itemIds.size());
-        RowId zero = new RowId(new Object[] { 0 });
-        RowId one = new RowId(new Object[] { 1 });
-        RowId two = new RowId(new Object[] { 2 });
-        RowId three = new RowId(new Object[] { 3 });
+        RowId zero = new RowId(new Object[] { 0 + offset });
+        RowId one = new RowId(new Object[] { 1 + offset });
+        RowId two = new RowId(new Object[] { 2 + offset });
+        RowId three = new RowId(new Object[] { 3 + offset });
         Assert.assertArrayEquals(new Object[] { zero, one, two, three },
                 itemIds.toArray());
     }
@@ -265,8 +289,8 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(3,
-                container.indexOfId(new RowId(new Object[] { 3 })));
+        Assert.assertEquals(3, container.indexOfId(new RowId(
+                new Object[] { 3 + offset })));
     }
 
     @Test
@@ -275,9 +299,9 @@ public class SQLContainerTest {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        container.getItem(new RowId(new Object[] { 1337 }));
-        Assert.assertEquals(1337,
-                container.indexOfId(new RowId(new Object[] { 1337 })));
+        container.getItem(new RowId(new Object[] { 1337 + offset }));
+        Assert.assertEquals(1337, container.indexOfId(new RowId(
+                new Object[] { 1337 + offset })));
     }
 
     @Test
@@ -287,7 +311,7 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1337 }), itemId);
+        Assert.assertEquals(new RowId(new Object[] { 1337 + offset }), itemId);
     }
 
     @SuppressWarnings("unchecked")
@@ -295,8 +319,8 @@ public class SQLContainerTest {
     public void getIdByIndex_freeformWithPaging5000rowsIndex1337_returnsRowId1337()
             throws SQLException {
         addFiveThousand();
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
@@ -318,13 +342,13 @@ public class SQLContainerTest {
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
         SQLContainer container = new SQLContainer(query);
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1337 }), itemId);
+        Assert.assertEquals(new RowId(new Object[] { 1337 + offset }), itemId);
     }
 
     @Test
@@ -334,7 +358,7 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1338 }),
+        Assert.assertEquals(new RowId(new Object[] { 1338 + offset }),
                 container.nextItemId(itemId));
     }
 
@@ -345,7 +369,7 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1336 }),
+        Assert.assertEquals(new RowId(new Object[] { 1336 + offset }),
                 container.prevItemId(itemId));
     }
 
@@ -353,8 +377,8 @@ public class SQLContainerTest {
     public void firstItemId_freeform_returnsItemId0() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(new RowId(new Object[] { 0 }),
-                container.firstItemId());
+        Assert.assertEquals(new RowId(new Object[] { 0 + offset }), container
+                .firstItemId());
     }
 
     @Test
@@ -364,7 +388,7 @@ public class SQLContainerTest {
 
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(new RowId(new Object[] { 4999 }),
+        Assert.assertEquals(new RowId(new Object[] { 4999 + offset }),
                 container.lastItemId());
     }
 
@@ -373,28 +397,32 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertTrue(container.isFirstId(new RowId(new Object[] { 0 })));
+        Assert.assertTrue(container.isFirstId(new RowId(
+                new Object[] { 0 + offset })));
     }
 
     @Test
     public void isFirstId_freeformSecondId_returnsFalse() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertFalse(container.isFirstId(new RowId(new Object[] { 1 })));
+        Assert.assertFalse(container.isFirstId(new RowId(
+                new Object[] { 1 + offset })));
     }
 
     @Test
     public void isLastId_freeformSecondId_returnsFalse() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertFalse(container.isLastId(new RowId(new Object[] { 1 })));
+        Assert.assertFalse(container.isLastId(new RowId(
+                new Object[] { 1 + offset })));
     }
 
     @Test
     public void isLastId_freeformLastId_returnsTrue() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertTrue(container.isLastId(new RowId(new Object[] { 3 })));
+        Assert.assertTrue(container.isLastId(new RowId(
+                new Object[] { 3 + offset })));
     }
 
     @Test
@@ -403,7 +431,8 @@ public class SQLContainerTest {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertTrue(container.isLastId(new RowId(new Object[] { 4999 })));
+        Assert.assertTrue(container.isLastId(new RowId(
+                new Object[] { 4999 + offset })));
     }
 
     @Test
@@ -625,16 +654,15 @@ public class SQLContainerTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         try {
-            statement.execute("drop table garbage");
+            statement.execute("drop table GARBAGE");
         } catch (SQLException e) {
             // Don't worry if the table doesn't exist, since we don't want it to
         }
-        statement
-                .execute("create table garbage (id integer generated always as identity, type varchar(32), PRIMARY KEY(id))");
+        statement.execute(createGarbage);
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM garbage", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM GARBAGE", Arrays.asList("ID"), connectionPool));
         Object id = container.addItem();
         Assert.assertSame(id, container.firstItemId());
     }
@@ -645,16 +673,15 @@ public class SQLContainerTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         try {
-            statement.execute("drop table garbage");
+            statement.execute("drop table GARBAGE");
         } catch (SQLException e) {
             // Don't worry if the table doesn't exist, since we don't want it to
         }
-        statement
-                .execute("create table garbage (id integer generated always as identity, type varchar(32), PRIMARY KEY(id))");
+        statement.execute(createGarbage);
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM garbage", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM GARBAGE", Arrays.asList("ID"), connectionPool));
         Object id = container.addItem();
         Assert.assertTrue(container.isFirstId(id));
     }
@@ -849,16 +876,15 @@ public class SQLContainerTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         try {
-            statement.execute("drop table garbage");
+            statement.execute("drop table GARBAGE");
         } catch (SQLException e) {
             // Don't worry if the table doesn't exist, since we don't want it to
         }
-        statement
-                .execute("create table garbage (id integer generated always as identity, type varchar(32), PRIMARY KEY(id))");
+        statement.execute(createGarbage);
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM garbage", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM GARBAGE", Arrays.asList("ID"), connectionPool));
         Object first = container.addItem();
         Object second = container.addItem();
         Assert.assertSame(first, container.firstItemId());
@@ -903,16 +929,16 @@ public class SQLContainerTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         try {
-            statement.execute("drop table garbage");
+            statement.execute("drop table GARBAGE");
         } catch (SQLException e) {
             // Don't worry if the table doesn't exist, since we don't want it to
+            conn.rollback();
         }
-        statement
-                .execute("create table garbage (id integer generated always as identity, type varchar(32), PRIMARY KEY(id))");
+        statement.execute(createGarbage);
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM garbage", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM GARBAGE", Arrays.asList("ID"), connectionPool));
         Object first = container.addItem();
         container.addItem();
         Assert.assertSame(first, container.firstItemId());
@@ -1010,24 +1036,20 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.storeRow(EasyMock.isA(Connection.class),
-                        EasyMock.isA(RowItem.class)))
-                .andAnswer(new IAnswer<Integer>() {
-                    public Integer answer() throws Throwable {
-                        Connection conn = (Connection) EasyMock
-                                .getCurrentArguments()[0];
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
-                        Statement statement = conn.createStatement();
-                        statement
-                                .executeUpdate("insert into people values(default, '"
-                                        + item.getItemProperty("NAME")
-                                                .getValue() + "')");
-                        statement.close();
-                        conn.commit();
-                        connectionPool.releaseConnection(conn);
-                        return 1;
-                    }
-                }).anyTimes();
+                delegate.storeRow(EasyMock.isA(Connection.class), EasyMock
+                        .isA(RowItem.class))).andAnswer(new IAnswer<Integer>() {
+            public Integer answer() throws Throwable {
+                Connection conn = (Connection) EasyMock.getCurrentArguments()[0];
+                RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
+                Statement statement = conn.createStatement();
+                statement.executeUpdate("insert into people values(default, '"
+                        + item.getItemProperty("NAME").getValue() + "')");
+                statement.close();
+                conn.commit();
+                connectionPool.releaseConnection(conn);
+                return 1;
+            }
+        }).anyTimes();
         EasyMock.expect(
                 delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
                 .andAnswer(new IAnswer<String>() {
@@ -1047,11 +1069,11 @@ public class SQLContainerTest {
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         query.setDelegate(delegate);
         EasyMock.replay(delegate);
         SQLContainer container = new SQLContainer(query);
@@ -1061,9 +1083,8 @@ public class SQLContainerTest {
         Assert.assertSame(id, container.lastItemId());
         container.commit();
         Assert.assertFalse(container.lastItemId() instanceof TemporaryRowId);
-        Assert.assertEquals("New Name",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("New Name", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
         EasyMock.verify(delegate);
     }
 
@@ -1074,24 +1095,20 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.storeRow(EasyMock.isA(Connection.class),
-                        EasyMock.isA(RowItem.class)))
-                .andAnswer(new IAnswer<Integer>() {
-                    public Integer answer() throws Throwable {
-                        Connection conn = (Connection) EasyMock
-                                .getCurrentArguments()[0];
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
-                        Statement statement = conn.createStatement();
-                        statement
-                                .executeUpdate("insert into people values(default, '"
-                                        + item.getItemProperty("NAME")
-                                                .getValue() + "')");
-                        statement.close();
-                        conn.commit();
-                        connectionPool.releaseConnection(conn);
-                        return 1;
-                    }
-                }).anyTimes();
+                delegate.storeRow(EasyMock.isA(Connection.class), EasyMock
+                        .isA(RowItem.class))).andAnswer(new IAnswer<Integer>() {
+            public Integer answer() throws Throwable {
+                Connection conn = (Connection) EasyMock.getCurrentArguments()[0];
+                RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
+                Statement statement = conn.createStatement();
+                statement.executeUpdate("insert into people values(default, '"
+                        + item.getItemProperty("NAME").getValue() + "')");
+                statement.close();
+                conn.commit();
+                connectionPool.releaseConnection(conn);
+                return 1;
+            }
+        }).anyTimes();
         EasyMock.expect(
                 delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
                 .andAnswer(new IAnswer<String>() {
@@ -1111,11 +1128,11 @@ public class SQLContainerTest {
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         query.setDelegate(delegate);
         EasyMock.replay(delegate);
         SQLContainer container = new SQLContainer(query);
@@ -1128,12 +1145,11 @@ public class SQLContainerTest {
         container.commit();
         Object nextToLast = container.getIdByIndex(container.size() - 2);
         Assert.assertFalse(nextToLast instanceof TemporaryRowId);
-        Assert.assertEquals("Herbert",
-                container.getContainerProperty(nextToLast, "NAME").getValue());
+        Assert.assertEquals("Herbert", container.getContainerProperty(
+                nextToLast, "NAME").getValue());
         Assert.assertFalse(container.lastItemId() instanceof TemporaryRowId);
-        Assert.assertEquals("Larry",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Larry", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
         EasyMock.verify(delegate);
     }
 
@@ -1144,20 +1160,18 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.removeRow(EasyMock.isA(Connection.class),
-                        EasyMock.isA(RowItem.class)))
-                .andAnswer(new IAnswer<Boolean>() {
-                    public Boolean answer() throws Throwable {
-                        Connection conn = (Connection) EasyMock
-                                .getCurrentArguments()[0];
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
-                        Statement statement = conn.createStatement();
-                        statement.executeUpdate("DELETE FROM people WHERE ID="
-                                + item.getItemProperty("ID"));
-                        statement.close();
-                        return true;
-                    }
-                }).anyTimes();
+                delegate.removeRow(EasyMock.isA(Connection.class), EasyMock
+                        .isA(RowItem.class))).andAnswer(new IAnswer<Boolean>() {
+            public Boolean answer() throws Throwable {
+                Connection conn = (Connection) EasyMock.getCurrentArguments()[0];
+                RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
+                Statement statement = conn.createStatement();
+                statement.executeUpdate("DELETE FROM people WHERE \"ID\"="
+                        + item.getItemProperty("ID"));
+                statement.close();
+                return true;
+            }
+        }).anyTimes();
         EasyMock.expect(
                 delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
                 .andAnswer(new IAnswer<String>() {
@@ -1177,11 +1191,11 @@ public class SQLContainerTest {
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         query.setDelegate(delegate);
         EasyMock.replay(delegate);
         SQLContainer container = new SQLContainer(query);
@@ -1199,24 +1213,22 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.storeRow(EasyMock.isA(Connection.class),
-                        EasyMock.isA(RowItem.class)))
-                .andAnswer(new IAnswer<Integer>() {
-                    public Integer answer() throws Throwable {
-                        Connection conn = (Connection) EasyMock
-                                .getCurrentArguments()[0];
-                        RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
-                        Statement statement = conn.createStatement();
-                        statement.executeUpdate("UPDATE people SET NAME='"
-                                + item.getItemProperty("NAME").getValue()
-                                + "' WHERE ID="
-                                + item.getItemProperty("ID").getValue());
-                        statement.close();
-                        conn.commit();
-                        connectionPool.releaseConnection(conn);
-                        return 1;
-                    }
-                }).anyTimes();
+                delegate.storeRow(EasyMock.isA(Connection.class), EasyMock
+                        .isA(RowItem.class))).andAnswer(new IAnswer<Integer>() {
+            public Integer answer() throws Throwable {
+                Connection conn = (Connection) EasyMock.getCurrentArguments()[0];
+                RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
+                Statement statement = conn.createStatement();
+                statement.executeUpdate("UPDATE people SET \"NAME\"='"
+                        + item.getItemProperty("NAME").getValue()
+                        + "' WHERE \"ID\"="
+                        + item.getItemProperty("ID").getValue());
+                statement.close();
+                conn.commit();
+                connectionPool.releaseConnection(conn);
+                return 1;
+            }
+        }).anyTimes();
         EasyMock.expect(
                 delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
                 .andAnswer(new IAnswer<String>() {
@@ -1236,20 +1248,19 @@ public class SQLContainerTest {
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         query.setDelegate(delegate);
         EasyMock.replay(delegate);
         SQLContainer container = new SQLContainer(query);
         Object last = container.lastItemId();
         container.getContainerProperty(last, "NAME").setValue("Donald");
         container.commit();
-        Assert.assertEquals("Donald",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Donald", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
         EasyMock.verify(delegate);
     }
 
@@ -1397,8 +1408,8 @@ public class SQLContainerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void addOrderBy_freeform_shouldReorderResults() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
@@ -1430,7 +1441,7 @@ public class SQLContainerTest {
                         if (!orderBys.isEmpty()) {
                             query.append(" ORDER BY ");
                             for (OrderBy orderBy : orderBys) {
-                                query.append(orderBy.getColumn());
+                                query.append("\"" + orderBy.getColumn() + "\"");
                                 if (orderBy.isAscending()) {
                                     query.append(" ASC");
                                 } else {
@@ -1443,28 +1454,24 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
 
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.firstItemId(), "NAME")
-                        .getValue());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         container.addOrderBy(new OrderBy("NAME", true));
         // Börje, Kalle, Pelle, Ville
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.firstItemId(), "NAME")
-                        .getValue());
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1480,8 +1487,8 @@ public class SQLContainerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void sort_freeform_sortsByName() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
@@ -1513,7 +1520,7 @@ public class SQLContainerTest {
                         if (!orderBys.isEmpty()) {
                             query.append(" ORDER BY ");
                             for (OrderBy orderBy : orderBys) {
-                                query.append(orderBy.getColumn());
+                                query.append("\"" + orderBy.getColumn() + "\"");
                                 if (orderBy.isAscending()) {
                                     query.append(" ASC");
                                 } else {
@@ -1526,29 +1533,25 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
         EasyMock.replay(delegate);
 
         query.setDelegate(delegate);
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.firstItemId(), "NAME")
-                        .getValue());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         container.sort(new Object[] { "NAME" }, new boolean[] { true });
 
         // Börje, Kalle, Pelle, Ville
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.firstItemId(), "NAME")
-                        .getValue());
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1556,8 +1559,8 @@ public class SQLContainerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void addFilter_freeform_filtersResults() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
@@ -1601,8 +1604,8 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountQuery()).andAnswer(
+                new IAnswer<String>() {
                     public String answer() throws Throwable {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
@@ -1625,17 +1628,15 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         container
                 .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
         // Ville, Kalle, Pelle
         Assert.assertEquals(3, container.size());
-        Assert.assertEquals("Pelle",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Pelle", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1643,8 +1644,8 @@ public class SQLContainerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void addContainerFilter_filtersResults() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
@@ -1688,8 +1689,8 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountQuery()).andAnswer(
+                new IAnswer<String>() {
                     public String answer() throws Throwable {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
@@ -1717,9 +1718,8 @@ public class SQLContainerTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1728,8 +1728,8 @@ public class SQLContainerTest {
     @Test
     public void addContainerFilter_ignoreCase_filtersResults()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
@@ -1773,8 +1773,8 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountQuery()).andAnswer(
+                new IAnswer<String>() {
                     public String answer() throws Throwable {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
@@ -1802,9 +1802,8 @@ public class SQLContainerTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1813,8 +1812,8 @@ public class SQLContainerTest {
     @Test
     public void removeAllContainerFilters_freeform_noFiltering()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
@@ -1858,8 +1857,8 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountQuery()).andAnswer(
+                new IAnswer<String>() {
                     public String answer() throws Throwable {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
@@ -1887,16 +1886,14 @@ public class SQLContainerTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         container.removeAllContainerFilters();
 
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1905,8 +1902,8 @@ public class SQLContainerTest {
     @Test
     public void removeContainerFilters_freeform_noFiltering()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
@@ -1950,8 +1947,8 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountQuery()).andAnswer(
+                new IAnswer<String>() {
                     public String answer() throws Throwable {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
@@ -1979,16 +1976,14 @@ public class SQLContainerTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         container.removeContainerFilters("NAME");
 
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }
@@ -1997,8 +1992,8 @@ public class SQLContainerTest {
     @Test
     public void addFilter_freeformBufferedItems_alsoFiltersBufferedItems()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
@@ -2038,14 +2033,14 @@ public class SQLContainerTest {
                             }
                         }
                         if (limit > 0) {
-                            query.append(" LIMIT ").append(limit)
-                                    .append(" OFFSET ").append(offset);
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
                         }
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountQuery()).andAnswer(
+                new IAnswer<String>() {
                     public String answer() throws Throwable {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
@@ -2068,9 +2063,8 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         Object id1 = container.addItem();
         container.getContainerProperty(id1, "NAME").setValue("Palle");
@@ -2082,22 +2076,14 @@ public class SQLContainerTest {
 
         // Ville, Kalle, Pelle, Palle
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals(
-                "Ville",
-                container.getContainerProperty(container.getIdByIndex(0),
-                        "NAME").getValue());
-        Assert.assertEquals(
-                "Kalle",
-                container.getContainerProperty(container.getIdByIndex(1),
-                        "NAME").getValue());
-        Assert.assertEquals(
-                "Pelle",
-                container.getContainerProperty(container.getIdByIndex(2),
-                        "NAME").getValue());
-        Assert.assertEquals(
-                "Palle",
-                container.getContainerProperty(container.getIdByIndex(3),
-                        "NAME").getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.getIdByIndex(0), "NAME").getValue());
+        Assert.assertEquals("Kalle", container.getContainerProperty(
+                container.getIdByIndex(1), "NAME").getValue());
+        Assert.assertEquals("Pelle", container.getContainerProperty(
+                container.getIdByIndex(2), "NAME").getValue());
+        Assert.assertEquals("Palle", container.getContainerProperty(
+                container.getIdByIndex(3), "NAME").getValue());
 
         Assert.assertNull(container.getIdByIndex(4));
         Assert.assertNull(container.nextItemId(container.getIdByIndex(3)));
@@ -2118,8 +2104,8 @@ public class SQLContainerTest {
     @Test
     public void sort_freeformBufferedItems_sortsBufferedItemsLastInOrderAdded()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
-                Arrays.asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
+                .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
@@ -2151,7 +2137,7 @@ public class SQLContainerTest {
                         if (!orderBys.isEmpty()) {
                             query.append(" ORDER BY ");
                             for (OrderBy orderBy : orderBys) {
-                                query.append(orderBy.getColumn());
+                                query.append("\"" + orderBy.getColumn() + "\"");
                                 if (orderBy.isAscending()) {
                                     query.append(" ASC");
                                 } else {
@@ -2164,19 +2150,17 @@ public class SQLContainerTest {
                         return query.toString();
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andThrow(new UnsupportedOperationException()).anyTimes();
+        EasyMock.expect(delegate.getCountQuery()).andThrow(
+                new UnsupportedOperationException()).anyTimes();
         EasyMock.replay(delegate);
 
         query.setDelegate(delegate);
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
-        Assert.assertEquals("Ville",
-                container.getContainerProperty(container.firstItemId(), "NAME")
-                        .getValue());
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Ville", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         Object id1 = container.addItem();
         container.getContainerProperty(id1, "NAME").setValue("Wilbert");
@@ -2186,17 +2170,13 @@ public class SQLContainerTest {
         container.sort(new Object[] { "NAME" }, new boolean[] { true });
 
         // Börje, Kalle, Pelle, Ville, Wilbert, Albert
-        Assert.assertEquals("Börje",
-                container.getContainerProperty(container.firstItemId(), "NAME")
-                        .getValue());
-        Assert.assertEquals(
-                "Wilbert",
-                container.getContainerProperty(
-                        container.getIdByIndex(container.size() - 2), "NAME")
-                        .getValue());
-        Assert.assertEquals("Albert",
-                container.getContainerProperty(container.lastItemId(), "NAME")
-                        .getValue());
+        Assert.assertEquals("Börje", container.getContainerProperty(
+                container.firstItemId(), "NAME").getValue());
+        Assert.assertEquals("Wilbert", container.getContainerProperty(
+                container.getIdByIndex(container.size() - 2), "NAME")
+                .getValue());
+        Assert.assertEquals("Albert", container.getContainerProperty(
+                container.lastItemId(), "NAME").getValue());
 
         EasyMock.verify(delegate);
     }

@@ -7,10 +7,12 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.vaadin.addon.sqlcontainer.AllTests;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
@@ -21,19 +23,28 @@ import com.vaadin.addon.sqlcontainer.query.TableQuery;
 
 public class SQLGeneratorsTest {
 
+    private static final int offset = AllTests.offset;
     private JDBCConnectionPool connectionPool;
 
     @Before
     public void setUp() {
+
         try {
-            connectionPool = new SimpleJDBCConnectionPool(
-                    "org.hsqldb.jdbc.JDBCDriver",
-                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 2);
+            connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
+                    AllTests.dbURL, AllTests.dbUser, AllTests.dbPwd, 2, 2);
         } catch (SQLException e) {
             e.printStackTrace();
             Assert.fail(e.getMessage());
         }
+
         addPeopleToDatabase();
+    }
+
+    @After
+    public void tearDown() {
+        if (connectionPool != null) {
+            connectionPool.destroy();
+        }
     }
 
     private void addPeopleToDatabase() {
@@ -41,24 +52,26 @@ public class SQLGeneratorsTest {
             Connection conn = connectionPool.reserveConnection();
             Statement statement = conn.createStatement();
             try {
-                statement.execute("drop table people");
+                statement.execute("drop table PEOPLE");
             } catch (SQLException e) {
                 // Will fail if table doesn't exist, which is OK.
+                conn.rollback();
+            }
+            statement.execute(AllTests.peopleFirst);
+            if (AllTests.peopleSecond != null) {
+                statement.execute(AllTests.peopleSecond);
             }
             statement
-                    .execute("create table people (id integer generated always as identity, name varchar(32))");
-            statement.execute("alter table people add primary key (id)");
+                    .executeUpdate("insert into PEOPLE values(default, 'Ville')");
             statement
-                    .executeUpdate("insert into people values(default, 'Ville')");
+                    .executeUpdate("insert into PEOPLE values(default, 'Kalle')");
             statement
-                    .executeUpdate("insert into people values(default, 'Kalle')");
+                    .executeUpdate("insert into PEOPLE values(default, 'Pelle')");
             statement
-                    .executeUpdate("insert into people values(default, 'Pelle')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Börje')");
+                    .executeUpdate("insert into PEOPLE values(default, 'Börje')");
             statement.close();
             statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery("select * from people");
+            ResultSet rs = statement.executeQuery("select * from PEOPLE");
             Assert.assertTrue(rs.next());
             statement.close();
             conn.commit();
@@ -95,55 +108,57 @@ public class SQLGeneratorsTest {
                 Filter.ComparisonType.ENDS_WITH, "lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         String query = sg.generateSelectQuery("TABLE", f, ob, 0, 0, null);
-        Assert.assertEquals(query,
-                "SELECT * FROM TABLE WHERE name LIKE '%lle' ORDER BY name ASC");
+        Assert
+                .assertEquals(query,
+                        "SELECT * FROM TABLE WHERE \"name\" LIKE '%lle' ORDER BY \"name\" ASC");
     }
 
     @Test
     public void generateDeleteQuery_basicQuery_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new DefaultSQLGenerator();
-        TableQuery query = new TableQuery("PEOPLE", connectionPool);
+        TableQuery query = new TableQuery("people", connectionPool);
         SQLContainer container = new SQLContainer(query);
 
-        String queryString = sg.generateDeleteQuery("PEOPLE",
+        String queryString = sg.generateDeleteQuery("people",
                 (RowItem) container.getItem(container.getItemIds().iterator()
                         .next()));
-        Assert.assertEquals(queryString,
-                "DELETE FROM PEOPLE WHERE ID = '0' AND NAME = 'Ville'");
+        int id = offset;
+        Assert.assertEquals(queryString, "DELETE FROM people WHERE \"ID\" = '"
+                + id + "' AND \"NAME\" = 'Ville'");
     }
 
     @Test
     public void generateUpdateQuery_basicQuery_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new DefaultSQLGenerator();
-        TableQuery query = new TableQuery("PEOPLE", connectionPool);
+        TableQuery query = new TableQuery("people", connectionPool);
         SQLContainer container = new SQLContainer(query);
 
         RowItem ri = (RowItem) container.getItem(container.getItemIds()
                 .iterator().next());
         ri.getItemProperty("NAME").setValue("Viljami");
 
-        String queryString = sg.generateUpdateQuery("PEOPLE", ri);
-
+        String queryString = sg.generateUpdateQuery("people", ri);
+        int id = offset;
         Assert.assertEquals(queryString,
-                "UPDATE PEOPLE SET NAME = 'Viljami' WHERE ID = 0");
+                "UPDATE people SET \"NAME\" = 'Viljami' WHERE \"ID\" = " + id);
     }
 
     @Test
     public void generateInsertQuery_basicQuery_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new DefaultSQLGenerator();
-        TableQuery query = new TableQuery("PEOPLE", connectionPool);
+        TableQuery query = new TableQuery("people", connectionPool);
         SQLContainer container = new SQLContainer(query);
 
         RowItem ri = (RowItem) container.getItem(container.addItem());
         ri.getItemProperty("NAME").setValue("Viljami");
 
-        String queryString = sg.generateInsertQuery("PEOPLE", ri);
+        String queryString = sg.generateInsertQuery("people", ri);
 
         Assert.assertEquals(queryString,
-                "INSERT INTO PEOPLE (NAME) VALUES ('Viljami')");
+                "INSERT INTO people (\"NAME\") VALUES ('Viljami')");
     }
 
     @Test
@@ -154,9 +169,12 @@ public class SQLGeneratorsTest {
                 Filter.ComparisonType.ENDS_WITH, "lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         String query = sg.generateSelectQuery("TABLE", f, ob, 4, 8, "NAME, ID");
-        Assert.assertEquals(query, "SELECT * FROM (SELECT ROWNUM r, * FROM "
-                + "(SELECT NAME, ID FROM TABLE WHERE name LIKE '%lle' "
-                + "ORDER BY name ASC) WHERE ROWNUM <= 12) WHERE ROWNUM >= 4");
+        Assert
+                .assertEquals(
+                        query,
+                        "SELECT * FROM (SELECT ROWNUM r, * FROM "
+                                + "(SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE '%lle' "
+                                + "ORDER BY \"name\" ASC) WHERE ROWNUM <= 12) WHERE ROWNUM >= 4");
     }
 
     @Test
@@ -168,8 +186,8 @@ public class SQLGeneratorsTest {
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         String query = sg.generateSelectQuery("TABLE", f, ob, 4, 8, "NAME, ID");
         Assert.assertEquals(query, "SELECT * FROM (SELECT row_number() OVER "
-                + "( ORDER BY name ASC) AS rownum, NAME, ID "
-                + "FROM TABLE WHERE name LIKE '%lle') "
+                + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
+                + "FROM TABLE WHERE \"name\" LIKE '%lle') "
                 + "AS a WHERE a.rownum BETWEEN 4 AND 12");
     }
 }

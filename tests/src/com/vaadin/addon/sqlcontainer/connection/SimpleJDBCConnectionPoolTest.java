@@ -8,16 +8,16 @@ import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SimpleJDBCConnectionPoolTest {
+import com.vaadin.addon.sqlcontainer.AllTests;
 
-    private SimpleJDBCConnectionPool connectionPool;
+public class SimpleJDBCConnectionPoolTest {
+    private JDBCConnectionPool connectionPool;
 
     @Before
     public void setUp() {
         try {
-            connectionPool = new SimpleJDBCConnectionPool(
-                    "org.hsqldb.jdbc.JDBCDriver",
-                    "jdbc:hsqldb:mem:sqlcontainer", "SA", "", 2, 2);
+            connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
+                    AllTests.dbURL, AllTests.dbUser, AllTests.dbPwd, 2, 2);
         } catch (SQLException e) {
             e.printStackTrace();
             Assert.fail(e.getMessage());
@@ -60,7 +60,8 @@ public class SimpleJDBCConnectionPoolTest {
         }
 
         connectionPool.reserveConnection();
-        Assert.fail("Reserving connection didn't fail even though no connections are available!");
+        Assert
+                .fail("Reserving connection didn't fail even though no connections are available!");
     }
 
     @Test
