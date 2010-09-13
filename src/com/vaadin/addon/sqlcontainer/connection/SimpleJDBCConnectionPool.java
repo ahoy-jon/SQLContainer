@@ -3,6 +3,7 @@ package com.vaadin.addon.sqlcontainer.connection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -20,6 +21,7 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
     private int initialConnections = 5;
     private int maxConnections = 20;
 
+    private String driverName;
     private String connectionUri;
     private String userName;
     private String password;
@@ -47,6 +49,7 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
             throw new IllegalArgumentException(
                     "Database password must be given.");
         }
+        this.driverName = driverName;
         this.connectionUri = connectionUri;
         this.userName = userName;
         this.password = password;
@@ -117,7 +120,34 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
         Connection c = DriverManager.getConnection(connectionUri, userName,
                 password);
         c.setAutoCommit(false);
+        if (driverName.toLowerCase().contains("mysql")) {
+            try {
+                Statement s = c.createStatement();
+                s.execute("SET SESSION sql_mode = 'ANSI'");
+                s.close();
+            } catch (Exception e) {
+                // Failed to set ansi mode; continue
+            }
+        }
         return c;
+    }
+
+    public void destroy() {
+        for (Connection c : availableConnections) {
+            try {
+                c.close();
+            } catch (SQLException e) {
+                // No need to do anything
+            }
+        }
+        for (Connection c : reservedConnections) {
+            try {
+                c.close();
+            } catch (SQLException e) {
+                // No need to do anything
+            }
+        }
+
     }
 
 }

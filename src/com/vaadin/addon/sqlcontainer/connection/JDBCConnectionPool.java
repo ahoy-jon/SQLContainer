@@ -25,4 +25,13 @@ public interface JDBCConnectionPool {
      *            Connection to be released
      */
     public void releaseConnection(Connection conn);
+
+    /**
+     * Destroys the connection pool: close() is called an all the connections in
+     * the pool, whether available or reserved.
+     * 
+     * This method was added to fix PostgreSQL -related issues with connections
+     * that were left hanging 'idle'.
+     */
+    public void destroy();
 }
