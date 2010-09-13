@@ -344,9 +344,16 @@ public class TableQuery implements QueryDelegate {
             if (dbmd != null) {
                 ResultSet tables = dbmd.getTables(null, null, tableName, null);
                 if (!tables.next()) {
-                    throw new IllegalArgumentException("Table with the name \""
-                            + tableName
-                            + "\" was not found. Check your database contents.");
+                    tables = dbmd.getTables(null, null,
+                            tableName.toUpperCase(), null);
+                    if (!tables.next()) {
+                        throw new IllegalArgumentException(
+                                "Table with the name \""
+                                        + tableName
+                                        + "\" was not found. Check your database contents.");
+                    } else {
+                        tableName = tableName.toUpperCase();
+                    }
                 }
                 ResultSet rs = dbmd.getPrimaryKeys(null, null, tableName);
                 List<String> names = new ArrayList<String>();
