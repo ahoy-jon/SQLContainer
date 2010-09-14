@@ -59,14 +59,21 @@ public class TableQueryTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            statement
-                    .executeUpdate("insert into people values(default, 'Ville')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Kalle')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Pelle')");
-            statement
-                    .executeUpdate("insert into people values(default, 'Börje')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Ville')");
+                statement.executeUpdate("insert into people values('Kalle')");
+                statement.executeUpdate("insert into people values('Pelle')");
+                statement.executeUpdate("insert into people values('Börje')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Ville')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Kalle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Pelle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Börje')");
+            }
             statement.close();
             statement = conn.createStatement();
             ResultSet rs = statement.executeQuery("select * from people");
@@ -96,7 +103,8 @@ public class TableQueryTest {
 
     @Test
     public void construction_legalParameters_defaultGenerator_shouldSucceed() {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         Assert.assertArrayEquals(new Object[] { "ID" }, tQuery
                 .getPrimaryKeyColumns().toArray());
         boolean correctTableName = "people".equalsIgnoreCase(tQuery
@@ -129,7 +137,8 @@ public class TableQueryTest {
      **********************************************************************/
     @Test
     public void getCount_simpleQuery_returnsFour() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         Assert.assertEquals(4, tQuery.getCount());
     }
 
@@ -139,20 +148,29 @@ public class TableQueryTest {
         // Add some people
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
-        statement.executeUpdate("insert into people values(default, 'Bengt')");
-        statement.executeUpdate("insert into people values(default, 'Ingvar')");
+        if (AllTests.db == 3) {
+            statement.executeUpdate("insert into people values('Bengt')");
+            statement.executeUpdate("insert into people values('Ingvar')");
+        } else {
+            statement
+                    .executeUpdate("insert into people values(default, 'Bengt')");
+            statement
+                    .executeUpdate("insert into people values(default, 'Ingvar')");
+        }
         statement.close();
         conn.commit();
         connectionPool.releaseConnection(conn);
 
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
 
         Assert.assertEquals(6, tQuery.getCount());
     }
 
     @Test
     public void getCount_normalState_releasesConnection() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.getCount();
         tQuery.getCount();
         Assert.assertNotNull(connectionPool.reserveConnection());
@@ -163,7 +181,9 @@ public class TableQueryTest {
      **********************************************************************/
     @Test
     public void getResults_simpleQuery_returnsFourRecords() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         ResultSet rs = tQuery.getResults(0, 0);
 
         Assert.assertTrue(rs.next());
@@ -191,15 +211,22 @@ public class TableQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            statement
-                    .executeUpdate("insert into people values(default, 'Person "
-                            + i + "')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Person "
+                        + i + "')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Person "
+                                + i + "')");
+            }
         }
         statement.close();
         conn.commit();
         connectionPool.releaseConnection(conn);
 
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         ResultSet rs = tQuery.getResults(0, 0);
         for (int i = 0; i < 5000; i++) {
             Assert.assertTrue(rs.next());
@@ -212,14 +239,16 @@ public class TableQueryTest {
      **********************************************************************/
     @Test
     public void beginTransaction_readOnly_shouldSucceed() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.beginTransaction();
     }
 
     @Test(expected = IllegalStateException.class)
     public void beginTransaction_transactionAlreadyActive_shouldFail()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
 
         tQuery.beginTransaction();
         tQuery.beginTransaction();
@@ -227,27 +256,31 @@ public class TableQueryTest {
 
     @Test
     public void commit_readOnly_shouldSucceed() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.beginTransaction();
         tQuery.commit();
     }
 
     @Test
     public void rollback_readOnly_shouldSucceed() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.beginTransaction();
         tQuery.rollback();
     }
 
     @Test(expected = SQLException.class)
     public void commit_noActiveTransaction_shouldFail() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.commit();
     }
 
     @Test(expected = SQLException.class)
     public void rollback_noActiveTransaction_shouldFail() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.rollback();
     }
 
@@ -257,21 +290,26 @@ public class TableQueryTest {
     @Test
     public void containsRowWithKeys_existingKeys_returnsTrue()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         Assert.assertTrue(tQuery.containsRowWithKey(1));
     }
 
     @Test
     public void containsRowWithKeys_nonexistingKeys_returnsTrue()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         Assert.assertFalse(tQuery.containsRowWithKey(1337));
     }
 
     @Test
     public void containsRowWithKeys_invalidKeys_shouldFail()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         boolean b = true;
         try {
             b = tQuery.containsRowWithKey("foo");
@@ -284,7 +322,8 @@ public class TableQueryTest {
     @Test
     public void containsRowWithKeys_nullKeys_shouldFailAndReleaseConnections()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         try {
             tQuery.containsRowWithKey(new Object[] { null });
         } catch (SQLException e) {
@@ -299,7 +338,8 @@ public class TableQueryTest {
      **********************************************************************/
     @Test
     public void setFilters_shouldReturnCorrectCount() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         List<Filter> filters = Arrays.asList(new Filter("NAME",
                 ComparisonType.ENDS_WITH, "lle"));
         tQuery.setFilters(filters);
@@ -309,7 +349,9 @@ public class TableQueryTest {
     @Test
     public void setOrderByNameAscending_shouldReturnCorrectOrder()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         List<OrderBy> orderBys = Arrays.asList(new OrderBy("NAME", true));
         tQuery.setOrderBy(orderBys);
 
@@ -338,7 +380,9 @@ public class TableQueryTest {
     @Test
     public void setOrderByNameDescending_shouldReturnCorrectOrder()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         List<OrderBy> orderBys = Arrays.asList(new OrderBy("NAME", false));
         tQuery.setOrderBy(orderBys);
 
@@ -366,13 +410,15 @@ public class TableQueryTest {
 
     @Test
     public void setFilters_nullParameter_shouldSucceed() {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.setFilters(null);
     }
 
     @Test
     public void setOrderBy_nullParameter_shouldSucceed() {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         tQuery.setOrderBy(null);
     }
 
@@ -382,7 +428,8 @@ public class TableQueryTest {
     @Test
     public void removeRowThroughContainer_legalRowItem_shouldSucceed()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         SQLContainer container = new SQLContainer(tQuery);
         container.setAutoCommit(false);
         Assert.assertTrue(container.removeItem(container.getItemIds()
@@ -399,7 +446,9 @@ public class TableQueryTest {
     @Test
     public void removeRowThroughContainer_nonexistingRowId_shouldFail()
             throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         SQLContainer container = new SQLContainer(tQuery);
         container.setAutoCommit(true);
         Assert.assertFalse(container.removeItem(container.getItemIds()
@@ -411,7 +460,9 @@ public class TableQueryTest {
      **********************************************************************/
     @Test
     public void insertRowThroughContainer_shouldSucceed() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         SQLContainer container = new SQLContainer(tQuery);
         container.setAutoCommit(false);
 
@@ -428,7 +479,9 @@ public class TableQueryTest {
 
     @Test
     public void modifyRowThroughContainer_shouldSucceed() throws SQLException {
-        TableQuery tQuery = new TableQuery("people", connectionPool);
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+
         // In this test the primary key is used as a version column
         tQuery.setVersionColumn("ID");
         SQLContainer container = new SQLContainer(tQuery);

@@ -7,6 +7,9 @@ import org.junit.runners.Suite.SuiteClasses;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPoolTest;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryTest;
 import com.vaadin.addon.sqlcontainer.query.TableQueryTest;
+import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
 
 @RunWith(Suite.class)
@@ -16,8 +19,8 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
         TableQueryTest.class, SQLGeneratorsTest.class })
 public class AllTests {
     /* Set the DB used for testing here! */
-    /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL */
-    public static final int db = 2;
+    /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL */
+    public static final int db = 3;
 
     /* Auto-increment column offset (HSQLDB = 0, MYSQL = 1, POSTGRES = 1) */
     public static int offset;
@@ -31,9 +34,12 @@ public class AllTests {
     /* People -test table creation statement(s) */
     public static String peopleFirst;
     public static String peopleSecond;
+    /* SQL Generator used during the testing */
+    public static SQLGenerator sqlGen;
 
     /* Set DB-specific settings based on selected DB */
     static {
+        sqlGen = new DefaultSQLGenerator();
         switch (db) {
         case 0:
             offset = 0;
@@ -64,6 +70,17 @@ public class AllTests {
             dbPwd = "postgres";
             peopleFirst = "create table PEOPLE (\"ID\" serial primary key, \"NAME\" VARCHAR(32))";
             peopleSecond = null;
+            break;
+        case 3:
+            offset = 1;
+            createGarbage = "create table GARBAGE (\"ID\" int identity(1,1) primary key, \"TYPE\" varchar(32))";
+            dbDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+            dbURL = "jdbc:sqlserver://localhost:1433;databaseName=tempdb;";
+            dbUser = "sa";
+            dbPwd = "sa";
+            peopleFirst = "create table PEOPLE (\"ID\" int identity(1,1) primary key, \"NAME\" VARCHAR(32))";
+            peopleSecond = null;
+            sqlGen = new MSSQLGenerator();
             break;
         }
     }

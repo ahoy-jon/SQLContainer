@@ -24,6 +24,8 @@ import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.data.Item;
 import com.vaadin.data.Container.ItemSetChangeListener;
 
@@ -63,32 +65,25 @@ public class SQLContainerTest {
                 // Will fail if table doesn't exist, which is OK.
                 conn.rollback();
             }
-            statement.close();
-            statement = conn.createStatement();
             statement.execute(AllTests.peopleFirst);
-            statement.close();
             if (AllTests.peopleSecond != null) {
-                statement = conn.createStatement();
                 statement.execute(AllTests.peopleSecond);
-                statement.close();
             }
-            statement = conn.createStatement();
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Ville')");
-            statement.close();
-            statement = conn.createStatement();
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Kalle')");
-            statement.close();
-            statement = conn.createStatement();
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Pelle')");
-            statement.close();
-            statement = conn.createStatement();
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Börje')");
-            statement.close();
-            statement = conn.createStatement();
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Ville')");
+                statement.executeUpdate("insert into people values('Kalle')");
+                statement.executeUpdate("insert into people values('Pelle')");
+                statement.executeUpdate("insert into people values('Börje')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Ville')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Kalle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Pelle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Börje')");
+            }
             ResultSet rs = statement.executeQuery("select * from PEOPLE");
             Assert.assertTrue(rs.next());
             statement.close();
@@ -104,9 +99,14 @@ public class SQLContainerTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            statement
-                    .executeUpdate("insert into people values(default, 'Person "
-                            + i + "')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Person "
+                        + i + "')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Person "
+                                + i + "')");
+            }
         }
         statement.close();
         conn.commit();
@@ -274,7 +274,12 @@ public class SQLContainerTest {
     public void size_freeformOneAddedItem_returnsFive() throws SQLException {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
-        statement.executeUpdate("insert into people values(default, 'Bengt')");
+        if (AllTests.db == 3) {
+            statement.executeUpdate("insert into people values('Bengt')");
+        } else {
+            statement
+                    .executeUpdate("insert into people values(default, 'Bengt')");
+        }
         statement.close();
         conn.commit();
         connectionPool.releaseConnection(conn);
@@ -330,8 +335,19 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return "SELECT * FROM people LIMIT " + limit
-                                + " OFFSET " + offset;
+                        if (AllTests.db == 3) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT row_number() OVER"
+                                    + " ( ORDER BY \"ID\" ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN "
+                                    + start
+                                    + " AND " + end;
+                            return q;
+                        } else {
+                            return "SELECT * FROM people LIMIT " + limit
+                                    + " OFFSET " + offset;
+                        }
                     }
                 }).anyTimes();
         delegate.setFilters(null);
@@ -1042,8 +1058,15 @@ public class SQLContainerTest {
                 Connection conn = (Connection) EasyMock.getCurrentArguments()[0];
                 RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
                 Statement statement = conn.createStatement();
-                statement.executeUpdate("insert into people values(default, '"
-                        + item.getItemProperty("NAME").getValue() + "')");
+                if (AllTests.db == 3) {
+                    statement.executeUpdate("insert into people values('"
+                            + item.getItemProperty("NAME").getValue() + "')");
+                } else {
+                    statement
+                            .executeUpdate("insert into people values(default, '"
+                                    + item.getItemProperty("NAME").getValue()
+                                    + "')");
+                }
                 statement.close();
                 conn.commit();
                 connectionPool.releaseConnection(conn);
@@ -1057,8 +1080,19 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return "SELECT * FROM people LIMIT " + limit
-                                + " OFFSET " + offset;
+                        if (AllTests.db == 3) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT row_number() OVER"
+                                    + " ( ORDER BY \"ID\" ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN "
+                                    + start
+                                    + " AND " + end;
+                            return q;
+                        } else {
+                            return "SELECT * FROM people LIMIT " + limit
+                                    + " OFFSET " + offset;
+                        }
                     }
                 }).anyTimes();
         delegate.setFilters(null);
@@ -1101,8 +1135,15 @@ public class SQLContainerTest {
                 Connection conn = (Connection) EasyMock.getCurrentArguments()[0];
                 RowItem item = (RowItem) EasyMock.getCurrentArguments()[1];
                 Statement statement = conn.createStatement();
-                statement.executeUpdate("insert into people values(default, '"
-                        + item.getItemProperty("NAME").getValue() + "')");
+                if (AllTests.db == 3) {
+                    statement.executeUpdate("insert into people values('"
+                            + item.getItemProperty("NAME").getValue() + "')");
+                } else {
+                    statement
+                            .executeUpdate("insert into people values(default, '"
+                                    + item.getItemProperty("NAME").getValue()
+                                    + "')");
+                }
                 statement.close();
                 conn.commit();
                 connectionPool.releaseConnection(conn);
@@ -1116,8 +1157,19 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return "SELECT * FROM people LIMIT " + limit
-                                + " OFFSET " + offset;
+                        if (AllTests.db == 3) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT row_number() OVER"
+                                    + " ( ORDER BY \"ID\" ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN "
+                                    + start
+                                    + " AND " + end;
+                            return q;
+                        } else {
+                            return "SELECT * FROM people LIMIT " + limit
+                                    + " OFFSET " + offset;
+                        }
                     }
                 }).anyTimes();
         delegate.setFilters(null);
@@ -1179,8 +1231,19 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return "SELECT * FROM people LIMIT " + limit
-                                + " OFFSET " + offset;
+                        if (AllTests.db == 3) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT row_number() OVER"
+                                    + " ( ORDER BY \"ID\" ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN "
+                                    + start
+                                    + " AND " + end;
+                            return q;
+                        } else {
+                            return "SELECT * FROM people LIMIT " + limit
+                                    + " OFFSET " + offset;
+                        }
                     }
                 }).anyTimes();
         delegate.setFilters(null);
@@ -1236,8 +1299,19 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return "SELECT * FROM people LIMIT " + limit
-                                + " OFFSET " + offset;
+                        if (AllTests.db == 3) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT row_number() OVER"
+                                    + " ( ORDER BY \"ID\" ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN "
+                                    + start
+                                    + " AND " + end;
+                            return q;
+                        } else {
+                            return "SELECT * FROM people LIMIT " + limit
+                                    + " OFFSET " + offset;
+                        }
                     }
                 }).anyTimes();
         delegate.setFilters(null);
@@ -1436,22 +1510,36 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!orderBys.isEmpty()) {
-                            query.append(" ORDER BY ");
-                            for (OrderBy orderBy : orderBys) {
-                                query.append("\"" + orderBy.getColumn() + "\"");
-                                if (orderBy.isAscending()) {
-                                    query.append(" ASC");
-                                } else {
-                                    query.append(" DESC");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            if (orderBys == null || orderBys.isEmpty()) {
+                                List<OrderBy> ob = new ArrayList<OrderBy>();
+                                ob.add(new OrderBy("ID", true));
+                                return gen.generateSelectQuery("people", null,
+                                        ob, offset, limit, null);
+                            } else {
+                                return gen.generateSelectQuery("people", null,
+                                        orderBys, offset, limit, null);
+                            }
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!orderBys.isEmpty()) {
+                                query.append(" ORDER BY ");
+                                for (OrderBy orderBy : orderBys) {
+                                    query.append("\"" + orderBy.getColumn()
+                                            + "\"");
+                                    if (orderBy.isAscending()) {
+                                        query.append(" ASC");
+                                    } else {
+                                        query.append(" DESC");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andThrow(
@@ -1515,22 +1603,36 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!orderBys.isEmpty()) {
-                            query.append(" ORDER BY ");
-                            for (OrderBy orderBy : orderBys) {
-                                query.append("\"" + orderBy.getColumn() + "\"");
-                                if (orderBy.isAscending()) {
-                                    query.append(" ASC");
-                                } else {
-                                    query.append(" DESC");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            if (orderBys == null || orderBys.isEmpty()) {
+                                List<OrderBy> ob = new ArrayList<OrderBy>();
+                                ob.add(new OrderBy("ID", true));
+                                return gen.generateSelectQuery("people", null,
+                                        ob, offset, limit, null);
+                            } else {
+                                return gen.generateSelectQuery("people", null,
+                                        orderBys, offset, limit, null);
+                            }
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!orderBys.isEmpty()) {
+                                query.append(" ORDER BY ");
+                                for (OrderBy orderBy : orderBys) {
+                                    query.append("\"" + orderBy.getColumn()
+                                            + "\"");
+                                    if (orderBy.isAscending()) {
+                                        query.append(" ASC");
+                                    } else {
+                                        query.append(" DESC");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andThrow(
@@ -1587,21 +1689,30 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!filters.isEmpty()) {
+                                Filter lastFilter = filters
+                                        .get(filters.size() - 1);
+                                query.append(" WHERE ");
+                                for (Filter filter : filters) {
+                                    query.append(filter.toWhereString());
+                                    if (lastFilter != filter) {
+                                        query.append(" AND ");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andAnswer(
@@ -1672,21 +1783,30 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!filters.isEmpty()) {
+                                Filter lastFilter = filters
+                                        .get(filters.size() - 1);
+                                query.append(" WHERE ");
+                                for (Filter filter : filters) {
+                                    query.append(filter.toWhereString());
+                                    if (lastFilter != filter) {
+                                        query.append(" AND ");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andAnswer(
@@ -1756,21 +1876,30 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!filters.isEmpty()) {
+                                Filter lastFilter = filters
+                                        .get(filters.size() - 1);
+                                query.append(" WHERE ");
+                                for (Filter filter : filters) {
+                                    query.append(filter.toWhereString());
+                                    if (lastFilter != filter) {
+                                        query.append(" AND ");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andAnswer(
@@ -1840,21 +1969,30 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!filters.isEmpty()) {
+                                Filter lastFilter = filters
+                                        .get(filters.size() - 1);
+                                query.append(" WHERE ");
+                                for (Filter filter : filters) {
+                                    query.append(filter.toWhereString());
+                                    if (lastFilter != filter) {
+                                        query.append(" AND ");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andAnswer(
@@ -1930,21 +2068,30 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!filters.isEmpty()) {
+                                Filter lastFilter = filters
+                                        .get(filters.size() - 1);
+                                query.append(" WHERE ");
+                                for (Filter filter : filters) {
+                                    query.append(filter.toWhereString());
+                                    if (lastFilter != filter) {
+                                        query.append(" AND ");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andAnswer(
@@ -2020,23 +2167,32 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!filters.isEmpty()) {
+                                Filter lastFilter = filters
+                                        .get(filters.size() - 1);
+                                query.append(" WHERE ");
+                                for (Filter filter : filters) {
+                                    query.append(filter.toWhereString());
+                                    if (lastFilter != filter) {
+                                        query.append(" AND ");
+                                    }
                                 }
                             }
+                            if (limit != 0 || offset != 0) {
+                                query.append(" LIMIT ").append(limit).append(
+                                        " OFFSET ").append(offset);
+                            }
+                            return query.toString();
                         }
-                        if (limit > 0) {
-                            query.append(" LIMIT ").append(limit).append(
-                                    " OFFSET ").append(offset);
-                        }
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andAnswer(
@@ -2132,22 +2288,36 @@ public class SQLContainerTest {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        StringBuffer query = new StringBuffer(
-                                "SELECT * FROM people");
-                        if (!orderBys.isEmpty()) {
-                            query.append(" ORDER BY ");
-                            for (OrderBy orderBy : orderBys) {
-                                query.append("\"" + orderBy.getColumn() + "\"");
-                                if (orderBy.isAscending()) {
-                                    query.append(" ASC");
-                                } else {
-                                    query.append(" DESC");
+                        if (AllTests.db == 3) {
+                            SQLGenerator gen = new MSSQLGenerator();
+                            if (orderBys == null || orderBys.isEmpty()) {
+                                List<OrderBy> ob = new ArrayList<OrderBy>();
+                                ob.add(new OrderBy("ID", true));
+                                return gen.generateSelectQuery("people", null,
+                                        ob, offset, limit, null);
+                            } else {
+                                return gen.generateSelectQuery("people", null,
+                                        orderBys, offset, limit, null);
+                            }
+                        } else {
+                            StringBuffer query = new StringBuffer(
+                                    "SELECT * FROM people");
+                            if (!orderBys.isEmpty()) {
+                                query.append(" ORDER BY ");
+                                for (OrderBy orderBy : orderBys) {
+                                    query.append("\"" + orderBy.getColumn()
+                                            + "\"");
+                                    if (orderBy.isAscending()) {
+                                        query.append(" ASC");
+                                    } else {
+                                        query.append(" DESC");
+                                    }
                                 }
                             }
+                            query.append(" LIMIT ").append(limit).append(
+                                    " OFFSET ").append(offset);
+                            return query.toString();
                         }
-                        query.append(" LIMIT ").append(limit)
-                                .append(" OFFSET ").append(offset);
-                        return query.toString();
                     }
                 }).anyTimes();
         EasyMock.expect(delegate.getCountQuery()).andThrow(

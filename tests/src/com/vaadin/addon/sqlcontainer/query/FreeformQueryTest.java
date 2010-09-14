@@ -63,14 +63,21 @@ public class FreeformQueryTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Ville')");
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Kalle')");
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Pelle')");
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Börje')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Ville')");
+                statement.executeUpdate("insert into people values('Kalle')");
+                statement.executeUpdate("insert into people values('Pelle')");
+                statement.executeUpdate("insert into people values('Börje')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Ville')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Kalle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Pelle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Börje')");
+            }
             statement.close();
             statement = conn.createStatement();
             ResultSet rs = statement.executeQuery("select * from PEOPLE");
@@ -134,8 +141,15 @@ public class FreeformQueryTest {
         // Add some people
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
-        statement.executeUpdate("insert into people values(default, 'Bengt')");
-        statement.executeUpdate("insert into people values(default, 'Ingvar')");
+        if (AllTests.db == 3) {
+            statement.executeUpdate("insert into people values('Bengt')");
+            statement.executeUpdate("insert into people values('Ingvar')");
+        } else {
+            statement
+                    .executeUpdate("insert into people values(default, 'Bengt')");
+            statement
+                    .executeUpdate("insert into people values(default, 'Ingvar')");
+        }
         statement.close();
         conn.commit();
         connectionPool.releaseConnection(conn);
@@ -260,9 +274,14 @@ public class FreeformQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            statement
-                    .executeUpdate("insert into people values(default, 'Person "
-                            + i + "')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Person "
+                        + i + "')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Person "
+                                + i + "')");
+            }
         }
         conn.commit();
         connectionPool.releaseConnection(conn);
@@ -441,8 +460,17 @@ public class FreeformQueryTest {
                 .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.getQueryString(0, 2)).andReturn(
-                "SELECT * FROM people LIMIT 2 OFFSET 0");
+        if (AllTests.db == 3) {
+            EasyMock
+                    .expect(delegate.getQueryString(0, 2))
+                    .andReturn(
+                            "SELECT * FROM (SELECT row_number()"
+                                    + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN 0 AND 2");
+        } else {
+            EasyMock.expect(delegate.getQueryString(0, 2)).andReturn(
+                    "SELECT * FROM people LIMIT 2 OFFSET 0");
+        }
         EasyMock.replay(delegate);
 
         query.setDelegate(delegate);
@@ -457,19 +485,32 @@ public class FreeformQueryTest {
                 .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.getQueryString(0, 2)).andReturn(
-                "SELECT * FROM people LIMIT 2 OFFSET 0");
+        if (AllTests.db == 3) {
+            EasyMock
+                    .expect(delegate.getQueryString(0, 2))
+                    .andReturn(
+                            "SELECT * FROM (SELECT row_number()"
+                                    + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN 0 AND 2");
+        } else {
+            EasyMock.expect(delegate.getQueryString(0, 2)).andReturn(
+                    "SELECT * FROM people LIMIT 2 OFFSET 0");
+        }
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
 
         ResultSet rs = query.getResults(0, 2);
+        int rsoffset = 0;
+        if (AllTests.db == 3) {
+            rsoffset++;
+        }
         Assert.assertTrue(rs.next());
-        Assert.assertEquals(0 + offset, rs.getInt(1));
-        Assert.assertEquals("Ville", rs.getString(2));
+        Assert.assertEquals(0 + offset, rs.getInt(1 + rsoffset));
+        Assert.assertEquals("Ville", rs.getString(2 + rsoffset));
 
         Assert.assertTrue(rs.next());
-        Assert.assertEquals(1 + offset, rs.getInt(1));
-        Assert.assertEquals("Kalle", rs.getString(2));
+        Assert.assertEquals(1 + offset, rs.getInt(1 + rsoffset));
+        Assert.assertEquals("Kalle", rs.getString(2 + rsoffset));
 
         Assert.assertFalse(rs.next());
 
@@ -482,9 +523,14 @@ public class FreeformQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            statement
-                    .executeUpdate("insert into people values(default, 'Person "
-                            + i + "')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Person "
+                        + i + "')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Person "
+                                + i + "')");
+            }
         }
         statement.close();
         conn.commit();
@@ -494,8 +540,17 @@ public class FreeformQueryTest {
                 .asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        EasyMock.expect(delegate.getQueryString(200, 100)).andReturn(
-                "SELECT * FROM people LIMIT 100 OFFSET 200");
+        if (AllTests.db == 3) {
+            EasyMock
+                    .expect(delegate.getQueryString(200, 100))
+                    .andReturn(
+                            "SELECT * FROM (SELECT row_number()"
+                                    + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
+                                    + " AS a WHERE a.rownum BETWEEN 201 AND 300");
+        } else {
+            EasyMock.expect(delegate.getQueryString(200, 100)).andReturn(
+                    "SELECT * FROM people LIMIT 100 OFFSET 200");
+        }
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
 

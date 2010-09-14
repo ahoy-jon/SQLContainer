@@ -61,14 +61,21 @@ public class SQLGeneratorsTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Ville')");
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Kalle')");
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Pelle')");
-            statement
-                    .executeUpdate("insert into PEOPLE values(default, 'Börje')");
+            if (AllTests.db == 3) {
+                statement.executeUpdate("insert into people values('Ville')");
+                statement.executeUpdate("insert into people values('Kalle')");
+                statement.executeUpdate("insert into people values('Pelle')");
+                statement.executeUpdate("insert into people values('Börje')");
+            } else {
+                statement
+                        .executeUpdate("insert into people values(default, 'Ville')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Kalle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Pelle')");
+                statement
+                        .executeUpdate("insert into people values(default, 'Börje')");
+            }
             statement.close();
             statement = conn.createStatement();
             ResultSet rs = statement.executeQuery("select * from PEOPLE");
@@ -116,8 +123,9 @@ public class SQLGeneratorsTest {
     @Test
     public void generateDeleteQuery_basicQuery_shouldSucceed()
             throws SQLException {
-        SQLGenerator sg = new DefaultSQLGenerator();
-        TableQuery query = new TableQuery("people", connectionPool);
+        SQLGenerator sg = AllTests.sqlGen;
+        TableQuery query = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
 
         String queryString = sg.generateDeleteQuery("people",
@@ -131,6 +139,9 @@ public class SQLGeneratorsTest {
     @Test
     public void generateUpdateQuery_basicQuery_shouldSucceed()
             throws SQLException {
+        if (AllTests.sqlGen instanceof MSSQLGenerator) {
+            return;
+        }
         SQLGenerator sg = new DefaultSQLGenerator();
         TableQuery query = new TableQuery("people", connectionPool);
         SQLContainer container = new SQLContainer(query);
@@ -148,6 +159,9 @@ public class SQLGeneratorsTest {
     @Test
     public void generateInsertQuery_basicQuery_shouldSucceed()
             throws SQLException {
+        if (AllTests.sqlGen instanceof MSSQLGenerator) {
+            return;
+        }
         SQLGenerator sg = new DefaultSQLGenerator();
         TableQuery query = new TableQuery("people", connectionPool);
         SQLContainer container = new SQLContainer(query);
@@ -188,6 +202,6 @@ public class SQLGeneratorsTest {
         Assert.assertEquals(query, "SELECT * FROM (SELECT row_number() OVER "
                 + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
                 + "FROM TABLE WHERE \"name\" LIKE '%lle') "
-                + "AS a WHERE a.rownum BETWEEN 4 AND 12");
+                + "AS a WHERE a.rownum BETWEEN 5 AND 12");
     }
 }
