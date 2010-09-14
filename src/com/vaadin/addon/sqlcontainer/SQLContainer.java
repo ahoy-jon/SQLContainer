@@ -101,7 +101,6 @@ public class SQLContainer implements Container, Container.Filterable,
     /**************************************/
     /** Methods from interface Container **/
     /**************************************/
-
     /*
      * (non-Javadoc)
      * 
@@ -110,21 +109,39 @@ public class SQLContainer implements Container, Container.Filterable,
     public Object addItem() throws UnsupportedOperationException {
         Object emptyKey[] = new Object[delegate.getPrimaryKeyColumns().size()];
         TemporaryRowId itemId = new TemporaryRowId(emptyKey);
-        // New empty column properties for the row item.
+        // Create new empty column properties for the row item.
         List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
         for (String propertyId : propertyIds) {
+            /* Default settings for new item properties. */
             boolean readOnly = false;
             boolean allowReadOnlyChange = true;
-            // TODO: Primary key columns are set as read-only and changes are
-            // not allowed, but what about auto-increment columns and other
-            // read-only columns? Need to find a way to determine which columns
-            // are such.
-            if (delegate.getPrimaryKeyColumns().contains(propertyId)) {
+            boolean nullable = true;
+            /* Try to fetch column properties from an existing item. */
+            boolean dataFromItem = false;
+            if (!cachedItems.isEmpty()) {
+                try {
+                    RowItem item = cachedItems.get(cachedItems.keySet()
+                            .iterator().next());
+                    ColumnProperty cp = (ColumnProperty) item
+                            .getItemProperty("propertyId");
+                    allowReadOnlyChange = cp.isReadOnlyChangeAllowed();
+                    readOnly = cp.isReadOnly();
+                    nullable = cp.isNullable();
+                    dataFromItem = true;
+                } catch (Exception e) {
+                    /* Failed to fetch data from existing item. */
+                }
+            }
+            /*
+             * If data fetching failed, we can still check if the property in
+             * question is a primary key.
+             */
+            if (!dataFromItem
+                    && delegate.getPrimaryKeyColumns().contains(propertyId)) {
                 readOnly = true;
                 allowReadOnlyChange = false;
+                nullable = false;
             }
-            // TODO: There is now clear knowledge of nullability at this point
-            boolean nullable = true;
             itemProperties.add(new ColumnProperty(propertyId, readOnly,
                     allowReadOnlyChange, nullable, null, getType(propertyId)));
         }
@@ -852,12 +869,6 @@ public class SQLContainer implements Container, Container.Filterable,
      * Fetches new count of rows from the data source, if needed.
      */
     private void updateCount() {
-        // TODO: Adjust size to reflect added/removed items!
-        /*
-         * This may be quite complicated due to the filters and sorters; it will
-         * be quite annoying to add/remove the non-committed rows into correct
-         * indexes.
-         */
         if (!sizeDirty
                 && new Date().getTime() < sizeUpdated.getTime()
                         + sizeValidMilliSeconds) {
@@ -867,18 +878,12 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.setFilters(filters);
             } catch (UnsupportedOperationException e) {
-                /*
-                 * The query delegate doesn't support filtering. No need to do
-                 * anything.
-                 */
+                /* The query delegate doesn't support filtering. */
             }
             try {
                 delegate.setOrderBy(sorters);
             } catch (UnsupportedOperationException e) {
-                /*
-                 * The query delegate doesn't support sorting. No need to do
-                 * anything.
-                 */
+                /* The query delegate doesn't support filtering. */
             }
             int newSize = delegate.getCount();
             if (newSize != size) {
@@ -976,7 +981,6 @@ public class SQLContainer implements Container, Container.Filterable,
                     itemId[i] = rs.getObject(pKeys.get(i));
                 }
                 RowId id = new RowId(itemId);
-                // TODO: If the item is modified, skip adding it to cache
                 if (!removedItems.containsKey(id)) {
                     for (String propId : propertyIds) {
                         /* Determine column meta data */
@@ -1010,7 +1014,7 @@ public class SQLContainer implements Container, Container.Filterable,
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
-                /* Rollback failed, original exception will be thrown. */
+                /* Roll back failed, original exception will be thrown. */
             }
             throw new RuntimeException("Failed to fetch page.", e);
         }
