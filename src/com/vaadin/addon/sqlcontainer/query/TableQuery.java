@@ -15,7 +15,6 @@ import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
-import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
 public class TableQuery implements QueryDelegate {
@@ -123,16 +122,15 @@ public class TableQuery implements QueryDelegate {
      */
     public ResultSet getResults(int offset, int pagelength) throws SQLException {
         String query;
-        if (sqlGenerator instanceof MSSQLGenerator) {
-            if (orderBys == null || orderBys.isEmpty()) {
-                List<OrderBy> ob = new ArrayList<OrderBy>();
-                ob.add(new OrderBy(primaryKeyColumns.get(0), true));
-                query = sqlGenerator.generateSelectQuery(tableName, filters,
-                        ob, offset, pagelength, null);
-            } else {
-                query = sqlGenerator.generateSelectQuery(tableName, filters,
-                        orderBys, offset, pagelength, null);
-            }
+        /*
+         * If no ordering is explicitly set, results will be ordered by the
+         * first primary key column.
+         */
+        if (orderBys == null || orderBys.isEmpty()) {
+            List<OrderBy> ob = new ArrayList<OrderBy>();
+            ob.add(new OrderBy(primaryKeyColumns.get(0), true));
+            query = sqlGenerator.generateSelectQuery(tableName, filters, ob,
+                    offset, pagelength, null);
         } else {
             query = sqlGenerator.generateSelectQuery(tableName, filters,
                     orderBys, offset, pagelength, null);
