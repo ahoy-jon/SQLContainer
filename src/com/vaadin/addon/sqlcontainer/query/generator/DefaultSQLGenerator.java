@@ -85,6 +85,10 @@ public class DefaultSQLGenerator implements SQLGenerator {
         Map<String, String> rowIdentifiers = new HashMap<String, String>();
         for (Object id : item.getItemPropertyIds()) {
             ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
+            if (this instanceof MSSQLGenerator
+                    && cp.getPropertyId().equalsIgnoreCase("rownum")) {
+                continue;
+            }
             String value = cp.getValue() == null ? null : cp.getValue()
                     .toString();
             /*
@@ -158,6 +162,10 @@ public class DefaultSQLGenerator implements SQLGenerator {
         Map<String, String> columnToValueMap = new HashMap<String, String>();
         for (Object id : item.getItemPropertyIds()) {
             ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
+            if (this instanceof MSSQLGenerator
+                    && cp.getPropertyId().equalsIgnoreCase("rownum")) {
+                continue;
+            }
             String value = cp.getValue() == null ? null : cp.getValue()
                     .toString();
             /* Only include properties whose read-only status can be altered */
@@ -424,6 +432,11 @@ public class DefaultSQLGenerator implements SQLGenerator {
         Collection<?> propIds = item.getItemPropertyIds();
         int count = 1;
         for (Object p : propIds) {
+            if (this instanceof MSSQLGenerator
+                    && p.toString().equalsIgnoreCase("rownum")) {
+                count++;
+                continue;
+            }
             if (item.getItemProperty(p).getValue() != null) {
                 query.append(" ");
                 query.append("\"" + p.toString() + "\"");
@@ -436,6 +449,10 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(" AND");
             }
             count++;
+        }
+        /* Make sure that the where clause does not end with an AND */
+        if (" AND".equals(query.substring(query.length() - 4))) {
+            return query.substring(0, query.length() - 4);
         }
         return query.toString();
     }
