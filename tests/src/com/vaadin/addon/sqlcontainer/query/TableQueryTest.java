@@ -50,7 +50,10 @@ public class TableQueryTest {
             Connection conn = connectionPool.reserveConnection();
             Statement statement = conn.createStatement();
             try {
-                statement.execute("drop table people");
+                statement.execute("drop table PEOPLE");
+                if (AllTests.db == 4) {
+                    statement.execute("drop sequence people_seq");
+                }
             } catch (SQLException e) {
                 // Will fail if table doesn't exist, which is OK.
                 conn.rollback();
@@ -58,6 +61,9 @@ public class TableQueryTest {
             statement.execute(AllTests.peopleFirst);
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
+            }
+            if (AllTests.db == 4) {
+                statement.execute(AllTests.peopleThird);
             }
             if (AllTests.db == 3) {
                 statement.executeUpdate("insert into people values('Ville')");
@@ -76,7 +82,7 @@ public class TableQueryTest {
             }
             statement.close();
             statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery("select * from people");
+            ResultSet rs = statement.executeQuery("select * from PEOPLE");
             Assert.assertTrue(rs.next());
             statement.close();
             conn.commit();
@@ -183,7 +189,6 @@ public class TableQueryTest {
     public void getResults_simpleQuery_returnsFourRecords() throws SQLException {
         TableQuery tQuery = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
-
         ResultSet rs = tQuery.getResults(0, 0);
 
         Assert.assertTrue(rs.next());

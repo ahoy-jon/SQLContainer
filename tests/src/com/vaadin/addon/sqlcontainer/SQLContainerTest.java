@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,6 +26,7 @@ import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.data.Item;
 import com.vaadin.data.Container.ItemSetChangeListener;
@@ -61,6 +63,9 @@ public class SQLContainerTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
+                if (AllTests.db == 4) {
+                    statement.execute("drop sequence people_seq");
+                }
             } catch (SQLException e) {
                 // Will fail if table doesn't exist, which is OK.
                 conn.rollback();
@@ -68,6 +73,9 @@ public class SQLContainerTest {
             statement.execute(AllTests.peopleFirst);
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
+            }
+            if (AllTests.db == 4) {
+                statement.execute(AllTests.peopleThird);
             }
             if (AllTests.db == 3) {
                 statement.executeUpdate("insert into people values('Ville')");
@@ -84,6 +92,8 @@ public class SQLContainerTest {
                 statement
                         .executeUpdate("insert into people values(default, 'Börje')");
             }
+            statement.close();
+            statement = conn.createStatement();
             ResultSet rs = statement.executeQuery("select * from PEOPLE");
             Assert.assertTrue(rs.next());
             statement.close();
@@ -120,30 +130,6 @@ public class SQLContainerTest {
                 .asList("ID"), connectionPool));
     }
 
-    // @Test
-    // public void constructor_withTableQuery_shouldSucceed() throws
-    // SQLException {
-    // SQLContainer container = new SQLContainer(new TableQuery("people",
-    // connectionPool));
-    // }
-    //
-    // @Test
-    // public void containsId_withTableQueryAndExistingId_returnsTrue()
-    // throws SQLException {
-    // SQLContainer container = new SQLContainer(new TableQuery("people",
-    // connectionPool));
-    // Assert.assertTrue(container.containsId(new RowId(new Object[] { 1 })));
-    // }
-    //
-    // @Test
-    // public void containsId_withTableQueryAndNonexistingId_returnsFalse()
-    // throws SQLException {
-    // SQLContainer container = new SQLContainer(new TableQuery("people",
-    // connectionPool));
-    // Assert.assertFalse(container
-    // .containsId(new RowId(new Object[] { 1337 })));
-    // }
-
     @Test
     public void containsId_withFreeformQueryAndExistingId_returnsTrue()
             throws SQLException {
@@ -166,8 +152,14 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                new RowId(new Object[] { 0 + offset }), "NAME").getValue());
+        if (AllTests.db == 4) {
+            Assert.assertEquals("Ville", container.getContainerProperty(
+                    new RowId(new Object[] { new BigDecimal(0 + offset) }),
+                    "NAME").getValue());
+        } else {
+            Assert.assertEquals("Ville", container.getContainerProperty(
+                    new RowId(new Object[] { 0 + offset }), "NAME").getValue());
+        }
     }
 
     @Test
@@ -204,7 +196,13 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Item item = container.getItem(new RowId(new Object[] { 0 + offset }));
+        Item item;
+        if (AllTests.db == 4) {
+            item = container.getItem(new RowId(new Object[] { new BigDecimal(
+                    0 + offset) }));
+        } else {
+            item = container.getItem(new RowId(new Object[] { 0 + offset }));
+        }
         Assert.assertNotNull(item);
         Assert.assertEquals("Ville", item.getItemProperty("NAME").getValue());
     }
@@ -215,8 +213,13 @@ public class SQLContainerTest {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Item item = container
-                .getItem(new RowId(new Object[] { 1337 + offset }));
+        Item item;
+        if (AllTests.db == 4) {
+            item = container.getItem(new RowId(new Object[] { new BigDecimal(
+                    1337 + offset) }));
+        } else {
+            item = container.getItem(new RowId(new Object[] { 1337 + offset }));
+        }
         Assert.assertNotNull(item);
         Assert.assertEquals(1337 + offset, item.getItemProperty("ID")
                 .getValue());
@@ -235,8 +238,17 @@ public class SQLContainerTest {
         RowId one = new RowId(new Object[] { 1 + offset });
         RowId two = new RowId(new Object[] { 2 + offset });
         RowId three = new RowId(new Object[] { 3 + offset });
-        Assert.assertArrayEquals(new Object[] { zero, one, two, three },
-                itemIds.toArray());
+        if (AllTests.db == 4) {
+            String[] correct = new String[] { "1", "2", "3", "4" };
+            List<String> oracle = new ArrayList<String>();
+            for (Object o : itemIds) {
+                oracle.add(o.toString());
+            }
+            Assert.assertArrayEquals(correct, oracle.toArray());
+        } else {
+            Assert.assertArrayEquals(new Object[] { zero, one, two, three },
+                    itemIds.toArray());
+        }
     }
 
     @Test
@@ -252,7 +264,11 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(Integer.class, container.getType("ID"));
+        if (AllTests.db == 4) {
+            Assert.assertEquals(BigDecimal.class, container.getType("ID"));
+        } else {
+            Assert.assertEquals(Integer.class, container.getType("ID"));
+        }
     }
 
     @Test
@@ -294,8 +310,13 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(3, container.indexOfId(new RowId(
-                new Object[] { 3 + offset })));
+        if (AllTests.db == 4) {
+            Assert.assertEquals(3, container.indexOfId(new RowId(
+                    new Object[] { new BigDecimal(3 + offset) })));
+        } else {
+            Assert.assertEquals(3, container.indexOfId(new RowId(
+                    new Object[] { 3 + offset })));
+        }
     }
 
     @Test
@@ -303,10 +324,18 @@ public class SQLContainerTest {
             throws SQLException {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        container.getItem(new RowId(new Object[] { 1337 + offset }));
-        Assert.assertEquals(1337, container.indexOfId(new RowId(
-                new Object[] { 1337 + offset })));
+                "SELECT * FROM people ORDER BY \"ID\" ASC",
+                Arrays.asList("ID"), connectionPool));
+        if (AllTests.db == 4) {
+            container.getItem(new RowId(new Object[] { new BigDecimal(
+                    1337 + offset) }));
+            Assert.assertEquals(1337, container.indexOfId(new RowId(
+                    new Object[] { new BigDecimal(1337 + offset) })));
+        } else {
+            container.getItem(new RowId(new Object[] { 1337 + offset }));
+            Assert.assertEquals(1337, container.indexOfId(new RowId(
+                    new Object[] { 1337 + offset })));
+        }
     }
 
     @Test
@@ -314,9 +343,16 @@ public class SQLContainerTest {
             throws SQLException {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM people ORDER BY \"ID\" ASC",
+                Arrays.asList("ID"), connectionPool));
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1337 + offset }), itemId);
+        if (AllTests.db == 4) {
+            Assert.assertEquals(new RowId(new Object[] { new BigDecimal(
+                    1337 + offset) }), itemId);
+        } else {
+            Assert.assertEquals(new RowId(new Object[] { 1337 + offset }),
+                    itemId);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -344,6 +380,16 @@ public class SQLContainerTest {
                                     + start
                                     + " AND " + end;
                             return q;
+                        } else if (AllTests.db == 4) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people ORDER BY \"ID\" ASC) x) "
+                                    + " WHERE r BETWEEN "
+                                    + start
+                                    + " AND "
+                                    + end;
+                            return q;
                         } else {
                             return "SELECT * FROM people LIMIT " + limit
                                     + " OFFSET " + offset;
@@ -364,7 +410,13 @@ public class SQLContainerTest {
         query.setDelegate(delegate);
         SQLContainer container = new SQLContainer(query);
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1337 + offset }), itemId);
+        if (AllTests.db == 4) {
+            Assert.assertEquals(new RowId(new Object[] { 1337 + offset })
+                    .toString(), itemId.toString());
+        } else {
+            Assert.assertEquals(new RowId(new Object[] { 1337 + offset }),
+                    itemId);
+        }
     }
 
     @Test
@@ -372,10 +424,16 @@ public class SQLContainerTest {
             throws SQLException {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM people ORDER BY \"ID\" ASC",
+                Arrays.asList("ID"), connectionPool));
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1338 + offset }),
-                container.nextItemId(itemId));
+        if (AllTests.db == 4) {
+            Assert.assertEquals(new RowId(new Object[] { 1338 + offset })
+                    .toString(), container.nextItemId(itemId).toString());
+        } else {
+            Assert.assertEquals(new RowId(new Object[] { 1338 + offset }),
+                    container.nextItemId(itemId));
+        }
     }
 
     @Test
@@ -383,18 +441,29 @@ public class SQLContainerTest {
             throws SQLException {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+                "SELECT * FROM people ORDER BY \"ID\" ASC",
+                Arrays.asList("ID"), connectionPool));
         Object itemId = container.getIdByIndex(1337);
-        Assert.assertEquals(new RowId(new Object[] { 1336 + offset }),
-                container.prevItemId(itemId));
+        if (AllTests.db == 4) {
+            Assert.assertEquals(new RowId(new Object[] { 1336 + offset })
+                    .toString(), container.prevItemId(itemId).toString());
+        } else {
+            Assert.assertEquals(new RowId(new Object[] { 1336 + offset }),
+                    container.prevItemId(itemId));
+        }
     }
 
     @Test
     public void firstItemId_freeform_returnsItemId0() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(new RowId(new Object[] { 0 + offset }), container
-                .firstItemId());
+        if (AllTests.db == 4) {
+            Assert.assertEquals(new RowId(new Object[] { 0 + offset })
+                    .toString(), container.firstItemId().toString());
+        } else {
+            Assert.assertEquals(new RowId(new Object[] { 0 + offset }),
+                    container.firstItemId());
+        }
     }
 
     @Test
@@ -403,9 +472,15 @@ public class SQLContainerTest {
         addFiveThousand();
 
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertEquals(new RowId(new Object[] { 4999 + offset }),
-                container.lastItemId());
+                "SELECT * FROM people ORDER BY \"ID\" ASC",
+                Arrays.asList("ID"), connectionPool));
+        if (AllTests.db == 4) {
+            Assert.assertEquals(new RowId(new Object[] { 4999 + offset })
+                    .toString(), container.lastItemId().toString());
+        } else {
+            Assert.assertEquals(new RowId(new Object[] { 4999 + offset }),
+                    container.lastItemId());
+        }
     }
 
     @Test
@@ -413,32 +488,52 @@ public class SQLContainerTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertTrue(container.isFirstId(new RowId(
-                new Object[] { 0 + offset })));
+        if (AllTests.db == 4) {
+            Assert.assertTrue(container.isFirstId(new RowId(
+                    new Object[] { new BigDecimal(0 + offset) })));
+        } else {
+            Assert.assertTrue(container.isFirstId(new RowId(
+                    new Object[] { 0 + offset })));
+        }
     }
 
     @Test
     public void isFirstId_freeformSecondId_returnsFalse() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertFalse(container.isFirstId(new RowId(
-                new Object[] { 1 + offset })));
+        if (AllTests.db == 4) {
+            Assert.assertFalse(container.isFirstId(new RowId(
+                    new Object[] { new BigDecimal(1 + offset) })));
+        } else {
+            Assert.assertFalse(container.isFirstId(new RowId(
+                    new Object[] { 1 + offset })));
+        }
     }
 
     @Test
     public void isLastId_freeformSecondId_returnsFalse() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertFalse(container.isLastId(new RowId(
-                new Object[] { 1 + offset })));
+        if (AllTests.db == 4) {
+            Assert.assertFalse(container.isLastId(new RowId(
+                    new Object[] { new BigDecimal(1 + offset) })));
+        } else {
+            Assert.assertFalse(container.isLastId(new RowId(
+                    new Object[] { 1 + offset })));
+        }
     }
 
     @Test
     public void isLastId_freeformLastId_returnsTrue() throws SQLException {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertTrue(container.isLastId(new RowId(
-                new Object[] { 3 + offset })));
+        if (AllTests.db == 4) {
+            Assert.assertTrue(container.isLastId(new RowId(
+                    new Object[] { new BigDecimal(3 + offset) })));
+        } else {
+            Assert.assertTrue(container.isLastId(new RowId(
+                    new Object[] { 3 + offset })));
+        }
     }
 
     @Test
@@ -446,9 +541,15 @@ public class SQLContainerTest {
             throws SQLException {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new FreeformQuery(
-                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
-        Assert.assertTrue(container.isLastId(new RowId(
-                new Object[] { 4999 + offset })));
+                "SELECT * FROM people ORDER BY \"ID\" ASC",
+                Arrays.asList("ID"), connectionPool));
+        if (AllTests.db == 4) {
+            Assert.assertTrue(container.isLastId(new RowId(
+                    new Object[] { new BigDecimal(4999 + offset) })));
+        } else {
+            Assert.assertTrue(container.isLastId(new RowId(
+                    new Object[] { 4999 + offset })));
+        }
     }
 
     @Test
@@ -671,10 +772,17 @@ public class SQLContainerTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
+            if (AllTests.db == 4) {
+                statement.execute("drop sequence garbage_seq");
+            }
         } catch (SQLException e) {
-            // Don't worry if the table doesn't exist, since we don't want it to
+            // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
+        if (AllTests.db == 4) {
+            statement.execute(AllTests.createGarbageSecond);
+            statement.execute(AllTests.createGarbageThird);
+        }
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
@@ -690,10 +798,17 @@ public class SQLContainerTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
+            if (AllTests.db == 4) {
+                statement.execute("drop sequence garbage_seq");
+            }
         } catch (SQLException e) {
-            // Don't worry if the table doesn't exist, since we don't want it to
+            // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
+        if (AllTests.db == 4) {
+            statement.execute(AllTests.createGarbageSecond);
+            statement.execute(AllTests.createGarbageThird);
+        }
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
@@ -893,10 +1008,17 @@ public class SQLContainerTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
+            if (AllTests.db == 4) {
+                statement.execute("drop sequence garbage_seq");
+            }
         } catch (SQLException e) {
-            // Don't worry if the table doesn't exist, since we don't want it to
+            // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
+        if (AllTests.db == 4) {
+            statement.execute(AllTests.createGarbageSecond);
+            statement.execute(AllTests.createGarbageThird);
+        }
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
@@ -946,11 +1068,17 @@ public class SQLContainerTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
+            if (AllTests.db == 4) {
+                statement.execute("drop sequence garbage_seq");
+            }
         } catch (SQLException e) {
-            // Don't worry if the table doesn't exist, since we don't want it to
-            conn.rollback();
+            // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
+        if (AllTests.db == 4) {
+            statement.execute(AllTests.createGarbageSecond);
+            statement.execute(AllTests.createGarbageThird);
+        }
         conn.commit();
         connectionPool.releaseConnection(conn);
         SQLContainer container = new SQLContainer(new FreeformQuery(
@@ -1089,6 +1217,16 @@ public class SQLContainerTest {
                                     + start
                                     + " AND " + end;
                             return q;
+                        } else if (AllTests.db == 4) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people ORDER BY \"ID\" ASC) x) "
+                                    + " WHERE r BETWEEN "
+                                    + start
+                                    + " AND "
+                                    + end;
+                            return q;
                         } else {
                             return "SELECT * FROM people LIMIT " + limit
                                     + " OFFSET " + offset;
@@ -1166,6 +1304,16 @@ public class SQLContainerTest {
                                     + start
                                     + " AND " + end;
                             return q;
+                        } else if (AllTests.db == 4) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people ORDER BY \"ID\" ASC) x) "
+                                    + " WHERE r BETWEEN "
+                                    + start
+                                    + " AND "
+                                    + end;
+                            return q;
                         } else {
                             return "SELECT * FROM people LIMIT " + limit
                                     + " OFFSET " + offset;
@@ -1240,6 +1388,16 @@ public class SQLContainerTest {
                                     + start
                                     + " AND " + end;
                             return q;
+                        } else if (AllTests.db == 4) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people ORDER BY \"ID\" ASC) x) "
+                                    + " WHERE r BETWEEN "
+                                    + start
+                                    + " AND "
+                                    + end;
+                            return q;
                         } else {
                             return "SELECT * FROM people LIMIT " + limit
                                     + " OFFSET " + offset;
@@ -1307,6 +1465,16 @@ public class SQLContainerTest {
                                     + " AS a WHERE a.rownum BETWEEN "
                                     + start
                                     + " AND " + end;
+                            return q;
+                        } else if (AllTests.db == 4) {
+                            int start = offset + 1;
+                            int end = offset + limit + 1;
+                            String q = "SELECT * FROM (SELECT x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people ORDER BY \"ID\" ASC) x) "
+                                    + " WHERE r BETWEEN "
+                                    + start
+                                    + " AND "
+                                    + end;
                             return q;
                         } else {
                             return "SELECT * FROM people LIMIT " + limit
@@ -1521,6 +1689,17 @@ public class SQLContainerTest {
                                 return gen.generateSelectQuery("people", null,
                                         orderBys, offset, limit, null);
                             }
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
+                            if (orderBys == null || orderBys.isEmpty()) {
+                                List<OrderBy> ob = new ArrayList<OrderBy>();
+                                ob.add(new OrderBy("ID", true));
+                                return gen.generateSelectQuery("people", null,
+                                        ob, offset, limit, null);
+                            } else {
+                                return gen.generateSelectQuery("people", null,
+                                        orderBys, offset, limit, null);
+                            }
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -1614,6 +1793,17 @@ public class SQLContainerTest {
                                 return gen.generateSelectQuery("people", null,
                                         orderBys, offset, limit, null);
                             }
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
+                            if (orderBys == null || orderBys.isEmpty()) {
+                                List<OrderBy> ob = new ArrayList<OrderBy>();
+                                ob.add(new OrderBy("ID", true));
+                                return gen.generateSelectQuery("people", null,
+                                        ob, offset, limit, null);
+                            } else {
+                                return gen.generateSelectQuery("people", null,
+                                        orderBys, offset, limit, null);
+                            }
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -1691,6 +1881,12 @@ public class SQLContainerTest {
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
                             SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
@@ -1789,6 +1985,12 @@ public class SQLContainerTest {
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
                                     ob, offset, limit, null);
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -1882,6 +2084,12 @@ public class SQLContainerTest {
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
                                     ob, offset, limit, null);
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -1971,6 +2179,12 @@ public class SQLContainerTest {
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
                             SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
@@ -2074,6 +2288,12 @@ public class SQLContainerTest {
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
                                     ob, offset, limit, null);
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -2169,6 +2389,12 @@ public class SQLContainerTest {
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
                             SQLGenerator gen = new MSSQLGenerator();
+                            List<OrderBy> ob = new ArrayList<OrderBy>();
+                            ob.add(new OrderBy("ID", true));
+                            return gen.generateSelectQuery("people", filters,
+                                    ob, offset, limit, null);
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
@@ -2290,6 +2516,17 @@ public class SQLContainerTest {
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
                             SQLGenerator gen = new MSSQLGenerator();
+                            if (orderBys == null || orderBys.isEmpty()) {
+                                List<OrderBy> ob = new ArrayList<OrderBy>();
+                                ob.add(new OrderBy("ID", true));
+                                return gen.generateSelectQuery("people", null,
+                                        ob, offset, limit, null);
+                            } else {
+                                return gen.generateSelectQuery("people", null,
+                                        orderBys, offset, limit, null);
+                            }
+                        } else if (AllTests.db == 4) {
+                            SQLGenerator gen = new OracleGenerator();
                             if (orderBys == null || orderBys.isEmpty()) {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));

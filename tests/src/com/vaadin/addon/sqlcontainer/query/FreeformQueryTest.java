@@ -55,6 +55,9 @@ public class FreeformQueryTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
+                if (AllTests.db == 4) {
+                    statement.execute("drop sequence people_seq");
+                }
             } catch (SQLException e) {
                 // Will fail if table doesn't exist, which is OK.
                 conn.rollback();
@@ -62,6 +65,9 @@ public class FreeformQueryTest {
             statement.execute(AllTests.peopleFirst);
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
+            }
+            if (AllTests.db == 4) {
+                statement.execute(AllTests.peopleThird);
             }
             if (AllTests.db == 3) {
                 statement.executeUpdate("insert into people values('Ville')");
@@ -200,10 +206,17 @@ public class FreeformQueryTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
+            if (AllTests.db == 4) {
+                statement.execute("drop sequence garbage_seq");
+            }
         } catch (SQLException e) {
             // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
+        if (AllTests.db == 4) {
+            statement.execute(AllTests.createGarbageSecond);
+            statement.execute(AllTests.createGarbageThird);
+        }
         conn.commit();
         connectionPool.releaseConnection(conn);
 
@@ -467,6 +480,12 @@ public class FreeformQueryTest {
                             "SELECT * FROM (SELECT row_number()"
                                     + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
                                     + " AS a WHERE a.rownum BETWEEN 0 AND 2");
+        } else if (AllTests.db == 4) {
+            EasyMock
+                    .expect(delegate.getQueryString(0, 2))
+                    .andReturn(
+                            "SELECT * FROM (SELECT  x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people) x) WHERE r BETWEEN 1 AND 2");
         } else {
             EasyMock.expect(delegate.getQueryString(0, 2)).andReturn(
                     "SELECT * FROM people LIMIT 2 OFFSET 0");
@@ -492,6 +511,12 @@ public class FreeformQueryTest {
                             "SELECT * FROM (SELECT row_number()"
                                     + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
                                     + " AS a WHERE a.rownum BETWEEN 0 AND 2");
+        } else if (AllTests.db == 4) {
+            EasyMock
+                    .expect(delegate.getQueryString(0, 2))
+                    .andReturn(
+                            "SELECT * FROM (SELECT  x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people) x) WHERE r BETWEEN 1 AND 2");
         } else {
             EasyMock.expect(delegate.getQueryString(0, 2)).andReturn(
                     "SELECT * FROM people LIMIT 2 OFFSET 0");
@@ -547,6 +572,12 @@ public class FreeformQueryTest {
                             "SELECT * FROM (SELECT row_number()"
                                     + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
                                     + " AS a WHERE a.rownum BETWEEN 201 AND 300");
+        } else if (AllTests.db == 4) {
+            EasyMock
+                    .expect(delegate.getQueryString(200, 100))
+                    .andReturn(
+                            "SELECT * FROM (SELECT  x.*, ROWNUM AS r FROM"
+                                    + " (SELECT * FROM people ORDER BY ID ASC) x) WHERE r BETWEEN 201 AND 300");
         } else {
             EasyMock.expect(delegate.getQueryString(200, 100)).andReturn(
                     "SELECT * FROM people LIMIT 100 OFFSET 200");

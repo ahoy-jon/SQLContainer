@@ -9,6 +9,7 @@ import com.vaadin.addon.sqlcontainer.query.FreeformQueryTest;
 import com.vaadin.addon.sqlcontainer.query.TableQueryTest;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
 
@@ -19,13 +20,15 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
         TableQueryTest.class, SQLGeneratorsTest.class })
 public class AllTests {
     /* Set the DB used for testing here! */
-    /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL */
-    public static final int db = 3;
+    /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL, 4 = ORACLE */
+    public static final int db = 4;
 
     /* Auto-increment column offset (HSQLDB = 0, MYSQL = 1, POSTGRES = 1) */
     public static int offset;
-    /* Garbage table creation query */
+    /* Garbage table creation query (=three queries for oracle) */
     public static String createGarbage;
+    public static String createGarbageSecond;
+    public static String createGarbageThird;
     /* DB Drivers, urls, usernames and passwords */
     public static String dbDriver;
     public static String dbURL;
@@ -34,6 +37,7 @@ public class AllTests {
     /* People -test table creation statement(s) */
     public static String peopleFirst;
     public static String peopleSecond;
+    public static String peopleThird;
     /* SQL Generator used during the testing */
     public static SQLGenerator sqlGen;
 
@@ -81,6 +85,20 @@ public class AllTests {
             peopleFirst = "create table PEOPLE (\"ID\" int identity(1,1) primary key, \"NAME\" VARCHAR(32))";
             peopleSecond = null;
             sqlGen = new MSSQLGenerator();
+            break;
+        case 4:
+            offset = 1;
+            createGarbage = "create table GARBAGE (\"ID\" integer primary key, \"TYPE\" varchar2(32))";
+            createGarbageSecond = "create sequence garbage_seq start with 1 increment by 1 nomaxvalue";
+            createGarbageThird = "create trigger garbage_trigger before insert on GARBAGE for each row begin select garbage_seq.nextval into :new.ID from dual; end;";
+            dbDriver = "oracle.jdbc.OracleDriver";
+            dbURL = "jdbc:oracle:thin:test/test@localhost:1521:XE";
+            dbUser = "test";
+            dbPwd = "test";
+            peopleFirst = "create table PEOPLE (\"ID\" integer primary key, \"NAME\" VARCHAR2(32))";
+            peopleSecond = "create sequence people_seq start with 1 increment by 1 nomaxvalue";
+            peopleThird = "create trigger people_trigger before insert on PEOPLE for each row begin select people_seq.nextval into :new.ID from dual; end;";
+            sqlGen = new OracleGenerator();
             break;
         }
     }

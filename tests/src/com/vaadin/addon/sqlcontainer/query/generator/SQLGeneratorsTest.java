@@ -53,6 +53,9 @@ public class SQLGeneratorsTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
+                if (AllTests.db == 4) {
+                    statement.execute("drop sequence people_seq");
+                }
             } catch (SQLException e) {
                 // Will fail if table doesn't exist, which is OK.
                 conn.rollback();
@@ -60,6 +63,9 @@ public class SQLGeneratorsTest {
             statement.execute(AllTests.peopleFirst);
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
+            }
+            if (AllTests.db == 4) {
+                statement.execute(AllTests.peopleThird);
             }
             if (AllTests.db == 3) {
                 statement.executeUpdate("insert into people values('Ville')");
@@ -123,6 +129,14 @@ public class SQLGeneratorsTest {
     @Test
     public void generateDeleteQuery_basicQuery_shouldSucceed()
             throws SQLException {
+        /*
+         * No need to run this for Oracle/MSSQL generators since the
+         * DefaultSQLGenerator method would be called anyway.
+         */
+        if (AllTests.sqlGen instanceof MSSQLGenerator
+                || AllTests.sqlGen instanceof OracleGenerator) {
+            return;
+        }
         SQLGenerator sg = AllTests.sqlGen;
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
@@ -139,7 +153,12 @@ public class SQLGeneratorsTest {
     @Test
     public void generateUpdateQuery_basicQuery_shouldSucceed()
             throws SQLException {
-        if (AllTests.sqlGen instanceof MSSQLGenerator) {
+        /*
+         * No need to run this for Oracle/MSSQL generators since the
+         * DefaultSQLGenerator method would be called anyway.
+         */
+        if (AllTests.sqlGen instanceof MSSQLGenerator
+                || AllTests.sqlGen instanceof OracleGenerator) {
             return;
         }
         SQLGenerator sg = new DefaultSQLGenerator();
@@ -159,7 +178,12 @@ public class SQLGeneratorsTest {
     @Test
     public void generateInsertQuery_basicQuery_shouldSucceed()
             throws SQLException {
-        if (AllTests.sqlGen instanceof MSSQLGenerator) {
+        /*
+         * No need to run this for Oracle/MSSQL generators since the
+         * DefaultSQLGenerator method would be called anyway.
+         */
+        if (AllTests.sqlGen instanceof MSSQLGenerator
+                || AllTests.sqlGen instanceof OracleGenerator) {
             return;
         }
         SQLGenerator sg = new DefaultSQLGenerator();
@@ -186,9 +210,9 @@ public class SQLGeneratorsTest {
         Assert
                 .assertEquals(
                         query,
-                        "SELECT * FROM (SELECT ROWNUM r, * FROM "
-                                + "(SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE '%lle' "
-                                + "ORDER BY \"name\" ASC) WHERE ROWNUM <= 12) WHERE ROWNUM >= 4");
+                        "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
+                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE '%lle'"
+                                + " ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
     }
 
     @Test
