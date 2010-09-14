@@ -147,4 +147,8 @@ final public class ColumnProperty implements Property {
     public void setVersionColumn(boolean versionColumn) {
         this.versionColumn = versionColumn;
     }
+
+    public boolean isNullable() {
+        return nullable;
+    }
 }
