@@ -457,7 +457,8 @@ public class SQLContainer implements Container, Container.Filterable,
             getPage();
         }
         int size = size();
-        while (true) {
+        boolean wrappedAround = false;
+        while (!wrappedAround) {
             for (Integer i : itemIndexes.keySet()) {
                 if (itemIndexes.get(i).equals(itemId)) {
                     return i;
@@ -468,6 +469,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     + (int) (pageLength * CACHE_RATIO * 1.5f);
             if (nextIndex >= size) {
                 // Wrap around.
+                wrappedAround = true;
                 // this will load from index 0 forward, since
                 // updateOffsetAndCache loads from index - pageLength *
                 // CACHE_RATIO / 2.
@@ -475,6 +477,7 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             updateOffsetAndCache(nextIndex);
         }
+        return -1;
     }
 
     /*
