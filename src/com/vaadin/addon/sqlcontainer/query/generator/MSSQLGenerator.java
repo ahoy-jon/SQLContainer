@@ -20,8 +20,50 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
-
+        if (pagelength > 1) {
+            offset++;
+            pagelength--;
+        }
         StringBuffer query = new StringBuffer();
+
+        /* Row count request is handled here */
+        if ("COUNT(*)".equalsIgnoreCase(toSelect)) {
+            query
+                    .append("SELECT COUNT(*) AS \"rowcount\" FROM (SELECT * FROM ");
+            query.append(tableName);
+            if (filters != null && !filters.isEmpty()) {
+                for (Filter f : filters) {
+                    generateFilter(query, f, filters.indexOf(f) == 0);
+                }
+            }
+            query.append(") AS t");
+            return query.toString();
+        }
+
+        /* SELECT without row number constraints */
+        if (offset == 0 && pagelength == 0) {
+            query.append("SELECT ");
+            if (toSelect != null) {
+                query.append(toSelect);
+            } else {
+                query.append("*");
+            }
+            query.append(" FROM ");
+            query.append(tableName);
+            if (filters != null) {
+                for (Filter f : filters) {
+                    generateFilter(query, f, filters.indexOf(f) == 0);
+                }
+            }
+            if (orderBys != null) {
+                for (OrderBy o : orderBys) {
+                    generateOrderBy(query, o, orderBys.indexOf(o) == 0);
+                }
+            }
+            return query.toString();
+        }
+
+        /* Remaining SELECT cases are handled here */
         query.append("SELECT * FROM (SELECT row_number() OVER (");
         if (orderBys != null) {
             for (OrderBy o : orderBys) {
