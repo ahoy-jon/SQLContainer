@@ -18,6 +18,9 @@ import java.util.Map;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
+import com.vaadin.addon.sqlcontainer.query.TableQuery;
+import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.data.Container;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
@@ -238,7 +241,6 @@ public class SQLContainer implements Container, Container.Filterable,
         ArrayList<RowId> ids = new ArrayList<RowId>();
         ResultSet rs = null;
         try {
-            delegate.beginTransaction();
             // Load ALL rows :(
             rs = delegate.getResults(0, 0);
             List<String> pKeys = delegate.getPrimaryKeyColumns();
@@ -253,13 +255,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     ids.add(id);
                 }
             }
-            delegate.commit();
         } catch (SQLException e) {
-            try {
-                delegate.rollback();
-            } catch (SQLException e1) {
-                /* Rollback failed, original exception will be thrown. */
-            }
             throw new RuntimeException("Failed to fetch item indexes.", e);
         }
         for (RowItem item : getFilteredAddedItems()) {
@@ -912,12 +908,14 @@ public class SQLContainer implements Container, Container.Filterable,
         ResultSet rs = null;
         ResultSetMetaData rsmd = null;
         try {
-            delegate.beginTransaction();
             rs = delegate.getResults(0, 1);
             boolean resultExists = rs.next();
             rsmd = rs.getMetaData();
             Object o = null;
             for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
+                    continue;
+                }
                 propertyIds.add(rsmd.getColumnName(i));
                 if (resultExists) {
                     o = rs.getObject(i);
@@ -925,13 +923,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 propertyTypes.put(rsmd.getColumnName(i),
                         o == null ? new Object().getClass() : o.getClass());
             }
-            delegate.commit();
         } catch (SQLException e) {
-            try {
-                delegate.rollback();
-            } catch (SQLException e1) {
-                /* Rollback failed, original exception will be thrown. */
-            }
             throw new RuntimeException("Failed to fetch property id's.", e);
         }
     }
@@ -950,14 +942,11 @@ public class SQLContainer implements Container, Container.Filterable,
         cachedItems.clear();
         itemIndexes.clear();
         try {
-            delegate.beginTransaction();
             try {
                 delegate.setOrderBy(sorters);
             } catch (UnsupportedOperationException e) {
-                /*
-                 * The query delegate doesn't support sorting. No need to do
-                 * anything.
-                 */
+                /* The query delegate doesn't support sorting. */
+                /* No need to do anything. */
             }
             rs = delegate.getResults(currentOffset, pageLength * CACHE_RATIO);
             rsmd = rs.getMetaData();
@@ -974,7 +963,6 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             while (rs.next()) {
                 List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
-                int columnNum = 1;
                 /* Generate row itemId based on primary key(s) */
                 Object[] itemId = new Object[pKeys.size()];
                 for (int i = 0; i < pKeys.size(); i++) {
@@ -982,26 +970,34 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
                 RowId id = new RowId(itemId);
                 if (!removedItems.containsKey(id)) {
-                    for (String propId : propertyIds) {
+                    for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                        if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
+                            continue;
+                        }
                         /* Determine column meta data */
-                        boolean nullable = rsmd.isNullable(columnNum) == ResultSetMetaData.columnNullable;
-                        boolean allowReadOnlyChange = !rsmd
-                                .isReadOnly(columnNum)
-                                && !rsmd.isAutoIncrement(columnNum);
-                        boolean readOnly = rsmd.isReadOnly(columnNum)
-                                || rsmd.isAutoIncrement(columnNum);
-                        Object value = rs.getObject(columnNum);
+                        boolean nullable = rsmd.isNullable(i) == ResultSetMetaData.columnNullable;
+                        boolean allowReadOnlyChange = !rsmd.isReadOnly(i)
+                                && !rsmd.isAutoIncrement(i);
+                        boolean readOnly = rsmd.isReadOnly(i)
+                                || rsmd.isAutoIncrement(i);
+                        Object value = rs.getObject(i);
                         if (value != null) {
-                            cp = new ColumnProperty(propId, readOnly,
-                                    allowReadOnlyChange, nullable, value, value
-                                            .getClass());
+                            cp = new ColumnProperty(rsmd.getColumnName(i),
+                                    readOnly, allowReadOnlyChange, nullable,
+                                    value, value.getClass());
                         } else {
-                            cp = new ColumnProperty(propId, readOnly,
-                                    allowReadOnlyChange, nullable, null,
-                                    getType(propId));
+                            Class<?> colType = Object.class;
+                            for (String propName : propertyTypes.keySet()) {
+                                if (propName.equals(rsmd.getColumnName(i))) {
+                                    colType = propertyTypes.get(propName);
+                                    break;
+                                }
+                            }
+                            cp = new ColumnProperty(rsmd.getColumnName(i),
+                                    readOnly, allowReadOnlyChange, nullable,
+                                    null, colType);
                         }
                         itemProperties.add(cp);
-                        columnNum++;
                     }
                     /* Cache item */
                     itemIndexes.put(rowCount, id);
@@ -1009,13 +1005,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     rowCount++;
                 }
             }
-            delegate.commit();
         } catch (SQLException e) {
-            try {
-                delegate.rollback();
-            } catch (SQLException e1) {
-                /* Roll back failed, original exception will be thrown. */
-            }
             throw new RuntimeException("Failed to fetch page.", e);
         }
     }
@@ -1040,6 +1030,28 @@ public class SQLContainer implements Container, Container.Filterable,
         for (Filter filter : filters) {
             if (!filter.passes(item.getItemProperty(filter.getColumn())
                     .getValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Checks is the given column identifier valid to be used with SQLContainer.
+     * Currently the only non-valid identifier is "rownum" when MSSQL or Oracle
+     * is used. This is due to the way the SELECT queries are constructed in
+     * order to implement paging in these databases.
+     * 
+     * @param identifier
+     *            Column identifier
+     * @return true if the identifier is valid
+     */
+    private boolean isColumnIdentifierValid(String identifier) {
+        if (identifier.equalsIgnoreCase("rownum")
+                && delegate instanceof TableQuery) {
+            TableQuery tq = (TableQuery) delegate;
+            if (tq.getSqlGenerator() instanceof MSSQLGenerator
+                    || tq.getSqlGenerator() instanceof OracleGenerator) {
                 return false;
             }
         }
