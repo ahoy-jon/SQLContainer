@@ -109,8 +109,14 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
                 conn.rollback();
             }
         } catch (SQLException e) {
-            /* Roll back failed, discard connection */
+            /* Roll back failed, close and discard connection */
+            try {
+                conn.close();
+            } catch (SQLException e1) {
+                /* Nothing needs to be done */
+            }
             reservedConnections.remove(conn);
+            return;
         }
         reservedConnections.remove(conn);
         availableConnections.add(conn);
