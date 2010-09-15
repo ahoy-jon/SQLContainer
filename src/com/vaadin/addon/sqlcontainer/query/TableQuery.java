@@ -15,6 +15,7 @@ import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
 public class TableQuery implements QueryDelegate {
@@ -381,6 +382,16 @@ public class TableQuery implements QueryDelegate {
                             "Primary key constraints have not been defined for the table \""
                                     + tableName
                                     + "\". Use FreeFormQuery to access this table.");
+                }
+                for (String colName : primaryKeyColumns) {
+                    if (colName.equalsIgnoreCase("rownum")) {
+                        if (getSqlGenerator() instanceof MSSQLGenerator
+                                || getSqlGenerator() instanceof MSSQLGenerator) {
+                            throw new IllegalArgumentException(
+                                    "When using Oracle or MSSQL, a primary key column"
+                                            + " named \'rownum\' is not allowed!");
+                        }
+                    }
                 }
             }
         } catch (SQLException e) {
