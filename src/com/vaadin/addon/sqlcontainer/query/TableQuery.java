@@ -163,6 +163,13 @@ public class TableQuery implements QueryDelegate {
         }
         String query = null;
         if (row.getId() instanceof TemporaryRowId) {
+            try {
+                ((ColumnProperty) row.getItemProperty(versionColumn))
+                        .setVersionColumn(true);
+            } catch (Exception e) {
+                throw new IllegalStateException(
+                        "Version column not set or does not exist.", e);
+            }
             query = sqlGenerator.generateInsertQuery(tableName, row);
         } else {
             try {
