@@ -21,8 +21,10 @@ public class DemoFreeformQueryDelegate implements FreeformQueryDelegate {
         StringBuffer query = new StringBuffer("SELECT * FROM PEOPLE");
         query.append(getFiltersString());
         query.append(getOrderByString());
-        query.append(" LIMIT ").append(limit);
-        query.append(" OFFSET ").append(offset);
+        if (offset != 0 || limit != 0) {
+            query.append(" LIMIT ").append(limit);
+            query.append(" OFFSET ").append(offset);
+        }
         return query.toString();
     }
 
