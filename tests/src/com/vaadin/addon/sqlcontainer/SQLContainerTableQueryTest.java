@@ -182,13 +182,13 @@ public class SQLContainerTableQueryTest {
                 connectionPool, AllTests.sqlGen));
         Collection<?> propertyIds = container.getContainerPropertyIds();
         if (AllTests.db == 3) {
-            Assert.assertEquals(3, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "rownum", "ID", "NAME" },
-                    propertyIds.toArray());
+            Assert.assertEquals(2, propertyIds.size());
+            Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
+                    .toArray());
         } else if (AllTests.db == 4) {
-            Assert.assertEquals(3, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME", "rownum" },
-                    propertyIds.toArray());
+            Assert.assertEquals(2, propertyIds.size());
+            Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
+                    .toArray());
         } else {
             Assert.assertEquals(2, propertyIds.size());
             Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
@@ -1311,8 +1311,8 @@ public class SQLContainerTableQueryTest {
         Assert.assertTrue(sortableIds.contains("ID"));
         Assert.assertTrue(sortableIds.contains("NAME"));
         if (AllTests.db == 3 || AllTests.db == 4) {
-            Assert.assertEquals(3, sortableIds.size());
-            Assert.assertTrue(sortableIds.contains("rownum"));
+            Assert.assertEquals(2, sortableIds.size());
+            Assert.assertFalse(sortableIds.contains("rownum"));
         } else {
             Assert.assertEquals(2, sortableIds.size());
         }
