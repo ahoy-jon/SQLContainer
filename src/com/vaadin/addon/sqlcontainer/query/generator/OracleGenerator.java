@@ -207,7 +207,7 @@ public class OracleGenerator extends DefaultSQLGenerator {
             String value = cp.getValue() == null ? null : cp.getValue()
                     .toString();
             /* Only include properties whose read-only status can be altered */
-            if (cp.isReadOnlyChangeAllowed()) {
+            if (cp.isReadOnlyChangeAllowed() && !cp.isVersionColumn()) {
                 columnToValueMap.put(cp.getPropertyId(), value);
             }
         }
