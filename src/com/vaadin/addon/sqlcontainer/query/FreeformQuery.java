@@ -128,6 +128,7 @@ public class FreeformQuery implements QueryDelegate {
         Connection conn = getConnection();
         Statement statement = conn.createStatement();
         ResultSet rs = statement.executeQuery(query);
+        releaseConnection(conn);
         return rs;
     }
 
