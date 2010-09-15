@@ -100,4 +100,18 @@ public final class RowItem implements Item {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        StringBuffer s = new StringBuffer();
+        s.append("ID: ");
+        s.append(getId().toString());
+        for (Object propId : getItemPropertyIds()) {
+            s.append(" | ");
+            s.append(propId.toString());
+            s.append(":");
+            s.append(getItemProperty(propId).toString());
+        }
+        return s.toString();
+    }
 }
