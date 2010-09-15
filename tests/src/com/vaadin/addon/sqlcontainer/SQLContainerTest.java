@@ -41,7 +41,7 @@ public class SQLContainerTest {
 
         try {
             connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
-                    AllTests.dbURL, AllTests.dbUser, AllTests.dbPwd, 5, 20);
+                    AllTests.dbURL, AllTests.dbUser, AllTests.dbPwd, 2, 2);
         } catch (SQLException e) {
             e.printStackTrace();
             Assert.fail(e.getMessage());
