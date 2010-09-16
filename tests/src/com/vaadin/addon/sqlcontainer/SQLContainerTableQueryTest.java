@@ -1118,6 +1118,7 @@ public class SQLContainerTableQueryTest {
     public void commit_tableAddedItem_shouldBeWrittenToDB() throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
+        query.setVersionColumn("ID");
         SQLContainer container = new SQLContainer(query);
         Object id = container.addItem();
         container.getContainerProperty(id, "NAME").setValue("New Name");
@@ -1134,6 +1135,7 @@ public class SQLContainerTableQueryTest {
             throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
+        query.setVersionColumn("ID");
         SQLContainer container = new SQLContainer(query);
         Object id = container.addItem();
         Object id2 = container.addItem();

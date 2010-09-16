@@ -467,6 +467,7 @@ public class TableQueryTest {
     public void insertRowThroughContainer_shouldSucceed() throws SQLException {
         TableQuery tQuery = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
+        tQuery.setVersionColumn("ID");
 
         SQLContainer container = new SQLContainer(tQuery);
         container.setAutoCommit(false);

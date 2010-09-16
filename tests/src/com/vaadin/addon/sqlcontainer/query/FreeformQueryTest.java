@@ -601,7 +601,8 @@ public class FreeformQueryTest {
                 .createMock(FreeformQueryDelegate.class);
         List<Filter> filters = Arrays.asList(new Filter("name",
                 ComparisonType.ENDS_WITH, "lle"));
-        delegate.setFilters(filters);
+        delegate.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
+
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
 
@@ -618,7 +619,7 @@ public class FreeformQueryTest {
                 .createMock(FreeformQueryDelegate.class);
         List<Filter> filters = Arrays.asList(new Filter("name",
                 ComparisonType.ENDS_WITH, "lle"));
-        delegate.setFilters(filters);
+        delegate.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().andThrow(new UnsupportedOperationException());
         EasyMock.replay(delegate);
         query.setDelegate(delegate);

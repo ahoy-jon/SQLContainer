@@ -21,6 +21,7 @@ import com.vaadin.addon.sqlcontainer.SQLContainer.ItemSetChangeEvent;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
@@ -396,9 +397,10 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1233,9 +1235,10 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1320,9 +1323,10 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1404,9 +1408,10 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1482,9 +1487,10 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1655,9 +1661,10 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1759,9 +1766,10 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1856,13 +1864,14 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -1956,13 +1965,14 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null);
-        EasyMock.expectLastCall().anyTimes();
-        delegate.setOrderBy(EasyMock.isA(List.class));
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setOrderBy(EasyMock.isA(List.class));
+        EasyMock.expectLastCall().anyTimes();
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2055,13 +2065,14 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2154,13 +2165,14 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2259,13 +2271,14 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2364,13 +2377,14 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2491,9 +2505,10 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
-        delegate.setFilters(null);
+        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class));
+        delegate.setFilters(EasyMock.isA(List.class), EasyMock
+                .eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
