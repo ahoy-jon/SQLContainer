@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
@@ -28,6 +29,9 @@ import com.vaadin.data.Property;
 public class SQLContainer implements Container, Container.Filterable,
         Container.Indexed, Container.Sortable, Container.ItemSetChangeNotifier {
     private static final long serialVersionUID = -3863564310693712511L;
+
+    /* Filtering mode setting. Default mode = INCLUSIVE */
+    private FilteringMode currentFilteringMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
     /* Query delegate and related settings */
     private QueryDelegate delegate;
@@ -651,6 +655,24 @@ public class SQLContainer implements Container, Container.Filterable,
     /**************************************/
     /** Methods specific to SQLContainer **/
     /**************************************/
+
+    /**
+     * Sets the current filtering mode of the container. Possible values are
+     * <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code> and
+     * <code>FilteringMode.FILTERING_MODE_EXCLUSIVE</code>.
+     * 
+     * With other inputs this method defaults to
+     * <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code>.
+     * 
+     * @param filteringMode
+     *            Filtering mode to set.
+     */
+    public void setFilteringMode(FilteringMode filteringMode) {
+        currentFilteringMode = filteringMode == FilteringMode.FILTERING_MODE_EXCLUSIVE ? FilteringMode.FILTERING_MODE_EXCLUSIVE
+                : FilteringMode.FILTERING_MODE_INCLUSIVE;
+        refresh();
+    }
+
     /**
      * Refreshes the container - clears all caches and resets size and offset.
      * Does NOT remove sorting or filtering rules!
@@ -872,7 +894,7 @@ public class SQLContainer implements Container, Container.Filterable,
         }
         try {
             try {
-                delegate.setFilters(filters);
+                delegate.setFilters(filters, currentFilteringMode);
             } catch (UnsupportedOperationException e) {
                 /* The query delegate doesn't support filtering. */
             }

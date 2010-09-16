@@ -9,6 +9,7 @@ import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
 public class MSSQLGenerator extends DefaultSQLGenerator {
@@ -17,12 +18,14 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
      * (non-Javadoc)
      * 
      * @see com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator#
-     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
-     * int, int, java.lang.String)
+     * generateSelectQuery(java.lang.String, java.util.List,
+     * com.vaadin.addon.sqlcontainer.query.FilteringMode, java.util.List, int,
+     * int, java.lang.String)
      */
     @Override
     public String generateSelectQuery(String tableName, List<Filter> filters,
-            List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
+            FilteringMode filterMode, List<OrderBy> orderBys, int offset,
+            int pagelength, String toSelect) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
@@ -39,7 +42,8 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
             query.append(tableName);
             if (filters != null && !filters.isEmpty()) {
                 for (Filter f : filters) {
-                    generateFilter(query, f, filters.indexOf(f) == 0);
+                    generateFilter(query, f, filters.indexOf(f) == 0,
+                            filterMode);
                 }
             }
             query.append(") AS t");
@@ -58,7 +62,8 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
             query.append(tableName);
             if (filters != null) {
                 for (Filter f : filters) {
-                    generateFilter(query, f, filters.indexOf(f) == 0);
+                    generateFilter(query, f, filters.indexOf(f) == 0,
+                            filterMode);
                 }
             }
             if (orderBys != null) {
@@ -86,7 +91,7 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
 
         if (filters != null) {
             for (Filter f : filters) {
-                generateFilter(query, f, filters.indexOf(f) == 0);
+                generateFilter(query, f, filters.indexOf(f) == 0, filterMode);
             }
         }
 

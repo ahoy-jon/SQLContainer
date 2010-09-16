@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
 /**
@@ -15,7 +16,8 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
  */
 public interface SQLGenerator {
     /**
-     * Generates a SELECT query with the provided parameters.
+     * Generates a SELECT query with the provided parameters. Uses default
+     * filtering mode (INCLUSIVE).
      * 
      * @param tableName
      *            Name of the table queried
@@ -33,6 +35,29 @@ public interface SQLGenerator {
      */
     public String generateSelectQuery(String tableName, List<Filter> filters,
             List<OrderBy> orderBys, int offset, int pagelength, String toSelect);
+
+    /**
+     * Generates a SELECT query with the provided parameters.
+     * 
+     * @param tableName
+     *            Name of the table queried
+     * @param filters
+     *            The filters, converted into a WHERE clause
+     * @param filterMode
+     *            Sets the filtering mode for this query. See FilteringMode.
+     * @param orderBys
+     *            The the ordering conditions, converted into an ORDER BY clause
+     * @param offset
+     *            The offset of the first row to be included
+     * @param pagelength
+     *            The number of rows to be returned when the query executes
+     * @param toSelect
+     *            String containing what to select, e.g. "*", "COUNT(*)"
+     * @return a string with the SQL query that will return the wanted results.
+     */
+    public String generateSelectQuery(String tableName, List<Filter> filters,
+            FilteringMode filterMode, List<OrderBy> orderBys, int offset,
+            int pagelength, String toSelect);
 
     /**
      * Generates an UPDATE query with the provided parameters.

@@ -12,6 +12,8 @@ import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 
 public class FreeformQuery implements QueryDelegate {
 
+    private FilteringMode filterMode;
+
     FreeformQueryDelegate delegate = null;
     private String queryString;
     private List<String> primaryKeyColumns;
@@ -144,14 +146,27 @@ public class FreeformQuery implements QueryDelegate {
         }
     }
 
-    public void setFilters(List<Filter> filters)
+    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
             throws UnsupportedOperationException {
         if (delegate != null) {
-            delegate.setFilters(filters);
+            filterMode = filteringMode;
+            delegate.setFilters(filters, filterMode);
         } else if (filters != null) {
             throw new UnsupportedOperationException(
                     "FreeFormQueryDelegate not set!");
         }
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setFilters(java.util
+     * .List)
+     */
+    public void setFilters(List<Filter> filters)
+            throws UnsupportedOperationException {
+        this.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
     }
 
     public void setOrderBy(List<OrderBy> orderBys)
@@ -315,5 +330,4 @@ public class FreeformQuery implements QueryDelegate {
         // Append a where clause
         return queryString + " WHERE " + where;
     }
-
 }

@@ -33,15 +33,32 @@ public interface FreeformQueryDelegate {
 
     /**
      * Sets the filters to apply when performing the SQL query. These are
-     * translated into a WHERE clause.
+     * translated into a WHERE clause. Default filtering mode will be used.
      * 
      * @param filters
      *            The filters to apply.
-     * 
      * @throws UnsupportedOperationException
      *             if the implementation doesn't support filtering.
      */
     public void setFilters(List<Filter> filters)
+            throws UnsupportedOperationException;
+
+    /**
+     * Sets the filters to apply when performing the SQL query. These are
+     * translated into a WHERE clause.
+     * 
+     * @param filters
+     *            The filters to apply.
+     * @param filteringMode
+     *            Filtering mode.
+     *            <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code> =
+     *            Inclusive (AND).
+     *            <code>FilteringMode.FILTERING_MODE_EXCLUSIVE</code> =
+     *            Exclusive (OR)
+     * @throws UnsupportedOperationException
+     *             if the implementation doesn't support filtering.
+     */
+    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
             throws UnsupportedOperationException;
 
     /**

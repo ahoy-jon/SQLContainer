@@ -9,6 +9,7 @@ import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
 /**
@@ -27,11 +28,13 @@ public class DefaultSQLGenerator implements SQLGenerator {
      * (non-Javadoc)
      * 
      * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
-     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
-     * int, int, java.lang.String)
+     * generateSelectQuery(java.lang.String, java.util.List,
+     * com.vaadin.addon.sqlcontainer.query.FilteringMode, java.util.List, int,
+     * int, java.lang.String)
      */
     public String generateSelectQuery(String tableName, List<Filter> filters,
-            List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
+            FilteringMode filterMode, List<OrderBy> orderBys, int offset,
+            int pagelength, String toSelect) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
@@ -46,7 +49,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
 
         if (filters != null) {
             for (Filter f : filters) {
-                generateFilter(query, f, filters.indexOf(f) == 0);
+                generateFilter(query, f, filters.indexOf(f) == 0, filterMode);
             }
         }
         if (orderBys != null) {
@@ -58,6 +61,20 @@ public class DefaultSQLGenerator implements SQLGenerator {
             generateLimits(query, offset, pagelength);
         }
         return query.toString();
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
+     * int, int, java.lang.String)
+     */
+    public String generateSelectQuery(String tableName, List<Filter> filters,
+            List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
+        return generateSelectQuery(tableName, filters,
+                FilteringMode.FILTERING_MODE_INCLUSIVE, orderBys, offset,
+                pagelength, toSelect);
     }
 
     /*
@@ -194,7 +211,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
     }
 
     /**
-     * Creates filtering as a WHERE -clause
+     * Creates filtering as a WHERE -clause. Uses default filtering mode.
      * 
      * @param sb
      *            StringBuffer to which the clause is appended.
@@ -206,10 +223,34 @@ public class DefaultSQLGenerator implements SQLGenerator {
      */
     protected StringBuffer generateFilter(StringBuffer sb, Filter f,
             boolean firstFilter) {
+        return generateFilter(sb, f, firstFilter,
+                FilteringMode.FILTERING_MODE_INCLUSIVE);
+    }
+
+    /**
+     * Creates filtering as a WHERE -clause
+     * 
+     * @param sb
+     *            StringBuffer to which the clause is appended.
+     * @param f
+     *            Filter to be added to the sb.
+     * @param firstFilter
+     *            If true, this is the first Filter to be added.
+     * @param filterMode
+     *            FilteringMode for this set of filters.
+     * @return
+     */
+    protected StringBuffer generateFilter(StringBuffer sb, Filter f,
+            boolean firstFilter, FilteringMode filterMode) {
         if (firstFilter) {
             sb.append(" WHERE ");
         } else {
-            sb.append(" AND ");
+            if (FilteringMode.FILTERING_MODE_INCLUSIVE.equals(filterMode)) {
+                sb.append(" AND ");
+            } else if (FilteringMode.FILTERING_MODE_EXCLUSIVE
+                    .equals(filterMode)) {
+                sb.append(" OR ");
+            }
         }
         /* Null filter equates to 1=1 where clause */
         if (f.getValue() == null) {
@@ -219,31 +260,31 @@ public class DefaultSQLGenerator implements SQLGenerator {
 
         String name = f.getColumn();
         String value = String.valueOf(f.getValue());
-        f.setNeedsQuotes(false);
+        // f.setNeedsQuotes(false);
 
         if (f.getValue() instanceof String) {
             // Try to determine if the filter value is numeric
-            try {
-                Long.parseLong(String.valueOf(f.getValue()));
-                Double.parseDouble(String.valueOf(f.getValue()));
-                value = String.valueOf(f.getValue());
-            } catch (NumberFormatException nfe) {
-                // The filter value is indeed a String and thus needs wild card
-                // removal, quote escaping and quotes around it in the query
-                value = escapeQuotes(escapeWildCards((String) f.getValue()));
-                f.setNeedsQuotes(true);
-                switch (f.getComparisonType()) {
-                case STARTS_WITH:
-                    value += "%";
-                    break;
-                case CONTAINS:
-                    value = "%" + value + "%";
-                    break;
-                case ENDS_WITH:
-                    value = "%" + value;
-                    break;
-                }
+            // try {
+            // Double.parseDouble(String.valueOf(f.getValue()));
+            // Long.parseLong(String.valueOf(f.getValue()));
+            // value = String.valueOf(f.getValue());
+            // } catch (NumberFormatException nfe) {
+            // The filter value is indeed a String and thus needs wild card
+            // removal, quote escaping and quotes around it in the query
+            value = escapeQuotes(escapeWildCards((String) f.getValue()));
+            // f.setNeedsQuotes(true);
+            switch (f.getComparisonType()) {
+            case STARTS_WITH:
+                value += "%";
+                break;
+            case CONTAINS:
+                value = "%" + value + "%";
+                break;
+            case ENDS_WITH:
+                value = "%" + value;
+                break;
             }
+            // }
         }
 
         if (f.isNeedsQuotes()) {

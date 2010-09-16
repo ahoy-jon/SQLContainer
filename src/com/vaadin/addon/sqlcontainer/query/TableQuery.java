@@ -20,6 +20,8 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
 public class TableQuery implements QueryDelegate {
 
+    private FilteringMode filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
+
     private String tableName;
     private List<String> primaryKeyColumns;
     private String versionColumn;
@@ -91,7 +93,7 @@ public class TableQuery implements QueryDelegate {
     public int getCount() throws SQLException {
         debug("Fetching count...");
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
-                null, 0, 0, "COUNT(*)");
+                filterMode, null, 0, 0, "COUNT(*)");
         ResultSet r = executeQuery(query);
         r.next();
         return r.getInt(1);
@@ -130,11 +132,11 @@ public class TableQuery implements QueryDelegate {
         if (orderBys == null || orderBys.isEmpty()) {
             List<OrderBy> ob = new ArrayList<OrderBy>();
             ob.add(new OrderBy(primaryKeyColumns.get(0), true));
-            query = sqlGenerator.generateSelectQuery(tableName, filters, ob,
-                    offset, pagelength, null);
+            query = sqlGenerator.generateSelectQuery(tableName, filters,
+                    filterMode, ob, offset, pagelength, null);
         } else {
             query = sqlGenerator.generateSelectQuery(tableName, filters,
-                    orderBys, offset, pagelength, null);
+                    filterMode, orderBys, offset, pagelength, null);
         }
         return executeQuery(query);
     }
@@ -191,13 +193,26 @@ public class TableQuery implements QueryDelegate {
      * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setFilters(java.util
      * .List)
      */
-    public void setFilters(List<Filter> filters)
+    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
             throws UnsupportedOperationException {
+        filterMode = filteringMode;
         if (filters == null) {
             this.filters = null;
             return;
         }
         this.filters = Collections.unmodifiableList(filters);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setFilters(java.util
+     * .List)
+     */
+    public void setFilters(List<Filter> filters)
+            throws UnsupportedOperationException {
+        this.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
     }
 
     /*

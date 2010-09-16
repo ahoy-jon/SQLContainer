@@ -32,9 +32,27 @@ public class Filter {
         setColumn(column);
         setComparisonType(comparisonType);
         setValue(value);
+        setNeedsQuotes(false);
         if (value instanceof String || value instanceof CharSequence) {
-            setNeedsQuotes(true);
+            try {
+                int l = Integer.parseInt(String.valueOf(value));
+                setValue(l);
+            } catch (NumberFormatException nfe1) {
+                try {
+                    long l = Long.parseLong(String.valueOf(value));
+                    setValue(l);
+                } catch (NumberFormatException nfe2) {
+                    try {
+                        double d = Double.parseDouble(String.valueOf(value));
+                        setValue(d);
+                    } catch (NumberFormatException nfe3) {
+                        /* Value is still string -> needs quotes */
+                        setNeedsQuotes(true);
+                    }
+                }
+            }
         }
+        // TODO: How about dates, timestamps, etc. ?
     }
 
     public Filter(String column, ComparisonType comparisonType, Object value,
