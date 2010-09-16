@@ -33,6 +33,11 @@ public class PersonForm extends Form implements ClickListener {
     private AddressBookApplication app;
     private boolean newContactMode = false;
 
+    /**
+     * Item ID of a new contact during addition. The reference is needed because
+     * the item is added to the container, but the changes will be committed
+     * only when Save-button is pressed.
+     */
     private Object tempItemId = null;
 
     public PersonForm(AddressBookApplication app) {
@@ -59,7 +64,11 @@ public class PersonForm extends Form implements ClickListener {
         /* We do not want to use null values */
         cities.setNullSelectionAllowed(false);
 
-        /* Populate cities select using the cities in the data container */
+        /*
+         * Populate cities select using the cities in the data container. Here
+         * we are using the city's key as the Item ID in the ComboBox, and the
+         * name of the city is just set as the item's caption.
+         */
         SQLContainer ds = app.getDbHelp().getCityContainer();
         for (Object cityItemId : ds.getItemIds()) {
             int cityId = (Integer) ds.getItem(cityItemId).getItemProperty("ID")
@@ -69,9 +78,9 @@ public class PersonForm extends Form implements ClickListener {
             cities.addItem(cityId);
             cities.setItemCaption(cityId, city);
         }
+
         /*
-         * Field factory for overriding how the component for city selection is
-         * created
+         * Field factory for overriding how the fields are created.
          */
         setFormFieldFactory(new DefaultFieldFactory() {
             @Override
@@ -186,10 +195,10 @@ public class PersonForm extends Form implements ClickListener {
             cities.select(cKey);
         }
 
-        /* Commit the person form. */
+        /* Commit the data entered to the person form to the actual item. */
         super.commit();
 
-        /* Commit to the database. */
+        /* Commit changes to the database. */
         try {
             app.getDbHelp().getPersonContainer().commit();
         } catch (UnsupportedOperationException e) {
@@ -208,8 +217,14 @@ public class PersonForm extends Form implements ClickListener {
     public void discard() throws Buffered.SourceException {
         super.discard();
         if (newContactMode) {
-            /* On discard remove possibly added new item from container */
-            app.getDbHelp().getPersonContainer().removeItem(tempItemId);
+            /* On discard roll back the changes. */
+            try {
+                app.getDbHelp().getPersonContainer().rollback();
+            } catch (UnsupportedOperationException e) {
+                e.printStackTrace();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
             tempItemId = null;
             newContactMode = false;
             /* Clear the form and make it invisible */

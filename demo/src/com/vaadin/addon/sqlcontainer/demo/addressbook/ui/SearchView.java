@@ -3,6 +3,7 @@ package com.vaadin.addon.sqlcontainer.demo.addressbook.ui;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.AddressBookApplication;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.SearchFilter;
@@ -51,6 +52,7 @@ public class SearchView extends Panel {
         }
         fieldToSearch.setValue("lastName");
         fieldToSearch.setNullSelectionAllowed(false);
+
         /* Pre-select first field */
         fieldToSearch.select(fieldToSearch.getItemIds().iterator().next());
 
@@ -76,6 +78,9 @@ public class SearchView extends Panel {
         addComponent(saveSearch);
         addComponent(searchName);
         addComponent(search);
+
+        /* Focus the search term field. */
+        tf.focus();
     }
 
     private void performSearch() {
@@ -88,28 +93,46 @@ public class SearchView extends Panel {
         List<SearchFilter> searchFilters = new ArrayList<SearchFilter>();
 
         if (!"CITYID".equals(fieldToSearch.getValue())) {
+            /* If this is NOT a City search, one filter is enough. */
             searchFilters.add(new SearchFilter(fieldToSearch.getValue(),
                     searchTerm, (String) searchName.getValue(), fieldToSearch
                             .getItemCaption(fieldToSearch.getValue()),
                     searchTerm));
         } else {
-            app.getDbHelp().getCityContainer().addContainerFilter("NAME",
-                    searchTerm, true, false);
-            for (Object cityItemId : app.getDbHelp().getCityContainer()
-                    .getItemIds()) {
-                searchFilters.add(new SearchFilter("CITYID", app.getDbHelp()
-                        .getCityContainer().getItem(cityItemId)
-                        .getItemProperty("ID").getValue().toString(),
-                        (String) searchName.getValue(), fieldToSearch
-                                .getItemCaption(fieldToSearch.getValue()),
+            SQLContainer cc = app.getDbHelp().getCityContainer();
+            /*
+             * If the city column is searched, the filtering becomes a bit more
+             * complicated: We need to first find all the search hits from the
+             * city container, create search filters for all their ID's and
+             * finally use these filters to search the person container (which
+             * only holds a foreign key reference to an id of a city).
+             */
+            cc.addContainerFilter("NAME", searchTerm, true, false);
+            for (Object cityItemId : cc.getItemIds()) {
+                searchFilters.add(new SearchFilter("CITYID",
+                        cc.getItem(cityItemId).getItemProperty("ID").getValue()
+                                .toString(), (String) searchName.getValue(),
+                        fieldToSearch.getItemCaption(fieldToSearch.getValue()),
                         searchTerm));
             }
-            app.getDbHelp().getCityContainer().removeAllContainerFilters();
+            cc.removeAllContainerFilters();
+            /*
+             * If the search does not find any matched in the cities container,
+             * we show a notification at this point. It would not make sense to
+             * continue since obviously there will be no results from the person
+             * container.
+             */
             if (searchFilters.isEmpty()) {
-                searchFilters.add(new SearchFilter(fieldToSearch.getValue(),
-                        searchTerm, (String) searchName.getValue()));
+                getWindow().showNotification(
+                        "No matches found for \'"
+                                + searchTerm
+                                + "\' in "
+                                + fieldToSearch.getItemCaption(fieldToSearch
+                                        .getValue()));
             }
         }
+
+        /* If Save is checked, save the search through the main app. */
         if (saveSearch.booleanValue()) {
             if (searchName.getValue() == null
                     || searchName.getValue().equals("")) {
@@ -123,6 +146,11 @@ public class SearchView extends Panel {
         }
         SearchFilter[] sf = {};
         app.search(searchFilters.toArray(sf));
+
+        /*
+         * Clear the save name and check box to prevent multiple unintentional
+         * saves of the same search.
+         */
         clearSaving();
     }
 

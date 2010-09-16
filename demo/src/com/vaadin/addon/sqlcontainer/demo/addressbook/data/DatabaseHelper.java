@@ -6,6 +6,7 @@ import java.sql.Statement;
 import java.util.Random;
 
 import com.vaadin.addon.sqlcontainer.SQLContainer;
+import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
@@ -28,11 +29,18 @@ public class DatabaseHelper {
             "First name", "Last name", "Email", "Phone number",
             "Street Address", "Postal Code", "City" };
 
-    private SimpleJDBCConnectionPool connectionPool = null;
+    /**
+     * JDBC Connection pool and the two SQLContainers connecting to the persons
+     * and cities DB tables.
+     */
+    private JDBCConnectionPool connectionPool = null;
     private SQLContainer personContainer = null;
     private SQLContainer cityContainer = null;
 
-    private boolean debugMode = false;
+    /**
+     * Enable debug mode to output SQL queries to System.out.
+     */
+    private boolean debugMode = true;
 
     public DatabaseHelper() {
         initConnectionPool();
@@ -59,7 +67,10 @@ public class DatabaseHelper {
                 statement.executeQuery("SELECT * FROM PERSONADDRESS");
                 statement.executeQuery("SELECT * FROM CITY");
             } catch (SQLException e) {
-                // Failed, which means that the database is not initialized
+                /*
+                 * Failed, which means that the database is not yet initialized
+                 * => Create the tables
+                 */
                 statement
                         .execute("create table city (id integer generated always as identity, name varchar(64), version integer default 0 not null)");
                 statement.execute("alter table city add primary key (id)");
@@ -84,10 +95,13 @@ public class DatabaseHelper {
 
     private void initContainers() {
         try {
+            /* TableQuery and SQLContainer for personaddress -table */
             TableQuery q1 = new TableQuery("personaddress", connectionPool);
             q1.setVersionColumn("VERSION");
             q1.setDebug(debugMode);
             personContainer = new SQLContainer(q1);
+
+            /* TableQuery and SQLContainer for city -table */
             TableQuery q2 = new TableQuery("city", connectionPool);
             q2.setVersionColumn("VERSION");
             q2.setDebug(debugMode);
@@ -97,6 +111,10 @@ public class DatabaseHelper {
         }
     }
 
+    /**
+     * Method to generate dummy data to the database. Everything is added to the
+     * database through the SQLContainers.
+     */
     private void fillContainers() {
         if (personContainer.size() == 0 && cityContainer.size() == 0) {
             /* Create cities */
@@ -190,12 +208,26 @@ public class DatabaseHelper {
         return cityContainer;
     }
 
+    /**
+     * Fetches a city name based on its key.
+     * 
+     * @param cityId
+     *            Key
+     * @return City name
+     */
     public String getCityName(int cityId) {
         Object cityItemId = cityContainer.getIdByIndex(cityId);
         return cityContainer.getItem(cityItemId).getItemProperty("NAME")
                 .getValue().toString();
     }
 
+    /**
+     * Adds a new city to the container and commits changes to the database.
+     * 
+     * @param cityName
+     *            Name of the city to add
+     * @return true if the city was added successfully
+     */
     public boolean addCity(String cityName) {
         cityContainer.getItem(cityContainer.addItem()).getItemProperty("NAME")
                 .setValue(cityName);
@@ -210,6 +242,13 @@ public class DatabaseHelper {
         return false;
     }
 
+    /**
+     * Returns the ID of the first row in the city -table that matches the given
+     * name exactly.
+     * 
+     * @param name
+     * @return
+     */
     public int getCityIdByName(String name) {
         Filter f = new Filter("NAME", ComparisonType.EQUALS, name);
         f.setNeedsQuotes(true);

@@ -43,7 +43,7 @@ public class AddressBookApplication extends Application implements
     private SplitPanel horizontalSplit = new SplitPanel(
             SplitPanel.ORIENTATION_HORIZONTAL);
 
-    // Lazyly created ui references
+    // Lazily created UI references
     private ListView listView = null;
     private SearchView searchView = null;
     private PersonList personList = null;
@@ -51,11 +51,11 @@ public class AddressBookApplication extends Application implements
     private HelpWindow helpWindow = null;
     private SharingOptions sharingOptions = null;
 
-    private DatabaseHelper dbHelp = null;
+    /* Helper class that creates the tables and SQLContainers. */
+    private DatabaseHelper dbHelp = new DatabaseHelper();
 
     @Override
     public void init() {
-        dbHelp = new DatabaseHelper();
         buildMainLayout();
         setMainComponent(getListView());
     }
@@ -148,10 +148,6 @@ public class AddressBookApplication extends Application implements
         return sharingOptions;
     }
 
-    // public PersonContainer getDataSource() {
-    // return dataSource;
-    // }
-
     public void buttonClick(ClickEvent event) {
         final Button source = event.getButton();
 
@@ -162,7 +158,7 @@ public class AddressBookApplication extends Application implements
         } else if (source == share) {
             showShareWindow();
         } else if (source == newContact) {
-            addNewContanct();
+            addNewContact();
         }
     }
 
@@ -176,10 +172,12 @@ public class AddressBookApplication extends Application implements
 
     private void showListView() {
         setMainComponent(getListView());
+        personList.fixVisibleAndSelectedItem();
     }
 
     private void showSearchView() {
         setMainComponent(getSearchView());
+        personList.fixVisibleAndSelectedItem();
     }
 
     public void valueChange(ValueChangeEvent event) {
@@ -197,7 +195,7 @@ public class AddressBookApplication extends Application implements
             Object itemId = event.getItemId();
             if (itemId != null) {
                 if (NavigationTree.SHOW_ALL.equals(itemId)) {
-                    // clear previous filters
+                    /* Clear all filters from person container */
                     getDbHelp().getPersonContainer()
                             .removeAllContainerFilters();
                     showListView();
@@ -210,7 +208,7 @@ public class AddressBookApplication extends Application implements
         }
     }
 
-    private void addNewContanct() {
+    private void addNewContact() {
         showListView();
         personForm.addContact();
     }
@@ -219,9 +217,14 @@ public class AddressBookApplication extends Application implements
         if (searchFilters.length == 0) {
             return;
         }
-        // clear previous filters
+        /* Clear all filters from person container. */
         getDbHelp().getPersonContainer().removeAllContainerFilters();
-        // filter contacts with given filter
+        /*
+         * Set the appropriate filtering mode. In this application, multiple
+         * filters are only used to filter for more than one city since they are
+         * actually filtered by their keys. This filter has to be of the
+         * exclusive type.
+         */
         if (searchFilters.length > 1) {
             getDbHelp().getPersonContainer().setFilteringMode(
                     FilteringMode.FILTERING_MODE_EXCLUSIVE);
@@ -229,6 +232,7 @@ public class AddressBookApplication extends Application implements
             getDbHelp().getPersonContainer().setFilteringMode(
                     FilteringMode.FILTERING_MODE_INCLUSIVE);
         }
+        /* Add the filter(s) to the person container. */
         for (SearchFilter searchFilter : searchFilters) {
             getDbHelp().getPersonContainer().addContainerFilter(
                     searchFilter.getPropertyId(), searchFilter.getTerm(), true,
@@ -264,5 +268,4 @@ public class AddressBookApplication extends Application implements
     public DatabaseHelper getDbHelp() {
         return dbHelp;
     }
-
 }

@@ -24,23 +24,14 @@ public class SearchFilter implements Serializable {
         setTermDisplayName(termDisplayName);
     }
 
-    /**
-     * @return the term
-     */
     public String getTerm() {
         return term;
     }
 
-    /**
-     * @return the propertyId
-     */
     public Object getPropertyId() {
         return propertyId;
     }
 
-    /**
-     * @return the name of the search
-     */
     public String getSearchName() {
         return searchName;
     }
