@@ -1,7 +1,8 @@
 package com.vaadin.addon.sqlcontainer.demo.addressbook.ui;
 
-import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.AddressBookApplication;
+import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.terminal.ExternalResource;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Label;
@@ -10,29 +11,19 @@ import com.vaadin.ui.Table;
 
 @SuppressWarnings("serial")
 public class PersonList extends Table {
-    /**
-     * Natural property order for Person bean. Used in tables and forms.
-     */
-    public static final Object[] NATURAL_COL_ORDER = new Object[] {
-            "FIRSTNAME", "LASTNAME", "EMAIL", "PHONENUMBER", "STREETADDRESS",
-            "POSTALCODE", "CITYID" };
-
-    /**
-     * "Human readable" captions for properties in same order as in
-     * NATURAL_COL_ORDER.
-     */
-    public static final String[] COL_HEADERS_ENGLISH = new String[] {
-            "First name", "Last name", "Email", "Phone number",
-            "Street Address", "Postal Code", "City" };
-
-    public PersonList(AddressBookApplication app) {
+    public PersonList(final AddressBookApplication app) {
         setSizeFull();
 
         /* Get the SQLContainer containing the persons in the address book */
         setContainerDataSource(app.getDbHelp().getPersonContainer());
 
-        /* Get SQLContainer containing Cities and set it as data in this Table */
-        setData(app.getDbHelp().getCityContainer());
+        /*
+         * Remove container filters and set container filtering mode to
+         * inclusive
+         */
+        app.getDbHelp().getPersonContainer().removeAllContainerFilters();
+        app.getDbHelp().getPersonContainer().setFilteringMode(
+                FilteringMode.FILTERING_MODE_INCLUSIVE);
 
         setColumnCollapsingAllowed(true);
         setColumnReorderingAllowed(true);
@@ -62,7 +53,7 @@ public class PersonList extends Table {
 
         /*
          * Create a cityName column that fetches the city name from another
-         * SQLContainer
+         * SQLContainer through the DatabaseHelper.
          */
         addGeneratedColumn("CITYID", new ColumnGenerator() {
             public Component generateCell(Table source, Object itemId,
@@ -70,20 +61,14 @@ public class PersonList extends Table {
                 Label l = new Label();
                 int cityId = (Integer) getItem(itemId)
                         .getItemProperty("CITYID").getValue();
-                Object cityItemId = ((SQLContainer) source.getData())
-                        .getIdByIndex(cityId);
-                String cityName = ((SQLContainer) source.getData()).getItem(
-                        cityItemId).getItemProperty("NAME").getValue()
-                        .toString();
-
-                l.setValue(cityName);
+                l.setValue(app.getDbHelp().getCityName(cityId));
                 l.setSizeUndefined();
                 return l;
             }
         });
 
         /* Set visible columns, their ordering and their headers. */
-        setVisibleColumns(NATURAL_COL_ORDER);
-        setColumnHeaders(COL_HEADERS_ENGLISH);
+        setVisibleColumns(DatabaseHelper.NATURAL_COL_ORDER);
+        setColumnHeaders(DatabaseHelper.COL_HEADERS_ENGLISH);
     }
 }

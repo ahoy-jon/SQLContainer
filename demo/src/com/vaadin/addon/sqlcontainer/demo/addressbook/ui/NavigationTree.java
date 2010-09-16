@@ -13,6 +13,8 @@ public class NavigationTree extends Tree {
         addItem(SHOW_ALL);
         addItem(SEARCH);
 
+        setItemCaptionMode(ITEM_CAPTION_MODE_EXPLICIT_DEFAULTS_ID);
+
         setChildrenAllowed(SHOW_ALL, false);
 
         /*

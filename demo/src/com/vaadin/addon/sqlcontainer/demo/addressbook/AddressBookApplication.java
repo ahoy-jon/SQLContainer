@@ -10,6 +10,7 @@ import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonForm;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonList;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SearchView;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SharingOptions;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
@@ -202,8 +203,8 @@ public class AddressBookApplication extends Application implements
                     showListView();
                 } else if (NavigationTree.SEARCH.equals(itemId)) {
                     showSearchView();
-                } else if (itemId instanceof SearchFilter) {
-                    search((SearchFilter) itemId);
+                } else if (itemId instanceof SearchFilter[]) {
+                    search((SearchFilter[]) itemId);
                 }
             }
         }
@@ -221,25 +222,36 @@ public class AddressBookApplication extends Application implements
         // clear previous filters
         getDbHelp().getPersonContainer().removeAllContainerFilters();
         // filter contacts with given filter
+        if (searchFilters.length > 1) {
+            getDbHelp().getPersonContainer().setFilteringMode(
+                    FilteringMode.FILTERING_MODE_EXCLUSIVE);
+        } else {
+            getDbHelp().getPersonContainer().setFilteringMode(
+                    FilteringMode.FILTERING_MODE_INCLUSIVE);
+        }
         for (SearchFilter searchFilter : searchFilters) {
             getDbHelp().getPersonContainer().addContainerFilter(
                     searchFilter.getPropertyId(), searchFilter.getTerm(), true,
                     false);
         }
+
         showListView();
 
         getMainWindow()
                 .showNotification(
-                        "Searched for " + searchFilters[0].getPropertyId()
-                                + "=*" + searchFilters[0].getTerm()
-                                + "*, found "
+                        "Searched for:<br/> "
+                                + searchFilters[0].getPropertyIdDisplayName()
+                                + " = *"
+                                + searchFilters[0].getTermDisplayName()
+                                + "*<br/>Found "
                                 + getDbHelp().getPersonContainer().size()
                                 + " item(s).",
                         Notification.TYPE_TRAY_NOTIFICATION);
     }
 
-    public void saveSearch(SearchFilter searchFilter) {
+    public void saveSearch(SearchFilter... searchFilter) {
         tree.addItem(searchFilter);
+        tree.setItemCaption(searchFilter, searchFilter[0].getSearchName());
         tree.setParent(searchFilter, NavigationTree.SEARCH);
         // mark the saved search as a leaf (cannot have children)
         tree.setChildrenAllowed(searchFilter, false);

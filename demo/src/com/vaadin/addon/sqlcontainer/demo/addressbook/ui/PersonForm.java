@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.AddressBookApplication;
-import com.vaadin.addon.sqlcontainer.demo.addressbook.data.Person;
+import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
 import com.vaadin.data.Buffered;
 import com.vaadin.data.Item;
 import com.vaadin.data.validator.EmailValidator;
@@ -28,11 +28,10 @@ public class PersonForm extends Form implements ClickListener {
     private Button save = new Button("Save", (ClickListener) this);
     private Button cancel = new Button("Cancel", (ClickListener) this);
     private Button edit = new Button("Edit", (ClickListener) this);
-    private final ComboBox cities = new ComboBox("City");
+    private final ComboBox cities = new ComboBox();
 
     private AddressBookApplication app;
     private boolean newContactMode = false;
-    private Person newPerson = null;
 
     private Object tempItemId = null;
 
@@ -59,8 +58,6 @@ public class PersonForm extends Form implements ClickListener {
         cities.setNewItemsAllowed(true);
         /* We do not want to use null values */
         cities.setNullSelectionAllowed(false);
-        /* Add an empty city used for selecting no city */
-        cities.addItem("");
 
         /* Populate cities select using the cities in the data container */
         SQLContainer ds = app.getDbHelp().getCityContainer();
@@ -80,12 +77,13 @@ public class PersonForm extends Form implements ClickListener {
             @Override
             public Field createField(Item item, Object propertyId,
                     Component uiContext) {
+                Field field;
                 if (propertyId.equals("CITYID")) {
-                    cities.setWidth("200px");
-                    return cities;
+                    field = cities;
+                } else {
+                    field = super.createField(item, propertyId, uiContext);
                 }
 
-                Field field = super.createField(item, propertyId, uiContext);
                 if (propertyId.equals("POSTALCODE")) {
                     TextField tf = (TextField) field;
                     /* Add a validator for postalCode and make it required */
@@ -98,13 +96,20 @@ public class PersonForm extends Form implements ClickListener {
                     field.addValidator(new EmailValidator(
                             "Email must contain '@' and have full domain."));
                     field.setRequired(true);
-
                 }
-                /* Set null representation of all text fields to empty string */
+                /* Set null representation of all text fields to empty */
                 if (field instanceof TextField) {
                     ((TextField) field).setNullRepresentation("");
                 }
+
                 field.setWidth("200px");
+
+                /* Set the correct caption to each field */
+                for (int i = 0; i < DatabaseHelper.NATURAL_COL_ORDER.length; i++) {
+                    if (DatabaseHelper.NATURAL_COL_ORDER[i].equals(propertyId)) {
+                        field.setCaption(DatabaseHelper.COL_HEADERS_ENGLISH[i]);
+                    }
+                }
                 return field;
             }
         });
@@ -130,7 +135,7 @@ public class PersonForm extends Form implements ClickListener {
         newContactMode = false;
         if (newDataSource != null) {
             List<Object> orderedProperties = Arrays
-                    .asList(PersonList.NATURAL_COL_ORDER);
+                    .asList(DatabaseHelper.NATURAL_COL_ORDER);
             super.setItemDataSource(newDataSource, orderedProperties);
             setReadOnly(true);
             getFooter().setVisible(true);
@@ -152,17 +157,39 @@ public class PersonForm extends Form implements ClickListener {
         tempItemId = app.getDbHelp().getPersonContainer().addItem();
         setItemDataSource(app.getDbHelp().getPersonContainer().getItem(
                 tempItemId));
+        /* Select the first available city for the new contact */
+        app.getDbHelp().getPersonContainer().getItem(tempItemId)
+                .getItemProperty("CITYID").setValue(0);
         newContactMode = true;
         setReadOnly(false);
     }
 
     @Override
     public void commit() throws Buffered.SourceException {
-        super.commit();
-        // TODO: Here we should determine whether the city was an existing one
-        // or was it just added. If it is new, we must add it to the city -table
-        // in the DB prior to adding the person into the DB.
+        /*
+         * If the selected city item id is not an integer, a new city name has
+         * been input.
+         */
+        if (!(cities.getValue() instanceof Integer)) {
+            /* Add city to container and fetch is DB-given id. */
+            String name = cities.getValue().toString();
+            app.getDbHelp().addCity(name);
+            int cKey = app.getDbHelp().getCityIdByName(name);
 
+            /* Update id of the added city to the data source of this form. */
+            getItemDataSource().getItemProperty("CITYID").setValue(cKey);
+
+            /* Fix the city entry in the cities-select of this form. */
+            cities.removeItem(name);
+            cities.addItem(cKey);
+            cities.setItemCaption(cKey, name);
+            cities.select(cKey);
+        }
+
+        /* Commit the person form. */
+        super.commit();
+
+        /* Commit to the database. */
         try {
             app.getDbHelp().getPersonContainer().commit();
         } catch (UnsupportedOperationException e) {
@@ -181,6 +208,7 @@ public class PersonForm extends Form implements ClickListener {
     public void discard() throws Buffered.SourceException {
         super.discard();
         if (newContactMode) {
+            /* On discard remove possibly added new item from container */
             app.getDbHelp().getPersonContainer().removeItem(tempItemId);
             tempItemId = null;
             newContactMode = false;

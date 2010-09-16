@@ -7,15 +7,32 @@ import java.util.Random;
 
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
+import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 
 public class DatabaseHelper {
+    /**
+     * Natural property order for SQLContainer linked with the PersonAddress
+     * database table. Used in tables and forms.
+     */
+    public static final Object[] NATURAL_COL_ORDER = new Object[] {
+            "FIRSTNAME", "LASTNAME", "EMAIL", "PHONENUMBER", "STREETADDRESS",
+            "POSTALCODE", "CITYID" };
+
+    /**
+     * "Human readable" captions for properties in same order as in
+     * NATURAL_COL_ORDER.
+     */
+    public static final String[] COL_HEADERS_ENGLISH = new String[] {
+            "First name", "Last name", "Email", "Phone number",
+            "Street Address", "Postal Code", "City" };
 
     private SimpleJDBCConnectionPool connectionPool = null;
     private SQLContainer personContainer = null;
     private SQLContainer cityContainer = null;
 
-    private boolean debugMode = true;
+    private boolean debugMode = false;
 
     public DatabaseHelper() {
         initConnectionPool();
@@ -83,9 +100,9 @@ public class DatabaseHelper {
     private void fillContainers() {
         if (personContainer.size() == 0 && cityContainer.size() == 0) {
             /* Create cities */
-            final String cities[] = { "Amsterdam", "Berlin", "Helsinki",
-                    "Hong Kong", "London", "Luxemburg", "New York", "Oslo",
-                    "Paris", "Rome", "Stockholm", "Tokyo", "Turku" };
+            final String cities[] = { "[no city]", "Amsterdam", "Berlin",
+                    "Helsinki", "Hong Kong", "London", "Luxemburg", "New York",
+                    "Oslo", "Paris", "Rome", "Stockholm", "Tokyo", "Turku" };
             for (int i = 0; i < cities.length; i++) {
                 Object id = cityContainer.addItem();
                 cityContainer.getContainerProperty(id, "NAME").setValue(
@@ -128,34 +145,29 @@ public class DatabaseHelper {
             Random r = new Random(0);
             try {
                 for (int i = 0; i < 100; i++) {
-                    Person p = new Person();
-                    p.setFirstName(fnames[r.nextInt(fnames.length)]);
-                    p.setLastName(lnames[r.nextInt(lnames.length)]);
-                    // p.setCity(cities[r.nextInt(cities.length)]);
-                    p.setEmail(p.getFirstName().toLowerCase() + "."
-                            + p.getLastName().toLowerCase() + "@vaadin.com");
-                    p.setPhoneNumber("+358 02 555 " + r.nextInt(10)
-                            + r.nextInt(10) + r.nextInt(10) + r.nextInt(10));
+                    Object id = personContainer.addItem();
+                    String firstName = fnames[r.nextInt(fnames.length)];
+                    String lastName = lnames[r.nextInt(lnames.length)];
+                    personContainer.getContainerProperty(id, "FIRSTNAME")
+                            .setValue(firstName);
+                    personContainer.getContainerProperty(id, "LASTNAME")
+                            .setValue(lastName);
+                    personContainer.getContainerProperty(id, "EMAIL").setValue(
+                            firstName.toLowerCase() + "."
+                                    + lastName.toLowerCase() + "@vaadin.com");
+                    personContainer.getContainerProperty(id, "PHONENUMBER")
+                            .setValue(
+                                    "+358 02 555 " + r.nextInt(10)
+                                            + r.nextInt(10) + r.nextInt(10)
+                                            + r.nextInt(10));
+                    personContainer.getContainerProperty(id, "STREETADDRESS")
+                            .setValue(streets[r.nextInt(streets.length)]);
                     int n = r.nextInt(100000);
                     if (n < 10000) {
                         n += 10000;
                     }
-                    p.setPostalCode(n);
-                    p.setStreetAddress(streets[r.nextInt(streets.length)]);
-
-                    Object id = personContainer.addItem();
-                    personContainer.getContainerProperty(id, "FIRSTNAME")
-                            .setValue(p.getFirstName());
-                    personContainer.getContainerProperty(id, "LASTNAME")
-                            .setValue(p.getLastName());
-                    personContainer.getContainerProperty(id, "EMAIL").setValue(
-                            p.getEmail());
-                    personContainer.getContainerProperty(id, "PHONENUMBER")
-                            .setValue(p.getPhoneNumber());
-                    personContainer.getContainerProperty(id, "STREETADDRESS")
-                            .setValue(p.getStreetAddress());
                     personContainer.getContainerProperty(id, "POSTALCODE")
-                            .setValue(p.getPostalCode());
+                            .setValue(n);
                     personContainer.getContainerProperty(id, "CITYID")
                             .setValue(r.nextInt(cities.length));
                 }
@@ -176,5 +188,35 @@ public class DatabaseHelper {
 
     public SQLContainer getCityContainer() {
         return cityContainer;
+    }
+
+    public String getCityName(int cityId) {
+        Object cityItemId = cityContainer.getIdByIndex(cityId);
+        return cityContainer.getItem(cityItemId).getItemProperty("NAME")
+                .getValue().toString();
+    }
+
+    public boolean addCity(String cityName) {
+        cityContainer.getItem(cityContainer.addItem()).getItemProperty("NAME")
+                .setValue(cityName);
+        try {
+            cityContainer.commit();
+            return true;
+        } catch (UnsupportedOperationException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public int getCityIdByName(String name) {
+        Filter f = new Filter("NAME", ComparisonType.EQUALS, name);
+        f.setNeedsQuotes(true);
+        cityContainer.addFilter(f);
+        int cKey = (Integer) cityContainer.getItem(cityContainer.firstItemId())
+                .getItemProperty("ID").getValue();
+        cityContainer.removeAllContainerFilters();
+        return cKey;
     }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.demo.addressbook.AddressBookApplication;
+import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.SearchFilter;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.CheckBox;
@@ -43,17 +44,18 @@ public class SearchView extends Panel {
         Button search = new Button("Search");
 
         /* Initialize fieldToSearch */
-        // TODO: City search will fail, needs re-implementation to search by ID!
-        for (int i = 0; i < PersonList.NATURAL_COL_ORDER.length; i++) {
-            fieldToSearch.addItem(PersonList.NATURAL_COL_ORDER[i]);
-            fieldToSearch.setItemCaption(PersonList.NATURAL_COL_ORDER[i],
-                    PersonList.COL_HEADERS_ENGLISH[i]);
+        for (int i = 0; i < DatabaseHelper.NATURAL_COL_ORDER.length; i++) {
+            fieldToSearch.addItem(DatabaseHelper.NATURAL_COL_ORDER[i]);
+            fieldToSearch.setItemCaption(DatabaseHelper.NATURAL_COL_ORDER[i],
+                    DatabaseHelper.COL_HEADERS_ENGLISH[i]);
         }
         fieldToSearch.setValue("lastName");
         fieldToSearch.setNullSelectionAllowed(false);
+        /* Pre-select first field */
+        fieldToSearch.select(fieldToSearch.getItemIds().iterator().next());
 
         /* Initialize save checkbox */
-        saveSearch.setValue(true);
+        saveSearch.setValue(false);
         saveSearch.setImmediate(true);
         saveSearch.addListener(new ClickListener() {
             public void buttonClick(ClickEvent event) {
@@ -85,11 +87,11 @@ public class SearchView extends Panel {
         }
         List<SearchFilter> searchFilters = new ArrayList<SearchFilter>();
 
-        // FIXME: The city searching (below) is still quite awful -> make up
-        // something reasonable!
-        if (!"cityName".equals(fieldToSearch.getValue())) {
+        if (!"CITYID".equals(fieldToSearch.getValue())) {
             searchFilters.add(new SearchFilter(fieldToSearch.getValue(),
-                    searchTerm, (String) searchName.getValue()));
+                    searchTerm, (String) searchName.getValue(), fieldToSearch
+                            .getItemCaption(fieldToSearch.getValue()),
+                    searchTerm));
         } else {
             app.getDbHelp().getCityContainer().addContainerFilter("NAME",
                     searchTerm, true, false);
@@ -98,7 +100,9 @@ public class SearchView extends Panel {
                 searchFilters.add(new SearchFilter("CITYID", app.getDbHelp()
                         .getCityContainer().getItem(cityItemId)
                         .getItemProperty("ID").getValue().toString(),
-                        (String) searchName.getValue()));
+                        (String) searchName.getValue(), fieldToSearch
+                                .getItemCaption(fieldToSearch.getValue()),
+                        searchTerm));
             }
             app.getDbHelp().getCityContainer().removeAllContainerFilters();
             if (searchFilters.isEmpty()) {
@@ -114,9 +118,16 @@ public class SearchView extends Panel {
                         Notification.TYPE_WARNING_MESSAGE);
                 return;
             }
-            // app.saveSearch(searchFilters.toArray(sf));
+            SearchFilter[] sf = {};
+            app.saveSearch(searchFilters.toArray(sf));
         }
         SearchFilter[] sf = {};
         app.search(searchFilters.toArray(sf));
+        clearSaving();
+    }
+
+    private void clearSaving() {
+        searchName.setValue("");
+        saveSearch.setValue(false);
     }
 }
