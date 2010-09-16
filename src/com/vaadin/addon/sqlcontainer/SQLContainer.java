@@ -406,7 +406,6 @@ public class SQLContainer implements Container, Container.Filterable,
             ct = Filter.ComparisonType.STARTS_WITH;
         }
         Filter f = new Filter((String) propertyId, ct, filterString);
-        f.setNeedsQuotes(true);
         f.setCaseSensitive(!ignoreCase);
         filters.add(f);
         refresh();
