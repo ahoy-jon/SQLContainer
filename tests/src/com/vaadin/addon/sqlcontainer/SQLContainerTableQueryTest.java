@@ -524,7 +524,7 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
-    public void setAutoCommit_freeform_shouldSucceed() throws SQLException {
+    public void setAutoCommit_table_shouldSucceed() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         container.setAutoCommit(true);
@@ -1321,7 +1321,7 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
-    public void addOrderBy_freeform_shouldReorderResults() throws SQLException {
+    public void addOrderBy_table_shouldReorderResults() throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
@@ -1347,7 +1347,7 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
-    public void sort_freeform_sortsByName() throws SQLException {
+    public void sort_table_sortsByName() throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
@@ -1367,7 +1367,7 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
-    public void addFilter_freeform_filtersResults() throws SQLException {
+    public void addFilter_table_filtersResults() throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
@@ -1418,7 +1418,7 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
-    public void removeAllContainerFilters_freeform_noFiltering()
+    public void removeAllContainerFilters_table_noFiltering()
             throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
@@ -1441,8 +1441,7 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
-    public void removeContainerFilters_freeform_noFiltering()
-            throws SQLException {
+    public void removeContainerFilters_table_noFiltering() throws SQLException {
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
