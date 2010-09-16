@@ -18,6 +18,7 @@ import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
 
@@ -127,6 +128,20 @@ public class SQLGeneratorsTest {
     }
 
     @Test
+    public void generateSelectQuery_filtersAndOrderingSet_exclusiveFilteringMode_shouldSucceed() {
+        SQLGenerator sg = new DefaultSQLGenerator();
+        List<Filter> f = Arrays.asList(new Filter("name",
+                Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
+                Filter.ComparisonType.STARTS_WITH, "vi"));
+        List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
+        String query = sg.generateSelectQuery("TABLE", f,
+                FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 0, 0, null);
+        Assert.assertEquals(query,
+                "SELECT * FROM TABLE WHERE \"name\" LIKE '%lle' "
+                        + "OR \"name\" LIKE 'vi%' ORDER BY \"name\" ASC");
+    }
+
+    @Test
     public void generateDeleteQuery_basicQuery_shouldSucceed()
             throws SQLException {
         /*
@@ -226,6 +241,42 @@ public class SQLGeneratorsTest {
         Assert.assertEquals(query, "SELECT * FROM (SELECT row_number() OVER "
                 + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
                 + "FROM TABLE WHERE \"name\" LIKE '%lle') "
+                + "AS a WHERE a.rownum BETWEEN 5 AND 12");
+    }
+
+    @Test
+    public void generateComplexSelectQuery_forOracle_exclusiveFilteringMode_shouldSucceed()
+            throws SQLException {
+        SQLGenerator sg = new OracleGenerator();
+        List<Filter> f = Arrays.asList(new Filter("name",
+                Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
+                Filter.ComparisonType.STARTS_WITH, "vi"));
+        List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
+        String query = sg.generateSelectQuery("TABLE", f,
+                FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
+        Assert
+                .assertEquals(
+                        query,
+                        "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
+                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE '%lle'"
+                                + " OR \"name\" LIKE 'vi%' "
+                                + "ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
+    }
+
+    @Test
+    public void generateComplexSelectQuery_forMSSQL_exclusiveFilteringMode_shouldSucceed()
+            throws SQLException {
+        SQLGenerator sg = new MSSQLGenerator();
+        List<Filter> f = Arrays.asList(new Filter("name",
+                Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
+                Filter.ComparisonType.STARTS_WITH, "vi"));
+        List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
+        String query = sg.generateSelectQuery("TABLE", f,
+                FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
+        Assert.assertEquals(query, "SELECT * FROM (SELECT row_number() OVER "
+                + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
+                + "FROM TABLE WHERE \"name\" LIKE '%lle' "
+                + "OR \"name\" LIKE 'vi%') "
                 + "AS a WHERE a.rownum BETWEEN 5 AND 12");
     }
 }
