@@ -8,6 +8,7 @@ import java.util.List;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
@@ -65,6 +66,11 @@ public class DemoFreeformQueryDelegate implements FreeformQueryDelegate {
 
     public String getCountQuery() throws UnsupportedOperationException {
         return "SELECT COUNT(*) FROM PEOPLE" + getFiltersString();
+    }
+
+    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
+            throws UnsupportedOperationException {
+        // TODO: Implement ?
     }
 
     public void setFilters(List<Filter> filters)
@@ -174,5 +180,4 @@ public class DemoFreeformQueryDelegate implements FreeformQueryDelegate {
         // TODO Auto-generated method stub
         return null;
     }
-
 }
