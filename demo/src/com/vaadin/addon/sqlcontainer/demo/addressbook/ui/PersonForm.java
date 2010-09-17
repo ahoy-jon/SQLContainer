@@ -31,14 +31,6 @@ public class PersonForm extends Form implements ClickListener {
     private final ComboBox cities = new ComboBox();
 
     private AddressBookApplication app;
-    private boolean newContactMode = false;
-
-    /**
-     * Item ID of a new contact during addition. The reference is needed because
-     * the item is added to the container, but the changes will be committed
-     * only when Save-button is pressed.
-     */
-    private Object tempItemId = null;
 
     public PersonForm(AddressBookApplication app) {
         this.app = app;
@@ -141,7 +133,6 @@ public class PersonForm extends Form implements ClickListener {
 
     @Override
     public void setItemDataSource(Item newDataSource) {
-        newContactMode = false;
         if (newDataSource != null) {
             List<Object> orderedProperties = Arrays
                     .asList(DatabaseHelper.NATURAL_COL_ORDER);
@@ -163,13 +154,12 @@ public class PersonForm extends Form implements ClickListener {
     }
 
     public void addContact() {
-        tempItemId = app.getDbHelp().getPersonContainer().addItem();
+        Object tempItemId = app.getDbHelp().getPersonContainer().addItem();
         setItemDataSource(app.getDbHelp().getPersonContainer().getItem(
                 tempItemId));
         /* Select the first available city for the new contact */
         app.getDbHelp().getPersonContainer().getItem(tempItemId)
                 .getItemProperty("CITYID").setValue(0);
-        newContactMode = true;
         setReadOnly(false);
     }
 
@@ -206,30 +196,22 @@ public class PersonForm extends Form implements ClickListener {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        if (newContactMode) {
-            newContactMode = false;
-            tempItemId = null;
-        }
         setReadOnly(true);
     }
 
     @Override
     public void discard() throws Buffered.SourceException {
         super.discard();
-        if (newContactMode) {
-            /* On discard roll back the changes. */
-            try {
-                app.getDbHelp().getPersonContainer().rollback();
-            } catch (UnsupportedOperationException e) {
-                e.printStackTrace();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            tempItemId = null;
-            newContactMode = false;
-            /* Clear the form and make it invisible */
-            setItemDataSource(null);
+        /* On discard roll back the changes. */
+        try {
+            app.getDbHelp().getPersonContainer().rollback();
+        } catch (UnsupportedOperationException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+        /* Clear the form and make it invisible */
+        setItemDataSource(null);
         setReadOnly(true);
     }
 }
