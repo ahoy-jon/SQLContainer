@@ -921,6 +921,7 @@ public class SQLContainer implements Container, Container.Filterable,
      * Note that if the table contains (or query returns) no items, it is
      * impossible to determine the data types of the columns.
      */
+    @SuppressWarnings("unchecked")
     private void getPropertyIds() {
         propertyIds.clear();
         propertyTypes.clear();
@@ -932,17 +933,27 @@ public class SQLContainer implements Container, Container.Filterable,
             rs = delegate.getResults(0, 1);
             boolean resultExists = rs.next();
             rsmd = rs.getMetaData();
-            Object o = null;
+            Class c = null;
             for (int i = 1; i <= rsmd.getColumnCount(); i++) {
                 if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
                     continue;
                 }
                 propertyIds.add(rsmd.getColumnName(i));
+                /*
+                 * Try to determine the column's JDBC class by all means. On
+                 * failure revert to Object and hope for the best.
+                 */
                 if (resultExists) {
-                    o = rs.getObject(i);
+                    c = rs.getObject(i).getClass();
+                } else {
+                    try {
+                        c = Class.forName(rsmd.getColumnClassName(i));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        c = new Object().getClass();
+                    }
                 }
-                propertyTypes.put(rsmd.getColumnName(i),
-                        o == null ? new Object().getClass() : o.getClass());
+                propertyTypes.put(rsmd.getColumnName(i), c);
             }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to fetch property id's.", e);
