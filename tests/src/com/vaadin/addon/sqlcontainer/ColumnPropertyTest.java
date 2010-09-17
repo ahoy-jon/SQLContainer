@@ -6,7 +6,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.vaadin.data.Property.ConversionException;
+import com.vaadin.addon.sqlcontainer.ColumnProperty.NotNullableException;
 import com.vaadin.data.Property.ReadOnlyException;
 
 public class ColumnPropertyTest {
@@ -74,7 +74,7 @@ public class ColumnPropertyTest {
         EasyMock.verify(container);
     }
 
-    @Test(expected = ConversionException.class)
+    @Test(expected = NotNullableException.class)
     public void setValue_readWriteNotNullable_nullShouldFail() {
         ColumnProperty cp = new ColumnProperty("NAME", false, true, false,
                 "Ville", String.class);
