@@ -154,9 +154,13 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
                 query.append(", ");
             }
             query.append("\"" + column + "\"");
-            query.append(" = '");
-            query.append(escapeQuotes(columnToValueMap.get(column)));
-            query.append("'");
+            if (columnToValueMap.get(column) == null) {
+                query.append(" = NULL");
+            } else {
+                query.append(" = '");
+                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append("'");
+            }
             first = false;
         }
 
@@ -233,9 +237,13 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
             if (!first) {
                 query.append(", ");
             }
-            query.append("'");
-            query.append(escapeQuotes(columnToValueMap.get(column)));
-            query.append("'");
+            if (columnToValueMap.get(column) == null) {
+                query.append("NULL");
+            } else {
+                query.append("'");
+                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append("'");
+            }
             first = false;
         }
         query.append(")");

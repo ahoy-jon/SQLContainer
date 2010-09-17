@@ -125,9 +125,13 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(", ");
             }
             query.append("\"" + column + "\"");
-            query.append(" = '");
-            query.append(escapeQuotes(columnToValueMap.get(column)));
-            query.append("'");
+            if (columnToValueMap.get(column) == null) {
+                query.append(" = NULL");
+            } else {
+                query.append(" = '");
+                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append("'");
+            }
             first = false;
         }
 
@@ -200,9 +204,13 @@ public class DefaultSQLGenerator implements SQLGenerator {
             if (!first) {
                 query.append(", ");
             }
-            query.append("'");
-            query.append(escapeQuotes(columnToValueMap.get(column)));
-            query.append("'");
+            if (columnToValueMap.get(column) == null) {
+                query.append("NULL");
+            } else {
+                query.append("'");
+                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append("'");
+            }
             first = false;
         }
         query.append(")");
