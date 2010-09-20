@@ -14,14 +14,14 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
 
 @RunWith(Suite.class)
-@SuiteClasses( { SimpleJDBCConnectionPoolTest.class, FreeformQueryTest.class,
+@SuiteClasses({ SimpleJDBCConnectionPoolTest.class, FreeformQueryTest.class,
         RowIdTest.class, SQLContainerTest.class,
         SQLContainerTableQueryTest.class, ColumnPropertyTest.class,
-        TableQueryTest.class, SQLGeneratorsTest.class })
+        TableQueryTest.class, SQLGeneratorsTest.class, UtilTest.class })
 public class AllTests {
     /* Set the DB used for testing here! */
     /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL, 4 = ORACLE */
-    public static final int db = 4;
+    public static final int db = 0;
 
     /* Auto-increment column offset (HSQLDB = 0, MYSQL = 1, POSTGRES = 1) */
     public static int offset;

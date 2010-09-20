@@ -8,6 +8,7 @@ import java.util.Map;
 import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
+import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
@@ -45,7 +46,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             query.append("SELECT " + toSelect + " FROM ");
         }
-        query.append(escapeQuotes(tableName));
+        query.append(Util.escapeSQL(tableName));
 
         if (filters != null) {
             for (Filter f : filters) {
@@ -129,7 +130,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(" = NULL");
             } else {
                 query.append(" = '");
-                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append(Util.escapeSQL(columnToValueMap.get(column)));
                 query.append("'");
             }
             first = false;
@@ -145,7 +146,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
             }
             query.append("\"" + column + "\"");
             query.append(" = ");
-            query.append(escapeQuotes(rowIdentifiers.get(column)));
+            query.append(Util.escapeSQL(rowIdentifiers.get(column)));
             first = false;
         }
 
@@ -208,7 +209,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append("NULL");
             } else {
                 query.append("'");
-                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append(Util.escapeSQL(columnToValueMap.get(column)));
                 query.append("'");
             }
             first = false;
@@ -260,87 +261,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 sb.append(" OR ");
             }
         }
-        /* Null filter equates to 1=1 where clause */
-        if (f.getValue() == null) {
-            sb.append("1=1");
-            return sb;
-        }
-
-        String name = f.getColumn();
-        String value = String.valueOf(f.getValue());
-        // f.setNeedsQuotes(false);
-
-        if (f.getValue() instanceof String) {
-            // Try to determine if the filter value is numeric
-            // try {
-            // Double.parseDouble(String.valueOf(f.getValue()));
-            // Long.parseLong(String.valueOf(f.getValue()));
-            // value = String.valueOf(f.getValue());
-            // } catch (NumberFormatException nfe) {
-            // The filter value is indeed a String and thus needs wild card
-            // removal, quote escaping and quotes around it in the query
-            value = escapeQuotes(escapeWildCards((String) f.getValue()));
-            // f.setNeedsQuotes(true);
-            switch (f.getComparisonType()) {
-            case STARTS_WITH:
-                value += "%";
-                break;
-            case CONTAINS:
-                value = "%" + value + "%";
-                break;
-            case ENDS_WITH:
-                value = "%" + value;
-                break;
-            }
-            // }
-        }
-
-        if (f.isNeedsQuotes()) {
-            if (!f.isCaseSensitive()) {
-                name = "LOWER(\"" + f.getColumn() + "\")";
-                value = "LOWER('" + value + "')";
-            } else {
-                value = "'" + value + "'";
-            }
-        }
-        if (f.isCaseSensitive()) {
-            name = "\"" + name + "\"";
-        }
-
-        sb.append(name);
-
-        switch (f.getComparisonType()) {
-        case STARTS_WITH:
-        case CONTAINS:
-        case ENDS_WITH:
-            /*
-             * LIKE for Strings, = for numeric types. Prevents starts/ends_with
-             * filtering with numeric types, which would not be very functional
-             * anyway.
-             */
-            if (f.isNeedsQuotes()) {
-                sb.append(" LIKE ");
-            } else {
-                sb.append(" = ");
-            }
-            break;
-        case LESS:
-            sb.append(" < ");
-            break;
-        case LESS_OR_EQUAL:
-            sb.append(" <= ");
-            break;
-        case EQUALS:
-            sb.append(" = ");
-            break;
-        case GREATER:
-            sb.append(" > ");
-            break;
-        case GREATER_OR_EQUAL:
-            sb.append(" >= ");
-            break;
-        }
-        sb.append(value);
+        sb.append(f.toWhereString());
         return sb;
     }
 
@@ -414,33 +335,6 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return null;
     }
 
-    /**
-     * Replaces single quotes (') with two single quotes ('').
-     * 
-     * Note! If escaping a single quote is attempted by the user with e.g. (\'),
-     * both the single quote and the escape character(s) preceding it will be
-     * removed completely.
-     * 
-     * Also note! The escaping done here may or may not be enough to prevent any
-     * and all SQL injections so it is recommended to check user input before
-     * giving it to the SQLContainer/TableQuery.
-     * 
-     * @param constant
-     * @return \\\'\'
-     */
-    protected String escapeQuotes(String constant) {
-        String fixedConstant;
-        if (constant != null) {
-            fixedConstant = constant;
-            while (fixedConstant.contains("\\\'")) {
-                fixedConstant = fixedConstant.replace("\\\'", "");
-            }
-            fixedConstant = fixedConstant.replace("\'", "\'\'");
-            return fixedConstant;
-        }
-        return null;
-    }
-
     /*
      * (non-Javadoc)
      * 
@@ -477,8 +371,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(" ");
                 query.append("\"" + p.toString() + "\"");
                 query.append(" = '");
-                query.append(escapeQuotes(item.getItemProperty(p).getValue()
-                        .toString()));
+                query.append(Util.escapeSQL(item.getItemProperty(p)
+                        .getValue().toString()));
                 query.append("'");
             }
             if (count < propIds.size()) {

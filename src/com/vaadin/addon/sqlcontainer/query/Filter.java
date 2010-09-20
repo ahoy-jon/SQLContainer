@@ -1,5 +1,7 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import com.vaadin.addon.sqlcontainer.Util;
+
 /**
  * Filter represents a filtering rule to be applied to a query made by the
  * SQLContainer's QueryDelegate.
@@ -33,26 +35,6 @@ public class Filter {
         setComparisonType(comparisonType);
         setValue(value);
         setNeedsQuotes(false);
-        if (value instanceof String || value instanceof CharSequence) {
-            try {
-                int l = Integer.parseInt(String.valueOf(value));
-                setValue(l);
-            } catch (NumberFormatException nfe1) {
-                try {
-                    long l = Long.parseLong(String.valueOf(value));
-                    setValue(l);
-                } catch (NumberFormatException nfe2) {
-                    try {
-                        double d = Double.parseDouble(String.valueOf(value));
-                        setValue(d);
-                    } catch (NumberFormatException nfe3) {
-                        /* Value is still string -> needs quotes */
-                        setNeedsQuotes(true);
-                    }
-                }
-            }
-        }
-        // TODO: How about dates, timestamps, etc. ?
     }
 
     public Filter(String column, ComparisonType comparisonType, Object value,
@@ -69,12 +51,20 @@ public class Filter {
         return column;
     }
 
+    public String getEscapedColumn() {
+        return Util.escapeSQL(column);
+    }
+
     public void setValue(Object value) {
         this.value = value;
     }
 
     public Object getValue() {
         return value;
+    }
+
+    public String getEscapedValue() {
+        return Util.escapeSQL(String.valueOf(value));
     }
 
     public Object getSecondValue() {
@@ -110,11 +100,16 @@ public class Filter {
     }
 
     public String toWhereString() {
+        /* Null filter equates to 1=1 where clause */
+        if (value == null) {
+            return "1=1";
+        }
+
         StringBuffer where = new StringBuffer();
         if (isCaseSensitive()) {
-            where.append("\"" + getColumn() + "\"");
+            where.append("\"" + getEscapedColumn() + "\"");
         } else {
-            where.append("UPPER(\"").append(getColumn()).append("\")");
+            where.append("UPPER(\"").append(getEscapedColumn()).append("\")");
         }
         switch (getComparisonType()) {
         case EQUALS:
@@ -133,19 +128,22 @@ public class Filter {
             where.append(" <= ").append(format(getValue()));
             break;
         case STARTS_WITH:
-            where.append(" LIKE ").append("'").append(
-                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
-                    .append("%'");
+            where.append(" LIKE ")
+                    .append("'")
+                    .append(upperCaseIfCaseInsensitive(String
+                            .valueOf(getValue()))).append("%'");
             break;
         case ENDS_WITH:
-            where.append(" LIKE ").append("'%").append(
-                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
-                    .append("'");
+            where.append(" LIKE ")
+                    .append("'%")
+                    .append(upperCaseIfCaseInsensitive(String
+                            .valueOf(getValue()))).append("'");
             break;
         case CONTAINS:
-            where.append(" LIKE ").append("'%").append(
-                    upperCaseIfCaseInsensitive(String.valueOf(getValue())))
-                    .append("%'");
+            where.append(" LIKE ")
+                    .append("'%")
+                    .append(upperCaseIfCaseInsensitive(String
+                            .valueOf(getValue()))).append("%'");
             break;
         case BETWEEN:
             where.append(" BETWEEN ").append(format(getValue()))
@@ -157,10 +155,12 @@ public class Filter {
 
     private String format(Object value) {
         if (value instanceof String) {
-            return "'" + upperCaseIfCaseInsensitive(String.valueOf(value))
-                    + "'";
+            return "'"
+                    + Util.escapeSQL(upperCaseIfCaseInsensitive(String
+                            .valueOf(value))) + "'";
         }
-        return upperCaseIfCaseInsensitive(String.valueOf(value));
+        return Util.escapeSQL(upperCaseIfCaseInsensitive(String
+                .valueOf(value)));
     }
 
     private String upperCaseIfCaseInsensitive(String value) {

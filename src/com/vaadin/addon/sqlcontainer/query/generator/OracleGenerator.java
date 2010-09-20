@@ -8,6 +8,7 @@ import java.util.Map;
 import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
+import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
@@ -39,8 +40,7 @@ public class OracleGenerator extends DefaultSQLGenerator {
 
         /* Row count request is handled here */
         if ("COUNT(*)".equalsIgnoreCase(toSelect)) {
-            query
-                    .append("SELECT COUNT(*) AS \"rowcount\" FROM (SELECT * FROM ");
+            query.append("SELECT COUNT(*) AS \"rowcount\" FROM (SELECT * FROM ");
             query.append(tableName);
             if (filters != null && !filters.isEmpty()) {
                 for (Filter f : filters) {
@@ -77,12 +77,10 @@ public class OracleGenerator extends DefaultSQLGenerator {
         }
 
         if (toSelect == null) {
-            query
-                    .append("SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT * FROM ");
+            query.append("SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT * FROM ");
         } else {
-            query
-                    .append("SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT "
-                            + toSelect + " FROM ");
+            query.append("SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT "
+                    + toSelect + " FROM ");
         }
         query.append(tableName);
 
@@ -159,7 +157,7 @@ public class OracleGenerator extends DefaultSQLGenerator {
                 query.append(" = NULL");
             } else {
                 query.append(" = '");
-                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append(Util.escapeSQL(columnToValueMap.get(column)));
                 query.append("'");
             }
             first = false;
@@ -175,7 +173,7 @@ public class OracleGenerator extends DefaultSQLGenerator {
             }
             query.append("\"" + column + "\"");
             query.append(" = ");
-            query.append(escapeQuotes(rowIdentifiers.get(column)));
+            query.append(Util.escapeSQL(rowIdentifiers.get(column)));
             first = false;
         }
 
@@ -242,7 +240,7 @@ public class OracleGenerator extends DefaultSQLGenerator {
                 query.append("NULL");
             } else {
                 query.append("'");
-                query.append(escapeQuotes(columnToValueMap.get(column)));
+                query.append(Util.escapeSQL(columnToValueMap.get(column)));
                 query.append("'");
             }
             first = false;
@@ -283,8 +281,8 @@ public class OracleGenerator extends DefaultSQLGenerator {
                 query.append(" ");
                 query.append("\"" + p.toString() + "\"");
                 query.append(" = '");
-                query.append(escapeQuotes(item.getItemProperty(p).getValue()
-                        .toString()));
+                query.append(Util.escapeSQL(item.getItemProperty(p)
+                        .getValue().toString()));
                 query.append("'");
             }
             if (count < propIds.size()) {

@@ -388,18 +388,17 @@ public class SQLContainer implements Container, Container.Filterable,
     /** Methods from interface Container.Filterable **/
     /*************************************************/
 
-    /*
-     * (non-Javadoc)
+    /**
+     * {@inheritDoc}
      * 
-     * @see
-     * com.vaadin.data.Container.Filterable#addContainerFilter(java.lang.Object,
-     * java.lang.String, boolean, boolean)
+     * NOTE! This method only adds string type filters
      */
     public void addContainerFilter(Object propertyId, String filterString,
             boolean ignoreCase, boolean onlyMatchPrefix) {
         if (propertyId == null || !propertyIds.contains(propertyId)) {
             return;
         }
+
         /* Generate Filter -object */
         Filter.ComparisonType ct = Filter.ComparisonType.CONTAINS;
         if (onlyMatchPrefix) {
@@ -921,7 +920,6 @@ public class SQLContainer implements Container, Container.Filterable,
      * Note that if the table contains (or query returns) no items, it is
      * impossible to determine the data types of the columns.
      */
-    @SuppressWarnings("unchecked")
     private void getPropertyIds() {
         propertyIds.clear();
         propertyTypes.clear();
@@ -933,7 +931,7 @@ public class SQLContainer implements Container, Container.Filterable,
             rs = delegate.getResults(0, 1);
             boolean resultExists = rs.next();
             rsmd = rs.getMetaData();
-            Class c = null;
+            Class<?> type = null;
             for (int i = 1; i <= rsmd.getColumnCount(); i++) {
                 if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
                     continue;
@@ -944,16 +942,16 @@ public class SQLContainer implements Container, Container.Filterable,
                  * failure revert to Object and hope for the best.
                  */
                 if (resultExists) {
-                    c = rs.getObject(i).getClass();
+                    type = rs.getObject(i).getClass();
                 } else {
                     try {
-                        c = Class.forName(rsmd.getColumnClassName(i));
+                        type = Class.forName(rsmd.getColumnClassName(i));
                     } catch (Exception e) {
                         e.printStackTrace();
-                        c = new Object().getClass();
+                        type = Object.class;
                     }
                 }
-                propertyTypes.put(rsmd.getColumnName(i), c);
+                propertyTypes.put(rsmd.getColumnName(i), type);
             }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to fetch property id's.", e);

@@ -25,26 +25,18 @@ public class SimpleJDBCConnectionPoolTest {
     }
 
     @Test
-    public void reserveConnection_reserveNewConnection_returnsConnection() {
-        try {
-            Connection conn = connectionPool.reserveConnection();
-            Assert.assertNotNull(conn);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
-        }
+    public void reserveConnection_reserveNewConnection_returnsConnection()
+            throws SQLException {
+        Connection conn = connectionPool.reserveConnection();
+        Assert.assertNotNull(conn);
     }
 
     @Test
-    public void releaseConnection_releaseUnused_shouldNotThrowException() {
-        try {
-            Connection conn = connectionPool.reserveConnection();
-            connectionPool.releaseConnection(conn);
-            Assert.assertFalse(conn.isClosed());
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
-        }
+    public void releaseConnection_releaseUnused_shouldNotThrowException()
+            throws SQLException {
+        Connection conn = connectionPool.reserveConnection();
+        connectionPool.releaseConnection(conn);
+        Assert.assertFalse(conn.isClosed());
     }
 
     @Test(expected = SQLException.class)
@@ -60,12 +52,12 @@ public class SimpleJDBCConnectionPoolTest {
         }
 
         connectionPool.reserveConnection();
-        Assert
-                .fail("Reserving connection didn't fail even though no connections are available!");
+        Assert.fail("Reserving connection didn't fail even though no connections are available!");
     }
 
     @Test
-    public void reserveConnection_oneConnectionLeft_returnsConnection() {
+    public void reserveConnection_oneConnectionLeft_returnsConnection()
+            throws SQLException {
         try {
             connectionPool.reserveConnection();
         } catch (SQLException e) {
@@ -74,17 +66,13 @@ public class SimpleJDBCConnectionPoolTest {
                     + e.getMessage());
         }
 
-        try {
-            Connection conn = connectionPool.reserveConnection();
-            Assert.assertNotNull(conn);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
-        }
+        Connection conn = connectionPool.reserveConnection();
+        Assert.assertNotNull(conn);
     }
 
     @Test
-    public void reserveConnection_oneConnectionJustReleased_returnsConnection() {
+    public void reserveConnection_oneConnectionJustReleased_returnsConnection()
+            throws SQLException {
         Connection conn2 = null;
         try {
             connectionPool.reserveConnection();
@@ -97,11 +85,6 @@ public class SimpleJDBCConnectionPoolTest {
 
         connectionPool.releaseConnection(conn2);
 
-        try {
-            connectionPool.reserveConnection();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
-        }
+        connectionPool.reserveConnection();
     }
 }
