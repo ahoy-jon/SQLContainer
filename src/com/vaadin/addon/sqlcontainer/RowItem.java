@@ -104,10 +104,10 @@ public final class RowItem implements Item {
     @Override
     public String toString() {
         StringBuffer s = new StringBuffer();
-        s.append("ID: ");
+        s.append("ID:");
         s.append(getId().toString());
         for (Object propId : getItemPropertyIds()) {
-            s.append(" | ");
+            s.append("|");
             s.append(propId.toString());
             s.append(":");
             s.append(getItemProperty(propId).toString());

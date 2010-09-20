@@ -59,10 +59,13 @@ public class RowId implements Serializable {
 
     @Override
     public String toString() {
-        String s = "";
+        StringBuffer s = new StringBuffer();
         for (int i = 0; i < id.length; i++) {
-            s += id[i].toString();
+            s.append(id[i].toString());
+            if (i < id.length - 1) {
+                s.append("/");
+            }
         }
-        return s;
+        return s.toString();
     }
 }
