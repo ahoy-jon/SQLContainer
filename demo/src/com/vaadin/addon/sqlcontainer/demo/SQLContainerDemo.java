@@ -126,6 +126,12 @@ public class SQLContainerDemo extends Application implements Serializable {
         contactRemovalButton = new Button("-", new Button.ClickListener() {
             public void buttonClick(ClickEvent event) {
                 contactList.removeItem(contactList.getValue());
+                try {
+                    container.commit();
+                } catch (SQLException e) {
+                    showError("Error when removing record!");
+                    e.printStackTrace();
+                }
                 contactList.select(null);
             }
         });
@@ -141,6 +147,15 @@ public class SQLContainerDemo extends Application implements Serializable {
         contactList.addListener(new Property.ValueChangeListener() {
             public void valueChange(ValueChangeEvent event) {
                 Object id = contactList.getValue();
+                if (id instanceof Integer) {
+                    try {
+                        container.rollback();
+                    } catch (UnsupportedOperationException e) {
+                        e.printStackTrace();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
                 contactEditor.setItemDataSource(id == null ? null : contactList
                         .getItem(id));
                 editorLayout.setVisible(id != null);
