@@ -14,7 +14,6 @@ import com.vaadin.data.Item;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.ui.Button;
-import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.DefaultFieldFactory;
 import com.vaadin.ui.Field;
@@ -25,6 +24,7 @@ import com.vaadin.ui.Table;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
+import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Window.Notification;
 
 @SuppressWarnings("serial")
@@ -68,6 +68,10 @@ public class SQLContainerDemo extends Application implements Serializable {
                 if (f instanceof TextField) {
                     ((TextField) f).setNullRepresentation("");
                 }
+                if (propertyId.equals("FIRSTNAME")
+                        || propertyId.equals("LASTNAME")) {
+                    f.setRequired(true);
+                }
                 return f;
             }
         });
@@ -86,7 +90,9 @@ public class SQLContainerDemo extends Application implements Serializable {
         splitPanel.addComponent(editorLayout);
         contactEditor.setSizeFull();
         contactEditor.getLayout().setMargin(true);
-        contactEditor.setImmediate(true);
+        contactEditor.setImmediate(false);
+        contactEditor.setValidationVisible(false);
+        contactEditor.setValidationVisibleOnCommit(false);
         editorLayout.addComponent(contactEditor);
         editorLayout.addComponent(new Button("Save",
                 new Button.ClickListener() {
@@ -94,6 +100,7 @@ public class SQLContainerDemo extends Application implements Serializable {
                         contactEditor.commit();
                         try {
                             container.commit();
+                            editorLayout.setVisible(false);
                         } catch (SQLException e) {
                             showError("Error when saving record!");
                             e.printStackTrace();
