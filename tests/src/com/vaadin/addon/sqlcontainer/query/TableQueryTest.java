@@ -189,6 +189,7 @@ public class TableQueryTest {
     public void getResults_simpleQuery_returnsFourRecords() throws SQLException {
         TableQuery tQuery = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
+        tQuery.beginTransaction();
         ResultSet rs = tQuery.getResults(0, 0);
 
         Assert.assertTrue(rs.next());
@@ -208,6 +209,7 @@ public class TableQueryTest {
         Assert.assertEquals("Börje", rs.getString(2));
 
         Assert.assertFalse(rs.next());
+        tQuery.commit();
     }
 
     @Test
@@ -232,11 +234,13 @@ public class TableQueryTest {
         TableQuery tQuery = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
 
+        tQuery.beginTransaction();
         ResultSet rs = tQuery.getResults(0, 0);
         for (int i = 0; i < 5000; i++) {
             Assert.assertTrue(rs.next());
         }
         Assert.assertFalse(rs.next());
+        tQuery.commit();
     }
 
     /**********************************************************************
@@ -360,6 +364,7 @@ public class TableQueryTest {
         List<OrderBy> orderBys = Arrays.asList(new OrderBy("NAME", true));
         tQuery.setOrderBy(orderBys);
 
+        tQuery.beginTransaction();
         ResultSet rs;
         rs = tQuery.getResults(0, 0);
 
@@ -380,6 +385,7 @@ public class TableQueryTest {
         Assert.assertEquals("Ville", rs.getString(2));
 
         Assert.assertFalse(rs.next());
+        tQuery.commit();
     }
 
     @Test
@@ -391,6 +397,7 @@ public class TableQueryTest {
         List<OrderBy> orderBys = Arrays.asList(new OrderBy("NAME", false));
         tQuery.setOrderBy(orderBys);
 
+        tQuery.beginTransaction();
         ResultSet rs;
         rs = tQuery.getResults(0, 0);
 
@@ -411,6 +418,7 @@ public class TableQueryTest {
         Assert.assertEquals("Börje", rs.getString(2));
 
         Assert.assertFalse(rs.next());
+        tQuery.commit();
     }
 
     @Test

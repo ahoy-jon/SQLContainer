@@ -127,10 +127,11 @@ public class FreeformQuery implements QueryDelegate {
                 // This is fine, we'll just use the default queryString.
             }
         }
-        Connection conn = getConnection();
-        Statement statement = conn.createStatement();
+        if (activeConnection == null) {
+            throw new SQLException("No active transaction!");
+        }
+        Statement statement = activeConnection.createStatement();
         ResultSet rs = statement.executeQuery(query);
-        releaseConnection(conn);
         return rs;
     }
 
@@ -248,12 +249,6 @@ public class FreeformQuery implements QueryDelegate {
 
     public void setDelegate(FreeformQueryDelegate delegate) {
         this.delegate = delegate;
-    }
-
-    public ResultSet getIdList() throws SQLException {
-        // TODO This method should be removed from the interface and not used in
-        // any way in any implementation.
-        return null;
     }
 
     /**

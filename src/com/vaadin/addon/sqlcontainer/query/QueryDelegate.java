@@ -18,16 +18,6 @@ public interface QueryDelegate {
     public int getCount() throws SQLException;
 
     /**
-     * Generates and executes a query to fetch a complete list of IDs from the
-     * DB. In practice this executes a SELECT query which selects column(s)
-     * defined as primary key column(s).
-     * 
-     * @return a ResultSet containing values of primary key column(s)
-     * @throws SQLException
-     */
-    public ResultSet getIdList() throws SQLException;
-
-    /**
      * Executes a paged SQL query and returns the ResultSet. The query is
      * defined through implementations of this QueryDelegate interface.
      * 

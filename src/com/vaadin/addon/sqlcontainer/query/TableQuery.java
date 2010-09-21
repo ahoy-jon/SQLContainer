@@ -94,27 +94,18 @@ public class TableQuery implements QueryDelegate {
         debug("Fetching count...");
         String query = sqlGenerator.generateSelectQuery(tableName, filters,
                 filterMode, null, 0, 0, "COUNT(*)");
+        boolean shouldCloseTransaction = false;
+        if (!transactionOpen) {
+            shouldCloseTransaction = true;
+            beginTransaction();
+        }
         ResultSet r = executeQuery(query);
         r.next();
-        return r.getInt(1);
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.vaadin.addon.sqlcontainer.query.QueryDelegate#getIdList()
-     */
-    public ResultSet getIdList() throws SQLException {
-        StringBuffer keys = new StringBuffer();
-        for (String colName : primaryKeyColumns) {
-            keys.append(colName);
-            if (primaryKeyColumns.indexOf(colName) < primaryKeyColumns.size() - 1) {
-                keys.append(", ");
-            }
+        int count = r.getInt(1);
+        if (shouldCloseTransaction) {
+            commit();
         }
-        String query = sqlGenerator.generateSelectQuery(tableName, null, null,
-                0, 0, keys.toString());
-        return executeQuery(query);
+        return count;
     }
 
     /*
@@ -317,22 +308,15 @@ public class TableQuery implements QueryDelegate {
      */
     private ResultSet executeQuery(String query) throws SQLException {
         Connection c = null;
-        try {
-            if (transactionOpen && activeConnection != null) {
-                c = activeConnection;
-            } else {
-                c = connectionPool.reserveConnection();
-            }
-            Statement statement = c.createStatement(
-                    ResultSet.TYPE_SCROLL_INSENSITIVE,
-                    ResultSet.CONCUR_READ_ONLY);
-            debug("DB -> " + query);
-            return statement.executeQuery(query);
-        } finally {
-            if (!transactionOpen) {
-                connectionPool.releaseConnection(c);
-            }
+        if (transactionOpen && activeConnection != null) {
+            c = activeConnection;
+        } else {
+            throw new SQLException("No active transaction!");
         }
+        Statement statement = c.createStatement(
+                ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        debug("DB -> " + query);
+        return statement.executeQuery(query);
     }
 
     /**
@@ -459,10 +443,22 @@ public class TableQuery implements QueryDelegate {
         }
         String query = sqlGenerator.generateSelectQuery(tableName,
                 filtersAndKeys, orderBys, 0, 0, "*");
-        ResultSet rs = executeQuery(query);
-        boolean contains = rs.next();
-        rs.close();
-        return contains;
+
+        boolean shouldCloseTransaction = false;
+        if (!transactionOpen) {
+            shouldCloseTransaction = true;
+            beginTransaction();
+        }
+        try {
+            ResultSet rs = executeQuery(query);
+            boolean contains = rs.next();
+            rs.close();
+            return contains;
+        } finally {
+            if (shouldCloseTransaction) {
+                commit();
+            }
+        }
     }
 
     /**

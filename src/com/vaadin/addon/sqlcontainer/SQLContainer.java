@@ -246,6 +246,7 @@ public class SQLContainer implements Container, Container.Filterable,
         ResultSet rs = null;
         try {
             // Load ALL rows :(
+            delegate.beginTransaction();
             rs = delegate.getResults(0, 0);
             List<String> pKeys = delegate.getPrimaryKeyColumns();
             while (rs.next()) {
@@ -259,7 +260,12 @@ public class SQLContainer implements Container, Container.Filterable,
                     ids.add(id);
                 }
             }
+            delegate.commit();
         } catch (SQLException e) {
+            try {
+                delegate.rollback();
+            } catch (SQLException e1) {
+            }
             throw new RuntimeException("Failed to fetch item indexes.", e);
         }
         for (RowItem item : getFilteredAddedItems()) {
@@ -925,6 +931,7 @@ public class SQLContainer implements Container, Container.Filterable,
         ResultSet rs = null;
         ResultSetMetaData rsmd = null;
         try {
+            delegate.beginTransaction();
             rs = delegate.getResults(0, 1);
             boolean resultExists = rs.next();
             rsmd = rs.getMetaData();
@@ -938,7 +945,7 @@ public class SQLContainer implements Container, Container.Filterable,
                  * Try to determine the column's JDBC class by all means. On
                  * failure revert to Object and hope for the best.
                  */
-                if (resultExists) {
+                if (resultExists && rs.getObject(i) != null) {
                     type = rs.getObject(i).getClass();
                 } else {
                     try {
@@ -950,7 +957,12 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
                 propertyTypes.put(rsmd.getColumnName(i), type);
             }
+            delegate.commit();
         } catch (SQLException e) {
+            try {
+                delegate.rollback();
+            } catch (SQLException e1) {
+            }
             throw new RuntimeException("Failed to fetch property id's.", e);
         }
     }
@@ -975,6 +987,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 /* The query delegate doesn't support sorting. */
                 /* No need to do anything. */
             }
+            delegate.beginTransaction();
             rs = delegate.getResults(currentOffset, pageLength * CACHE_RATIO);
             rsmd = rs.getMetaData();
             List<String> pKeys = delegate.getPrimaryKeyColumns();
@@ -1032,7 +1045,12 @@ public class SQLContainer implements Container, Container.Filterable,
                     rowCount++;
                 }
             }
+            delegate.commit();
         } catch (SQLException e) {
+            try {
+                delegate.rollback();
+            } catch (SQLException e1) {
+            }
             throw new RuntimeException("Failed to fetch page.", e);
         }
     }
