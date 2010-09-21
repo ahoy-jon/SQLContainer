@@ -916,9 +916,6 @@ public class SQLContainer implements Container, Container.Filterable,
     /**
      * Fetches property id's (column names and their types) from the data
      * source.
-     * 
-     * Note that if the table contains (or query returns) no items, it is
-     * impossible to determine the data types of the columns.
      */
     private void getPropertyIds() {
         propertyIds.clear();
