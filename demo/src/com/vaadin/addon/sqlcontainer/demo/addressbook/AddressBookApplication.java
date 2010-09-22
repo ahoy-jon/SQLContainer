@@ -1,6 +1,7 @@
 package com.vaadin.addon.sqlcontainer.demo.addressbook;
 
 import com.vaadin.Application;
+import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.SearchFilter;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.HelpWindow;
@@ -219,6 +220,8 @@ public class AddressBookApplication extends Application implements
         if (searchFilters.length == 0) {
             return;
         }
+        SQLContainer c = getDbHelp().getPersonContainer();
+
         /* Clear all filters from person container. */
         getDbHelp().getPersonContainer().removeAllContainerFilters();
         /*
@@ -228,38 +231,34 @@ public class AddressBookApplication extends Application implements
          * exclusive type.
          */
         if (searchFilters.length > 1) {
-            getDbHelp().getPersonContainer().setFilteringMode(
-                    FilteringMode.FILTERING_MODE_EXCLUSIVE);
+            c.setFilteringMode(FilteringMode.FILTERING_MODE_EXCLUSIVE);
         } else {
-            getDbHelp().getPersonContainer().setFilteringMode(
-                    FilteringMode.FILTERING_MODE_INCLUSIVE);
+            c.setFilteringMode(FilteringMode.FILTERING_MODE_INCLUSIVE);
         }
         /* Add the filter(s) to the person container. */
         for (SearchFilter searchFilter : searchFilters) {
             Filter f = new Filter((String) searchFilter.getPropertyId(),
                     ComparisonType.CONTAINS, searchFilter.getTerm());
-            try {
-                int num = Integer.parseInt(searchFilter.getTerm());
-                f.setValue(num);
-                f.setComparisonType(ComparisonType.EQUALS);
-            } catch (NumberFormatException nfe) {
-                /* Search term is a String. Carry on. */
+            if (Integer.class.equals(c.getType(searchFilter.getPropertyId()))) {
+                try {
+                    f = new Filter((String) searchFilter.getPropertyId(),
+                            ComparisonType.EQUALS, Integer
+                                    .parseInt(searchFilter.getTerm()));
+                } catch (NumberFormatException nfe) {
+                    getMainWindow().showNotification("Invalid search term!");
+                    return;
+                }
             }
-            getDbHelp().getPersonContainer().addFilter(f);
+            c.addFilter(f);
         }
-
         showListView();
 
-        getMainWindow()
-                .showNotification(
-                        "Searched for:<br/> "
-                                + searchFilters[0].getPropertyIdDisplayName()
-                                + " = *"
-                                + searchFilters[0].getTermDisplayName()
-                                + "*<br/>Found "
-                                + getDbHelp().getPersonContainer().size()
-                                + " item(s).",
-                        Notification.TYPE_TRAY_NOTIFICATION);
+        getMainWindow().showNotification(
+                "Searched for:<br/> "
+                        + searchFilters[0].getPropertyIdDisplayName() + " = *"
+                        + searchFilters[0].getTermDisplayName()
+                        + "*<br/>Found " + c.size() + " item(s).",
+                Notification.TYPE_TRAY_NOTIFICATION);
     }
 
     public void saveSearch(SearchFilter... searchFilter) {
