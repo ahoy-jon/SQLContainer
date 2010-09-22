@@ -231,8 +231,10 @@ Implementation-Vendor: ${addon.vendor}
 			<lib dir="WebContent/WEB-INF/lib" excludes="*src*" />
 			<lib file="${jar.path}" />
 			<fileset dir="WebContent">
-				<patternset>				
+				<patternset>
 					<include name="VAADIN/widgetsets/${addon.widgetset}/**/*" />
+                    <include name="VAADIN/themes/**/*" />
+					<include name="*.html" />
 				</patternset>
 			</fileset>
 		</war>
