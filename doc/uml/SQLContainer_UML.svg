@@ -303,24 +303,23 @@
     <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="938.658" y="362.5" width="464.3" height="44"/>
     <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="1170.81" y="378.5">&lt;&lt;interface&gt;&gt;</text>
     <text style="fill: #000000;text-anchor:middle;font-size:16;font-family:sanserif;font-style:normal;font-weight:700" x="1170.81" y="397.5">SQLGenerator</text>
-    <rect style="fill: #ffffff" x="938.658" y="406.5" width="464.3" height="132"/>
-    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="938.658" y="406.5" width="464.3" height="132"/>
+    <rect style="fill: #ffffff" x="938.658" y="406.5" width="464.3" height="116"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="938.658" y="406.5" width="464.3" height="116"/>
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="420.5">+generateSelectQuery(tableName:String,filters:List&lt;Filter&gt;,</text>
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="436.5">                     orderBys:List&lt;OrderBy&gt;,</text>
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="452.5">                     offset:int,pageLength:int,</text>
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="468.5">                     toSelect:String): String</text>
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="484.5">+generateUpdateQuery(tableName:String,item:RowItem): String</text>
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="500.5">+generateInsertQuery(tableName:String,item:RowItem): String</text>
-    <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="516.5">+setSearchStringEscape(searchStringEscape:String): void</text>
-    <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="532.5">+generateDeleteQuery(tableName:String,item:RowItem): String</text>
+    <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="941.658" y="516.5">+generateDeleteQuery(tableName:String,item:RowItem): String</text>
   </g>
   <g>
-    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1171.21,570.631 1171.21,553.146 1170.81,553.146 1170.81,538.5 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1171.21,570.631 1171.21,553.146 1170.81,553.146 1170.81,522.5 "/>
     <polygon style="fill: #ffffff" points="1171.21,595.803 1166.41,581.803 1171.21,567.803 1176.01,581.803 "/>
     <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1171.21,595.803 1166.41,581.803 1171.21,567.803 1176.01,581.803 "/>
     <text style="fill: #000000;text-anchor:middle;font-size:12.7998;font-family:monospace;font-style:normal;font-weight:normal" x="1171.01" y="550.146"></text>
     <text style="fill: #000000;text-anchor:start;font-size:12.7998;font-family:monospace;font-style:normal;font-weight:normal" x="1182.21" y="591.803"></text>
-    <text style="fill: #000000;text-anchor:start;font-size:12.7998;font-family:monospace;font-style:normal;font-weight:normal" x="1174.81" y="550.5">1</text>
+    <text style="fill: #000000;text-anchor:start;font-size:12.7998;font-family:monospace;font-style:normal;font-weight:normal" x="1174.81" y="534.5">1</text>
   </g>
   <g>
     <rect style="fill: #ffffff" x="1069.66" y="298.404" width="203.25" height="28"/>
@@ -359,9 +358,9 @@
     <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:monospace;font-style:normal;font-weight:normal" x="37.658" y="575.404">+storeRow(row:RowItem): int</text>
   </g>
   <g>
-    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 8; stroke: #000000" points="1170.81,343.258 1170.81,343.949 1171.28,343.949 1171.28,326.404 "/>
-    <polygon style="fill: #ffffff" points="1162.81,343.258 1170.81,359.258 1178.81,343.258 "/>
-    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1162.81,343.258 1170.81,359.258 1178.81,343.258 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 8; stroke: #000000" points="1170.81,343.254 1170.81,343.947 1171.28,343.947 1171.28,326.404 "/>
+    <polygon style="fill: #ffffff" points="1162.81,343.254 1170.81,359.254 1178.81,343.254 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1162.81,343.254 1170.81,359.254 1178.81,343.254 "/>
   </g>
   <g>
     <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="330.158,629.82 330.158,618.701 197.508,618.701 197.508,582.41 "/>
