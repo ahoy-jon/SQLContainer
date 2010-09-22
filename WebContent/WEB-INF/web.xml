@@ -19,7 +19,7 @@
   </servlet>
   <servlet-mapping>
     <servlet-name>SQLContainer Demo</servlet-name>
-    <url-pattern>/*</url-pattern>
+    <url-pattern>/simple/*</url-pattern>
   </servlet-mapping>
   
     <servlet>
@@ -34,7 +34,12 @@
   </servlet>
   <servlet-mapping>
     <servlet-name>SQLContainer AddressBook Demo</servlet-name>
-    <url-pattern>/ab/*</url-pattern>
+    <url-pattern>/addressbook/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>SQLContainer AddressBook Demo</servlet-name>
+    <url-pattern>/VAADIN/*</url-pattern>
   </servlet-mapping>
       
   
