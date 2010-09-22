@@ -10,7 +10,9 @@ import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonForm;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonList;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SearchView;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SharingOptions;
+import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
@@ -234,9 +236,16 @@ public class AddressBookApplication extends Application implements
         }
         /* Add the filter(s) to the person container. */
         for (SearchFilter searchFilter : searchFilters) {
-            getDbHelp().getPersonContainer().addContainerFilter(
-                    searchFilter.getPropertyId(), searchFilter.getTerm(), true,
-                    false);
+            Filter f = new Filter((String) searchFilter.getPropertyId(),
+                    ComparisonType.CONTAINS, searchFilter.getTerm());
+            try {
+                int num = Integer.parseInt(searchFilter.getTerm());
+                f.setValue(num);
+                f.setComparisonType(ComparisonType.EQUALS);
+            } catch (NumberFormatException nfe) {
+                /* Search term is a String. Carry on. */
+            }
+            getDbHelp().getPersonContainer().addFilter(f);
         }
 
         showListView();
