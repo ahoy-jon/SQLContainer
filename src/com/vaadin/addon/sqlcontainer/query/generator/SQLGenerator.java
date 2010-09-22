@@ -95,11 +95,4 @@ public interface SQLGenerator {
      * @return a string with the SQL query that will delete the given row.
      */
     public String generateDeleteQuery(String tableName, RowItem item);
-
-    /**
-     * Sets the escape string used with this database.
-     * 
-     * @param searchStringEscape
-     */
-    public void setSearchStringEscape(String searchStringEscape);
 }

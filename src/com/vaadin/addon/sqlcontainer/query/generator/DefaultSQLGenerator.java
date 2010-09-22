@@ -20,11 +20,6 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
  */
 public class DefaultSQLGenerator implements SQLGenerator {
 
-    /**
-     * Escape character used by the underlying database.
-     */
-    protected String searchStringEscape;
-
     /*
      * (non-Javadoc)
      * 
@@ -312,39 +307,6 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return sb;
     }
 
-    /**
-     * This function will escape wildcard characters used in SQL search strings,
-     * e.g. with the LIKE keyword. If the escape string is not set, the original
-     * input will be returned as is.
-     * 
-     * @param constant
-     *            Original string to perform the escaping on.
-     * @return Escaped search string.
-     */
-    protected String escapeWildCards(String constant) {
-        String fixedConstant;
-        if (searchStringEscape == null) {
-            return constant;
-        }
-        if (constant != null) {
-            fixedConstant = constant.replace("%", searchStringEscape + "%");
-            fixedConstant = fixedConstant
-                    .replace("_", searchStringEscape + "_");
-            return fixedConstant;
-        }
-        return null;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
-     * setSearchStringEscape(java.lang.String)
-     */
-    public void setSearchStringEscape(String searchStringEscape) {
-        this.searchStringEscape = searchStringEscape;
-    }
-
     /*
      * (non-Javadoc)
      * 
@@ -371,8 +333,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(" ");
                 query.append("\"" + p.toString() + "\"");
                 query.append(" = '");
-                query.append(Util.escapeSQL(item.getItemProperty(p)
-                        .getValue().toString()));
+                query.append(Util.escapeSQL(item.getItemProperty(p).getValue()
+                        .toString()));
                 query.append("'");
             }
             if (count < propIds.size()) {

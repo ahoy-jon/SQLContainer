@@ -359,8 +359,6 @@ public class TableQuery implements QueryDelegate {
         try {
             c = connectionPool.reserveConnection();
             DatabaseMetaData dbmd = c.getMetaData();
-            getSqlGenerator().setSearchStringEscape(
-                    dbmd.getSearchStringEscape());
             if (dbmd != null) {
                 ResultSet tables = dbmd.getTables(null, null, tableName, null);
                 if (!tables.next()) {
