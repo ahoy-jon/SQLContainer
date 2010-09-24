@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,6 +47,11 @@ public class FreeformQuery implements QueryDelegate {
         this.primaryKeyColumns = Collections
                 .unmodifiableList(primaryKeyColumns);
         this.connectionPool = connectionPool;
+    }
+
+    public FreeformQuery(String queryString, JDBCConnectionPool connectionPool,
+            String... primaryKeyColumns) {
+        this(queryString, Arrays.asList(primaryKeyColumns), connectionPool);
     }
 
     /**
