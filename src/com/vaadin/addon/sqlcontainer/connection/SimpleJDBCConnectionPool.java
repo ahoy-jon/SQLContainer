@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.connection;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -12,6 +13,7 @@ import java.util.Set;
  * the JDBC driver, setting up the connections and ensuring they are still
  * usable upon release.
  */
+@SuppressWarnings("serial")
 public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
 
     public static class NoFreeConnectionException extends Exception {
@@ -26,8 +28,8 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
     private String userName;
     private String password;
 
-    private Set<Connection> availableConnections;
-    private Set<Connection> reservedConnections;
+    private transient Set<Connection> availableConnections;
+    private transient Set<Connection> reservedConnections;
 
     private boolean initialized;
 
@@ -154,6 +156,11 @@ public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
             }
         }
 
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        initialized = false;
+        out.defaultWriteObject();
     }
 
 }

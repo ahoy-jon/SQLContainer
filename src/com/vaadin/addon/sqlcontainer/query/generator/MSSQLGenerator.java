@@ -13,6 +13,7 @@ import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
+@SuppressWarnings("serial")
 public class MSSQLGenerator extends DefaultSQLGenerator {
 
     /*
@@ -38,7 +39,8 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
 
         /* Row count request is handled here */
         if ("COUNT(*)".equalsIgnoreCase(toSelect)) {
-            query.append("SELECT COUNT(*) AS \"rowcount\" FROM (SELECT * FROM ");
+            query
+                    .append("SELECT COUNT(*) AS \"rowcount\" FROM (SELECT * FROM ");
             query.append(tableName);
             if (filters != null && !filters.isEmpty()) {
                 for (Filter f : filters) {

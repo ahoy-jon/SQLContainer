@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
@@ -14,7 +15,7 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
  * 
  * @author Jonatan Kronqvist / IT Mill Ltd
  */
-public interface SQLGenerator {
+public interface SQLGenerator extends Serializable {
     /**
      * Generates a SELECT query with the provided parameters. Uses default
      * filtering mode (INCLUSIVE).

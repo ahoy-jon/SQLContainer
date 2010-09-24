@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -18,6 +19,7 @@ import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
+@SuppressWarnings("serial")
 public class TableQuery implements QueryDelegate {
 
     private FilteringMode filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
@@ -34,7 +36,7 @@ public class TableQuery implements QueryDelegate {
     private JDBCConnectionPool connectionPool;
 
     /** Transaction handling */
-    private Connection activeConnection;
+    private transient Connection activeConnection;
     private boolean transactionOpen;
 
     /** Set to true to output generated SQL Queries to System.out */
@@ -477,5 +479,13 @@ public class TableQuery implements QueryDelegate {
      */
     public void setDebug(boolean debug) {
         this.debug = debug;
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        try {
+            rollback();
+        } catch (SQLException ignored) {
+        }
+        out.defaultWriteObject();
     }
 }

@@ -1,12 +1,13 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
 
-public interface QueryDelegate {
+public interface QueryDelegate extends Serializable {
     /**
      * Generates and executes a query to determine the current row count from
      * the DB. Row count will be fetched using filters that are currently set to

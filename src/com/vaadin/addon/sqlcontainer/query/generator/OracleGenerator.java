@@ -13,6 +13,7 @@ import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 
+@SuppressWarnings("serial")
 public class OracleGenerator extends DefaultSQLGenerator {
 
     /*
@@ -281,8 +282,8 @@ public class OracleGenerator extends DefaultSQLGenerator {
                 query.append(" ");
                 query.append("\"" + p.toString() + "\"");
                 query.append(" = '");
-                query.append(Util.escapeSQL(item.getItemProperty(p)
-                        .getValue().toString()));
+                query.append(Util.escapeSQL(item.getItemProperty(p).getValue()
+                        .toString()));
                 query.append("'");
             }
             if (count < propIds.size()) {

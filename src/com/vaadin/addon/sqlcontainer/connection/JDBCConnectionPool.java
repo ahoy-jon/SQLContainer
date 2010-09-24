@@ -1,12 +1,13 @@
 package com.vaadin.addon.sqlcontainer.connection;
 
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
  * Interface for implementing connection pools to be used with SQLContainer.
  */
-public interface JDBCConnectionPool {
+public interface JDBCConnectionPool extends Serializable {
     /**
      * Retrieves a connection.
      * 

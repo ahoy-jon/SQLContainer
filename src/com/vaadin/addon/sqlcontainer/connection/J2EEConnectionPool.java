@@ -1,6 +1,5 @@
 package com.vaadin.addon.sqlcontainer.connection;
 
-import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -8,8 +7,8 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-public class J2EEConnectionPool implements JDBCConnectionPool, Serializable {
-    private static final long serialVersionUID = 3814945507319125205L;
+@SuppressWarnings("serial")
+public class J2EEConnectionPool implements JDBCConnectionPool {
 
     private String dataSourceJndiName;
 

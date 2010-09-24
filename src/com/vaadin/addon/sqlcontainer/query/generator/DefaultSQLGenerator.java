@@ -18,6 +18,7 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
  * 
  * @author Jonatan Kronqvist / IT Mill Ltd
  */
+@SuppressWarnings("serial")
 public class DefaultSQLGenerator implements SQLGenerator {
 
     /*

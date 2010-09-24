@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,6 +12,7 @@ import java.util.List;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 
+@SuppressWarnings("serial")
 public class FreeformQuery implements QueryDelegate {
 
     private FilteringMode filterMode;
@@ -19,7 +21,7 @@ public class FreeformQuery implements QueryDelegate {
     private String queryString;
     private List<String> primaryKeyColumns;
     private JDBCConnectionPool connectionPool;
-    private Connection activeConnection = null;
+    private transient Connection activeConnection = null;
 
     /**
      * Prevent no-parameters instantiation of FreeformQuery
@@ -330,5 +332,13 @@ public class FreeformQuery implements QueryDelegate {
         }
         // Append a where clause
         return queryString + " WHERE " + where;
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        try {
+            rollback();
+        } catch (SQLException ignored) {
+        }
+        out.defaultWriteObject();
     }
 }
