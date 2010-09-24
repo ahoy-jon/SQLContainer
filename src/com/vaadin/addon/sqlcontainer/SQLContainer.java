@@ -51,6 +51,8 @@ public class SQLContainer implements Container, Container.Filterable,
     /* Container properties = column names and data types */
     private List<String> propertyIds = new ArrayList<String>();
     private Map<String, Class<?>> propertyTypes = new HashMap<String, Class<?>>();
+    private Map<String, Boolean> propertyReadOnly = new HashMap<String, Boolean>();
+    private Map<String, Boolean> propertyNullable = new HashMap<String, Boolean>();
 
     /* Filters (WHERE) and sorters (ORDER BY) */
     private List<Filter> filters = new ArrayList<Filter>();
@@ -120,37 +122,11 @@ public class SQLContainer implements Container, Container.Filterable,
         List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
         for (String propertyId : propertyIds) {
             /* Default settings for new item properties. */
-            boolean readOnly = false;
-            boolean allowReadOnlyChange = true;
-            boolean nullable = true;
-            /* Try to fetch column properties from an existing item. */
-            boolean dataFromItem = false;
-            if (!cachedItems.isEmpty()) {
-                try {
-                    RowItem item = cachedItems.get(cachedItems.keySet()
-                            .iterator().next());
-                    ColumnProperty cp = (ColumnProperty) item
-                            .getItemProperty("propertyId");
-                    allowReadOnlyChange = cp.isReadOnlyChangeAllowed();
-                    readOnly = cp.isReadOnly();
-                    nullable = cp.isNullable();
-                    dataFromItem = true;
-                } catch (Exception e) {
-                    /* Failed to fetch data from existing item. */
-                }
-            }
-            /*
-             * If data fetching failed, we can still check if the property in
-             * question is a primary key.
-             */
-            if (!dataFromItem
-                    && delegate.getPrimaryKeyColumns().contains(propertyId)) {
-                readOnly = true;
-                allowReadOnlyChange = false;
-                nullable = false;
-            }
-            itemProperties.add(new ColumnProperty(propertyId, readOnly,
-                    allowReadOnlyChange, nullable, null, getType(propertyId)));
+            itemProperties
+                    .add(new ColumnProperty(propertyId, propertyReadOnly
+                            .get(propertyId),
+                            !propertyReadOnly.get(propertyId), propertyNullable
+                                    .get(propertyId), null, getType(propertyId)));
         }
         addedItems.add(new RowItem(this, itemId, itemProperties));
         fireContentsChange();
@@ -955,6 +931,16 @@ public class SQLContainer implements Container, Container.Filterable,
                         type = Object.class;
                     }
                 }
+                /*
+                 * Determine read only and nullability status of the column. A
+                 * column is read only if it is reported as either read only or
+                 * auto increment by the database.
+                 */
+                boolean readOnly = rsmd.isAutoIncrement(i)
+                        || rsmd.isReadOnly(i);
+                propertyReadOnly.put(rsmd.getColumnName(i), readOnly);
+                propertyNullable.put(rsmd.getColumnName(i),
+                        rsmd.isNullable(i) == ResultSetMetaData.columnNullable);
                 propertyTypes.put(rsmd.getColumnName(i), type);
             }
             delegate.commit();
