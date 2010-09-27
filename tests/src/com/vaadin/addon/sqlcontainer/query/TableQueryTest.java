@@ -464,8 +464,7 @@ public class TableQueryTest {
 
         SQLContainer container = new SQLContainer(tQuery);
         container.setAutoCommit(true);
-        Assert.assertFalse(container.removeItem(container.getItemIds()
-                .iterator().next()));
+        Assert.assertFalse(container.removeItem("foo"));
     }
 
     /**********************************************************************
