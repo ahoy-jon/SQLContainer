@@ -1,6 +1,5 @@
 package com.vaadin.addon.sqlcontainer;
 
-import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -20,6 +19,7 @@ import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
+import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeListener;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.data.Container;
@@ -1209,9 +1209,9 @@ public class SQLContainer implements Container, Container.Filterable,
     /**
      * Simple ItemSetChangeEvent implementation.
      */
+    @SuppressWarnings("serial")
     public class ItemSetChangeEvent extends EventObject implements
-            Container.ItemSetChangeEvent, Serializable {
-        private static final long serialVersionUID = -8215550776139145987L;
+            Container.ItemSetChangeEvent {
 
         private ItemSetChangeEvent(SQLContainer source) {
             super(source);
@@ -1219,6 +1219,34 @@ public class SQLContainer implements Container, Container.Filterable,
 
         public Container getContainer() {
             return (Container) getSource();
+        }
+    }
+
+    /**************************************************/
+    /** ROWIDCHANGELISTENER PASSING TO QUERYDELEGATE **/
+    /**************************************************/
+
+    /**
+     * Adds a RowIdChangeListener to the QueryDelegate
+     * 
+     * @param listener
+     */
+    public void addListener(RowIdChangeListener listener) {
+        if (delegate instanceof QueryDelegate.RowIdChangeNotifier) {
+            ((QueryDelegate.RowIdChangeNotifier) delegate)
+                    .addListener(listener);
+        }
+    }
+
+    /**
+     * Removes a RowIdChangeListener from the QueryDelegate
+     * 
+     * @param listener
+     */
+    public void removeListener(RowIdChangeListener listener) {
+        if (delegate instanceof QueryDelegate.RowIdChangeNotifier) {
+            ((QueryDelegate.RowIdChangeNotifier) delegate)
+                    .removeListener(listener);
         }
     }
 
@@ -1245,5 +1273,5 @@ public class SQLContainer implements Container, Container.Filterable,
         public int getCacheLimit() {
             return cacheLimit;
         }
-    };
+    }
 }
