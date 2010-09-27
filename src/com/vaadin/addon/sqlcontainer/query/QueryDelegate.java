@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.RowItem;
 
 public interface QueryDelegate extends Serializable {
@@ -160,4 +161,64 @@ public interface QueryDelegate extends Serializable {
      * @throws SQLException
      */
     public boolean containsRowWithKey(Object... keys) throws SQLException;
+
+    /************************/
+    /** ROWID CHANGE EVENT **/
+    /************************/
+
+    /**
+     * An <code>Event</code> object specifying the old and new RowId of an added
+     * item after the addition has been successfully committed.
+     */
+    public interface RowIdChangeEvent extends Serializable {
+        /**
+         * Gets the old (temporary) RowId of the added row that raised this
+         * event.
+         * 
+         * @return old RowId
+         */
+        public RowId getOldRowId();
+
+        /**
+         * Gets the new, possibly database assigned RowId of the added row that
+         * raised this event.
+         * 
+         * @return new RowId
+         */
+        public RowId getNewRowId();
+    }
+
+    /** RowId change listener interface. */
+    public interface RowIdChangeListener extends Serializable {
+        /**
+         * Lets the listener know that a RowId has been changed.
+         * 
+         * @param event
+         */
+        public void rowIdChange(QueryDelegate.RowIdChangeEvent event);
+    }
+
+    /**
+     * The interface for adding and removing <code>RowIdChangeEvent</code>
+     * listeners. By implementing this interface a class explicitly announces
+     * that it will generate a <code>RowIdChangeEvent</code> when it performs a
+     * database commit that may change the RowId.
+     */
+    public interface RowIdChangeNotifier extends Serializable {
+        /**
+         * Adds a RowIdChangeListener for the object.
+         * 
+         * @param listener
+         *            listener to be added
+         */
+        public void addListener(QueryDelegate.RowIdChangeListener listener);
+
+        /**
+         * Removes the specified RowIdChangeListener from the object.
+         * 
+         * @param listener
+         *            listener to be removed
+         */
+        public void removeListener(QueryDelegate.RowIdChangeListener listener);
+    }
 }

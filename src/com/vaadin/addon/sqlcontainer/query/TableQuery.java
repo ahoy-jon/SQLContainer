@@ -4,13 +4,19 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EventObject;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.ColumnProperty;
+import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
@@ -20,7 +26,8 @@ import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 
 @SuppressWarnings("serial")
-public class TableQuery implements QueryDelegate {
+public class TableQuery implements QueryDelegate,
+        QueryDelegate.RowIdChangeNotifier {
 
     private FilteringMode filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
@@ -41,6 +48,9 @@ public class TableQuery implements QueryDelegate {
 
     /** Set to true to output generated SQL Queries to System.out */
     private boolean debug = false;
+
+    /* Row ID change listeners */
+    private LinkedList<QueryDelegate.RowIdChangeListener> rowIdChangeListeners;
 
     /**
      * Prevent no-parameters instantiation of TableQuery
@@ -166,6 +176,7 @@ public class TableQuery implements QueryDelegate {
                         "Version column not set or does not exist.", e);
             }
             query = sqlGenerator.generateInsertQuery(tableName, row);
+            return executeUpdateReturnKeys(query, row);
         } else {
             try {
                 ((ColumnProperty) row.getItemProperty(versionColumn))
@@ -175,8 +186,8 @@ public class TableQuery implements QueryDelegate {
                         "Version column not set or does not exist.", e);
             }
             query = sqlGenerator.generateUpdateQuery(tableName, row);
+            return executeUpdate(query);
         }
-        return executeUpdate(query);
     }
 
     /*
@@ -352,6 +363,87 @@ public class TableQuery implements QueryDelegate {
     }
 
     /**
+     * Executes the given update query string using either the active connection
+     * if a transaction is already open, or a new connection from this query's
+     * connection pool.
+     * 
+     * Additionally notifies registered RowIdChangeListeners of a changed RowId.
+     * 
+     * @param query
+     *            Query to execute
+     * @return Number of affected rows
+     * @throws SQLException
+     */
+    private int executeUpdateReturnKeys(String query, RowItem row)
+            throws SQLException {
+        Connection c = null;
+        try {
+            if (transactionOpen && activeConnection != null) {
+                c = activeConnection;
+            } else {
+                c = connectionPool.reserveConnection();
+            }
+            Statement statement = c.createStatement();
+
+            debug("DB -> " + query);
+            int result = statement.executeUpdate(query, primaryKeyColumns
+                    .toArray(new String[0]));
+            /* If there are no listeners the result can be returned right away. */
+            if (rowIdChangeListeners == null || rowIdChangeListeners.isEmpty()) {
+                return result;
+            }
+
+            try {
+                /* Fetch primary key values and generate a map out of them. */
+                Map<String, Object> values = new HashMap<String, Object>();
+                ResultSet genKeys = statement.getGeneratedKeys();
+                ResultSetMetaData rsmd = genKeys.getMetaData();
+                int colCount = rsmd.getColumnCount();
+                if (genKeys.next()) {
+                    for (int i = 1; i <= colCount; i++) {
+                        values.put(rsmd.getColumnName(i), genKeys.getObject(i));
+                    }
+                }
+                /* Generate new RowId */
+                List<Object> newRowId = new ArrayList<Object>();
+                if (values.size() == 1) {
+                    if (primaryKeyColumns.size() == 1) {
+                        newRowId.add(values.get(values.keySet().iterator()
+                                .next()));
+                    } else {
+                        for (String s : primaryKeyColumns) {
+                            if (!((ColumnProperty) row.getItemProperty(s))
+                                    .isReadOnlyChangeAllowed()) {
+                                newRowId.add(values.get(values.keySet()
+                                        .iterator().next()));
+                            } else {
+                                newRowId.add(values.get(s));
+                            }
+                        }
+                    }
+                } else {
+                    for (String s : primaryKeyColumns) {
+                        newRowId.add(values.get(s));
+                    }
+                }
+                RowId newId = new RowId(newRowId.toArray());
+                for (RowIdChangeListener r : rowIdChangeListeners) {
+                    r.rowIdChange(new RowIdChangeEvent(row.getId(), newId));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                debug("Failed to fetch key values on insert: " + e.getMessage());
+            }
+
+            return result;
+        } finally {
+            if (!transactionOpen) {
+                connectionPool.releaseConnection(c);
+            }
+        }
+    }
+
+    /**
      * Fetches name(s) of primary key column(s) from DB metadata.
      * 
      * Also tries to get the escape string to be used in search strings.
@@ -487,5 +579,42 @@ public class TableQuery implements QueryDelegate {
         } catch (SQLException ignored) {
         }
         out.defaultWriteObject();
+    }
+
+    /**
+     * Simple RowIdChangeEvent implementation.
+     */
+    public class RowIdChangeEvent extends EventObject implements
+            QueryDelegate.RowIdChangeEvent {
+
+        private RowId oldId;
+        private RowId newId;
+
+        private RowIdChangeEvent(RowId oldId, RowId newId) {
+            super(oldId);
+            this.oldId = oldId;
+            this.newId = newId;
+        }
+
+        public RowId getNewRowId() {
+            return newId;
+        }
+
+        public RowId getOldRowId() {
+            return oldId;
+        }
+    }
+
+    public void addListener(RowIdChangeListener listener) {
+        if (rowIdChangeListeners == null) {
+            rowIdChangeListeners = new LinkedList<QueryDelegate.RowIdChangeListener>();
+        }
+        rowIdChangeListeners.add(listener);
+    }
+
+    public void removeListener(RowIdChangeListener listener) {
+        if (rowIdChangeListeners != null) {
+            rowIdChangeListeners.remove(listener);
+        }
     }
 }
