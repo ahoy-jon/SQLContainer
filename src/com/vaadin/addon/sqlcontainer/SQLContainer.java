@@ -110,10 +110,14 @@ public class SQLContainer implements Container, Container.Filterable,
     /**************************************/
     /** Methods from interface Container **/
     /**************************************/
-    /*
-     * (non-Javadoc)
+
+    /**
+     * Note! If auto commit mode is enabled, this method will still return the
+     * temporary row ID assigned for the item. Implement
+     * QueryDelegate.RowIdChangeListener to receive the actual Row ID value
+     * after the addition has been committed.
      * 
-     * @see com.vaadin.data.Container#addItem()
+     * {@inheritDoc}
      */
     public Object addItem() throws UnsupportedOperationException {
         Object emptyKey[] = new Object[delegate.getPrimaryKeyColumns().size()];
@@ -128,9 +132,33 @@ public class SQLContainer implements Container, Container.Filterable,
                             !propertyReadOnly.get(propertyId), propertyNullable
                                     .get(propertyId), null, getType(propertyId)));
         }
-        addedItems.add(new RowItem(this, itemId, itemProperties));
-        fireContentsChange();
-        return itemId;
+        RowItem newRowItem = new RowItem(this, itemId, itemProperties);
+
+        /*
+         * If auto commit mode is enabled, the added row will be instantly
+         * committed.
+         */
+        if (autoCommit) {
+            try {
+                delegate.beginTransaction();
+                delegate.storeRow(newRowItem);
+                delegate.commit();
+                refresh();
+                return itemId;
+            } catch (SQLException e) {
+                e.printStackTrace();
+                try {
+                    delegate.rollback();
+                } catch (SQLException ee) {
+                    /* Nothing can be done here */
+                }
+                return null;
+            }
+        } else {
+            addedItems.add(newRowItem);
+            fireContentsChange();
+            return itemId;
+        }
     }
 
     /*
@@ -298,7 +326,6 @@ public class SQLContainer implements Container, Container.Filterable,
                 return false;
             }
             try {
-                delegate.commit();
                 delegate.beginTransaction();
                 boolean success = delegate.removeRow((RowItem) i);
                 delegate.commit();
@@ -333,7 +360,6 @@ public class SQLContainer implements Container, Container.Filterable,
          */
         if (autoCommit) {
             try {
-                delegate.commit();
                 delegate.beginTransaction();
                 boolean success = true;
                 for (Object id : getItemIds()) {
@@ -825,7 +851,6 @@ public class SQLContainer implements Container, Container.Filterable,
     void itemChangeNotification(RowItem changedItem) {
         if (autoCommit) {
             try {
-                delegate.commit();
                 delegate.beginTransaction();
                 delegate.storeRow(changedItem);
                 delegate.commit();
