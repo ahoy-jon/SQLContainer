@@ -4,13 +4,16 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-import com.vaadin.addon.sqlcontainer.SQLContainer;
+import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.AddressBookApplication;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
+import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
+import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeEvent;
 import com.vaadin.data.Buffered;
 import com.vaadin.data.Item;
 import com.vaadin.data.validator.EmailValidator;
 import com.vaadin.data.validator.RegexpValidator;
+import com.vaadin.ui.AbstractSelect;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Component;
@@ -23,32 +26,33 @@ import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Button.ClickListener;
 
 @SuppressWarnings("serial")
-public class PersonForm extends Form implements ClickListener {
+public class PersonForm extends Form implements ClickListener,
+        QueryDelegate.RowIdChangeListener {
 
     private Button save = new Button("Save", (ClickListener) this);
     private Button cancel = new Button("Cancel", (ClickListener) this);
     private Button edit = new Button("Edit", (ClickListener) this);
     private final ComboBox cities = new ComboBox();
 
-    private AddressBookApplication app;
+    private final AddressBookApplication app;
 
-    public PersonForm(AddressBookApplication app) {
+    public PersonForm(final AddressBookApplication app) {
         this.app = app;
 
         /*
          * Enable buffering so that commit() must be called for the form before
-         * input is written to the data. (Form input is not written immediately
-         * through to the underlying object.)
+         * input is written to the data source. (Form input is not written
+         * immediately through to the underlying object.)
          */
         setWriteThrough(false);
 
+        /* Init form footer */
         HorizontalLayout footer = new HorizontalLayout();
         footer.setSpacing(true);
         footer.addComponent(save);
         footer.addComponent(cancel);
         footer.addComponent(edit);
         footer.setVisible(false);
-
         setFooter(footer);
 
         /* Allow the user to enter new cities */
@@ -56,20 +60,16 @@ public class PersonForm extends Form implements ClickListener {
         /* We do not want to use null values */
         cities.setNullSelectionAllowed(false);
 
-        /*
-         * Populate cities select using the cities in the data container. Here
-         * we are using the city's key as the Item ID in the ComboBox, and the
-         * name of the city is just set as the item's caption.
-         */
-        SQLContainer ds = app.getDbHelp().getCityContainer();
-        for (Object cityItemId : ds.getItemIds()) {
-            int cityId = (Integer) ds.getItem(cityItemId).getItemProperty("ID")
-                    .getValue();
-            String city = ds.getItem(cityItemId).getItemProperty("NAME")
-                    .getValue().toString();
-            cities.addItem(cityId);
-            cities.setItemCaption(cityId, city);
-        }
+        /* Cities selection */
+        cities.setContainerDataSource(app.getDbHelp().getCityContainer());
+        cities.setItemCaptionPropertyId("NAME");
+
+        /* NewItemHandler to add new cities */
+        cities.setNewItemHandler(new AbstractSelect.NewItemHandler() {
+            public void addNewItem(String newItemCaption) {
+                app.getDbHelp().addCity(newItemCaption);
+            }
+        });
 
         /*
          * Field factory for overriding how the fields are created.
@@ -86,12 +86,11 @@ public class PersonForm extends Form implements ClickListener {
                 }
 
                 if (propertyId.equals("POSTALCODE")) {
-                    TextField tf = (TextField) field;
                     /* Add a validator for postalCode and make it required */
-                    tf
+                    field
                             .addValidator(new RegexpValidator("[1-9][0-9]{4}",
                                     "Postal code must be a five digit number and cannot start with a zero."));
-                    tf.setRequired(true);
+                    field.setRequired(true);
                 } else if (propertyId.equals("EMAIL")) {
                     /* Add a validator for email and make it required */
                     field.addValidator(new EmailValidator(
@@ -114,6 +113,9 @@ public class PersonForm extends Form implements ClickListener {
                 return field;
             }
         });
+
+        /* Add PersonForm as RowIdChangeListener to the CityContainer */
+        app.getDbHelp().getCityContainer().addListener(this);
     }
 
     public void buttonClick(ClickEvent event) {
@@ -134,9 +136,17 @@ public class PersonForm extends Form implements ClickListener {
     @Override
     public void setItemDataSource(Item newDataSource) {
         if (newDataSource != null) {
+            setReadOnly(false);
             List<Object> orderedProperties = Arrays
                     .asList(DatabaseHelper.NATURAL_COL_ORDER);
             super.setItemDataSource(newDataSource, orderedProperties);
+            /* Select correct city from the cities ComboBox */
+            if (newDataSource.getItemProperty("CITYID").getValue() != null) {
+                cities.select(new RowId(new Object[] { newDataSource
+                        .getItemProperty("CITYID").getValue() }));
+            } else {
+                cities.select(cities.getItemIds().iterator().next());
+            }
             setReadOnly(true);
             getFooter().setVisible(true);
         } else {
@@ -154,40 +164,17 @@ public class PersonForm extends Form implements ClickListener {
     }
 
     public void addContact() {
+        /* Create a new item and set it as the data source for this form */
         Object tempItemId = app.getDbHelp().getPersonContainer().addItem();
         setItemDataSource(app.getDbHelp().getPersonContainer().getItem(
                 tempItemId));
-        /* Select the first available city for the new contact */
-        app.getDbHelp().getPersonContainer().getItem(tempItemId)
-                .getItemProperty("CITYID").setValue(0);
         setReadOnly(false);
     }
 
     @Override
     public void commit() throws Buffered.SourceException {
-        /*
-         * If the selected city item id is not an integer, a new city name has
-         * been input.
-         */
-        if (!(cities.getValue() instanceof Integer)) {
-            /* Add city to container and fetch is DB-given id. */
-            String name = cities.getValue().toString();
-            app.getDbHelp().addCity(name);
-            int cKey = app.getDbHelp().getCityIdByName(name);
-
-            /* Update id of the added city to the data source of this form. */
-            getItemDataSource().getItemProperty("CITYID").setValue(cKey);
-
-            /* Fix the city entry in the cities-select of this form. */
-            cities.removeItem(name);
-            cities.addItem(cKey);
-            cities.setItemCaption(cKey, name);
-            cities.select(cKey);
-        }
-
         /* Commit the data entered to the person form to the actual item. */
         super.commit();
-
         /* Commit changes to the database. */
         try {
             app.getDbHelp().getPersonContainer().commit();
@@ -213,5 +200,14 @@ public class PersonForm extends Form implements ClickListener {
         /* Clear the form and make it invisible */
         setItemDataSource(null);
         setReadOnly(true);
+    }
+
+    /*
+     * Receive the new row ID of an added city and set it to the item data
+     * source
+     */
+    public void rowIdChange(RowIdChangeEvent event) {
+        getItemDataSource().getItemProperty("CITYID").setValue(
+                event.getNewRowId().getId()[0]);
     }
 }
