@@ -8,9 +8,7 @@ import java.util.Random;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 
 public class DatabaseHelper {
     /**
@@ -240,22 +238,5 @@ public class DatabaseHelper {
             e.printStackTrace();
         }
         return false;
-    }
-
-    /**
-     * Returns the ID of the first row in the city -table that matches the given
-     * name exactly.
-     * 
-     * @param name
-     * @return
-     */
-    public int getCityIdByName(String name) {
-        Filter f = new Filter("NAME", ComparisonType.EQUALS, name);
-        f.setNeedsQuotes(true);
-        cityContainer.addFilter(f);
-        int cKey = (Integer) cityContainer.getItem(cityContainer.firstItemId())
-                .getItemProperty("ID").getValue();
-        cityContainer.removeAllContainerFilters();
-        return cKey;
     }
 }
