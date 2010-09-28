@@ -189,7 +189,6 @@ public class PersonForm extends Form implements ClickListener,
             e.printStackTrace();
         }
         setReadOnly(true);
-
     }
 
     @Override
@@ -201,7 +200,7 @@ public class PersonForm extends Form implements ClickListener,
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        /* Clear the form and make it invisible */
+        /* Clear the form */
         setItemDataSource(null);
         setReadOnly(true);
     }

@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer.demo.addressbook.data;
 
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -10,7 +11,8 @@ import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
 
-public class DatabaseHelper {
+@SuppressWarnings("serial")
+public class DatabaseHelper implements Serializable {
     /**
      * Natural property order for SQLContainer linked with the PersonAddress
      * database table. Used in tables and forms.
