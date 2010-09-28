@@ -45,12 +45,16 @@ public class PersonList extends Table {
         addGeneratedColumn("EMAIL", new ColumnGenerator() {
             public Component generateCell(Table source, Object itemId,
                     Object columnId) {
-                Link l = new Link();
-                l.setResource(new ExternalResource("mailto:"
-                        + getItem(itemId).getItemProperty("EMAIL").getValue()));
-                l.setCaption(getItem(itemId).getItemProperty("EMAIL")
-                        .getValue().toString());
-                return l;
+                if (getItem(itemId).getItemProperty("EMAIL").getValue() != null) {
+                    Link l = new Link();
+                    l.setResource(new ExternalResource("mailto:"
+                            + getItem(itemId).getItemProperty("EMAIL")
+                                    .getValue()));
+                    l.setCaption(getItem(itemId).getItemProperty("EMAIL")
+                            .getValue().toString());
+                    return l;
+                }
+                return null;
             }
         });
 
@@ -61,12 +65,15 @@ public class PersonList extends Table {
         addGeneratedColumn("CITYID", new ColumnGenerator() {
             public Component generateCell(Table source, Object itemId,
                     Object columnId) {
-                Label l = new Label();
-                int cityId = (Integer) getItem(itemId)
-                        .getItemProperty("CITYID").getValue();
-                l.setValue(app.getDbHelp().getCityName(cityId));
-                l.setSizeUndefined();
-                return l;
+                if (getItem(itemId).getItemProperty("CITYID").getValue() != null) {
+                    Label l = new Label();
+                    int cityId = (Integer) getItem(itemId).getItemProperty(
+                            "CITYID").getValue();
+                    l.setValue(app.getDbHelp().getCityName(cityId));
+                    l.setSizeUndefined();
+                    return l;
+                }
+                return null;
             }
         });
 

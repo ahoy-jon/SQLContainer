@@ -38,7 +38,7 @@ public class DatabaseHelper {
     /**
      * Enable debug mode to output SQL queries to System.out.
      */
-    private boolean debugMode = true;
+    private boolean debugMode = false;
 
     public DatabaseHelper() {
         initConnectionPool();

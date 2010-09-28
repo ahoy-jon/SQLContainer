@@ -13,7 +13,9 @@ import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SearchView;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SharingOptions;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeEvent;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
@@ -35,7 +37,8 @@ import com.vaadin.ui.Window.Notification;
 
 @SuppressWarnings("serial")
 public class AddressBookApplication extends Application implements
-        ClickListener, ValueChangeListener, ItemClickListener {
+        ClickListener, ValueChangeListener, ItemClickListener,
+        QueryDelegate.RowIdChangeListener {
 
     private NavigationTree tree = new NavigationTree(this);
 
@@ -61,6 +64,7 @@ public class AddressBookApplication extends Application implements
     public void init() {
         buildMainLayout();
         setMainComponent(getListView());
+        dbHelp.getPersonContainer().addListener(this);
     }
 
     private void buildMainLayout() {
@@ -174,6 +178,8 @@ public class AddressBookApplication extends Application implements
     }
 
     private void showListView() {
+        /* Clear all filters from person container */
+        getDbHelp().getPersonContainer().removeAllContainerFilters();
         setMainComponent(getListView());
         personList.fixVisibleAndSelectedItem();
     }
@@ -198,9 +204,6 @@ public class AddressBookApplication extends Application implements
             Object itemId = event.getItemId();
             if (itemId != null) {
                 if (NavigationTree.SHOW_ALL.equals(itemId)) {
-                    /* Clear all filters from person container */
-                    getDbHelp().getPersonContainer()
-                            .removeAllContainerFilters();
                     showListView();
                 } else if (NavigationTree.SEARCH.equals(itemId)) {
                     showSearchView();
@@ -275,5 +278,11 @@ public class AddressBookApplication extends Application implements
 
     public DatabaseHelper getDbHelp() {
         return dbHelp;
+    }
+
+    public void rowIdChange(RowIdChangeEvent event) {
+        /* Select the added item and fix the table scroll position */
+        personList.select(event.getNewRowId());
+        personList.fixVisibleAndSelectedItem();
     }
 }

@@ -64,6 +64,8 @@ public class PersonForm extends Form implements ClickListener,
         cities.setContainerDataSource(app.getDbHelp().getCityContainer());
         cities.setItemCaptionPropertyId("NAME");
 
+        cities.setImmediate(true);
+
         /* NewItemHandler to add new cities */
         cities.setNewItemHandler(new AbstractSelect.NewItemHandler() {
             public void addNewItem(String newItemCaption) {
@@ -164,6 +166,11 @@ public class PersonForm extends Form implements ClickListener,
     }
 
     public void addContact() {
+        /* Roll back changes just in case */
+        try {
+            app.getDbHelp().getPersonContainer().rollback();
+        } catch (SQLException ignored) {
+        }
         /* Create a new item and set it as the data source for this form */
         Object tempItemId = app.getDbHelp().getPersonContainer().addItem();
         setItemDataSource(app.getDbHelp().getPersonContainer().getItem(
@@ -178,12 +185,11 @@ public class PersonForm extends Form implements ClickListener,
         /* Commit changes to the database. */
         try {
             app.getDbHelp().getPersonContainer().commit();
-        } catch (UnsupportedOperationException e) {
-            e.printStackTrace();
         } catch (SQLException e) {
             e.printStackTrace();
         }
         setReadOnly(true);
+
     }
 
     @Override
@@ -192,8 +198,6 @@ public class PersonForm extends Form implements ClickListener,
         /* On discard roll back the changes. */
         try {
             app.getDbHelp().getPersonContainer().rollback();
-        } catch (UnsupportedOperationException e) {
-            e.printStackTrace();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -207,6 +211,7 @@ public class PersonForm extends Form implements ClickListener,
      * source
      */
     public void rowIdChange(RowIdChangeEvent event) {
+        cities.setValue(event.getNewRowId());
         getItemDataSource().getItemProperty("CITYID").setValue(
                 event.getNewRowId().getId()[0]);
     }
