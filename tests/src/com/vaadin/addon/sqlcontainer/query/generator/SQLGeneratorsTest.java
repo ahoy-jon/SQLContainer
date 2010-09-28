@@ -187,7 +187,8 @@ public class SQLGeneratorsTest {
         String queryString = sg.generateUpdateQuery("people", ri);
         int id = offset;
         Assert.assertEquals(queryString,
-                "UPDATE people SET \"NAME\" = 'Viljami' WHERE \"ID\" = " + id);
+                "UPDATE people SET \"NAME\" = 'Viljami' WHERE \"ID\" = '" + id
+                        + "'");
     }
 
     @Test
