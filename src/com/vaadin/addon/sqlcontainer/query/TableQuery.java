@@ -49,8 +49,10 @@ public class TableQuery implements QueryDelegate,
     /** Set to true to output generated SQL Queries to System.out */
     private boolean debug = false;
 
-    /* Row ID change listeners */
-    private LinkedList<QueryDelegate.RowIdChangeListener> rowIdChangeListeners;
+    /** Row ID change listeners */
+    private LinkedList<RowIdChangeListener> rowIdChangeListeners;
+    /** Row ID change events, stored until commit() is called */
+    private List<RowIdChangeEvent> bufferedEvents = new ArrayList<RowIdChangeEvent>();
 
     /**
      * Prevent no-parameters instantiation of TableQuery
@@ -265,6 +267,18 @@ public class TableQuery implements QueryDelegate,
             throw new SQLException("No active transaction");
         }
         transactionOpen = false;
+
+        /* Handle firing row ID change events */
+        RowIdChangeEvent[] unFiredEvents = bufferedEvents
+                .toArray(new RowIdChangeEvent[] {});
+        bufferedEvents.clear();
+        if (rowIdChangeListeners != null && !rowIdChangeListeners.isEmpty()) {
+            for (RowIdChangeListener r : rowIdChangeListeners) {
+                for (RowIdChangeEvent e : unFiredEvents) {
+                    r.rowIdChange(e);
+                }
+            }
+        }
     }
 
     /*
@@ -388,10 +402,6 @@ public class TableQuery implements QueryDelegate,
             debug("DB -> " + query);
             int result = statement.executeUpdate(query, primaryKeyColumns
                     .toArray(new String[0]));
-            /* If there are no listeners the result can be returned right away. */
-            if (rowIdChangeListeners == null || rowIdChangeListeners.isEmpty()) {
-                return result;
-            }
 
             try {
                 /* Fetch primary key values and generate a map out of them. */
@@ -427,9 +437,7 @@ public class TableQuery implements QueryDelegate,
                     }
                 }
                 RowId newId = new RowId(newRowId.toArray());
-                for (RowIdChangeListener r : rowIdChangeListeners) {
-                    r.rowIdChange(new RowIdChangeEvent(row.getId(), newId));
-                }
+                bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
             } catch (Exception e) {
                 e.printStackTrace();
                 debug("Failed to fetch key values on insert: " + e.getMessage());
