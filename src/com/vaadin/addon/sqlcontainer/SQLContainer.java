@@ -941,7 +941,8 @@ public class SQLContainer implements Container, Container.Filterable,
                 if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
                     continue;
                 }
-                propertyIds.add(rsmd.getColumnName(i));
+                String colName = rsmd.getColumnName(i);
+                propertyIds.add(colName);
                 /*
                  * Try to determine the column's JDBC class by all means. On
                  * failure revert to Object and hope for the best.
@@ -959,14 +960,20 @@ public class SQLContainer implements Container, Container.Filterable,
                 /*
                  * Determine read only and nullability status of the column. A
                  * column is read only if it is reported as either read only or
-                 * auto increment by the database.
+                 * auto increment by the database, and also it is set as the
+                 * version column in a TableQuery delegate.
                  */
                 boolean readOnly = rsmd.isAutoIncrement(i)
                         || rsmd.isReadOnly(i);
-                propertyReadOnly.put(rsmd.getColumnName(i), readOnly);
-                propertyNullable.put(rsmd.getColumnName(i),
+                if (delegate instanceof TableQuery
+                        && rsmd.getColumnName(i).equals(
+                                ((TableQuery) delegate).getVersionColumn())) {
+                    readOnly = true;
+                }
+                propertyReadOnly.put(colName, readOnly);
+                propertyNullable.put(colName,
                         rsmd.isNullable(i) == ResultSetMetaData.columnNullable);
-                propertyTypes.put(rsmd.getColumnName(i), type);
+                propertyTypes.put(colName, type);
             }
             delegate.commit();
         } catch (SQLException e) {
@@ -1025,17 +1032,13 @@ public class SQLContainer implements Container, Container.Filterable,
                         if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
                             continue;
                         }
-                        /* Determine column meta data */
-                        boolean nullable = rsmd.isNullable(i) == ResultSetMetaData.columnNullable;
-                        boolean allowReadOnlyChange = !rsmd.isReadOnly(i)
-                                && !rsmd.isAutoIncrement(i);
-                        boolean readOnly = rsmd.isReadOnly(i)
-                                || rsmd.isAutoIncrement(i);
+                        String colName = rsmd.getColumnName(i);
                         Object value = rs.getObject(i);
                         if (value != null) {
-                            cp = new ColumnProperty(rsmd.getColumnName(i),
-                                    readOnly, allowReadOnlyChange, nullable,
-                                    value, value.getClass());
+                            cp = new ColumnProperty(colName, propertyReadOnly
+                                    .get(colName), !propertyReadOnly
+                                    .get(colName), propertyNullable
+                                    .get(colName), value, value.getClass());
                         } else {
                             Class<?> colType = Object.class;
                             for (String propName : propertyTypes.keySet()) {
@@ -1044,9 +1047,10 @@ public class SQLContainer implements Container, Container.Filterable,
                                     break;
                                 }
                             }
-                            cp = new ColumnProperty(rsmd.getColumnName(i),
-                                    readOnly, allowReadOnlyChange, nullable,
-                                    null, colType);
+                            cp = new ColumnProperty(colName, propertyReadOnly
+                                    .get(colName), !propertyReadOnly
+                                    .get(colName), propertyNullable
+                                    .get(colName), null, colType);
                         }
                         itemProperties.add(cp);
                     }
