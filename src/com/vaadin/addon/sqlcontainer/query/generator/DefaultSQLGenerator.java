@@ -141,8 +141,13 @@ public class DefaultSQLGenerator implements SQLGenerator {
                 query.append(" AND ");
             }
             query.append("\"" + column + "\"");
-            query.append(" = ");
-            query.append(Util.escapeSQL(rowIdentifiers.get(column)));
+            if (rowIdentifiers.get(column) == null) {
+                query.append(" = NULL");
+            } else {
+                query.append(" = '");
+                query.append(Util.escapeSQL(rowIdentifiers.get(column)));
+                query.append("'");
+            }
             first = false;
         }
 

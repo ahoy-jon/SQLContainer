@@ -175,8 +175,13 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
                 query.append(" AND ");
             }
             query.append("\"" + column + "\"");
-            query.append(" = ");
-            query.append(Util.escapeSQL(rowIdentifiers.get(column)));
+            if (rowIdentifiers.get(column) == null) {
+                query.append(" = NULL");
+            } else {
+                query.append(" = '");
+                query.append(Util.escapeSQL(rowIdentifiers.get(column)));
+                query.append("'");
+            }
             first = false;
         }
 
@@ -284,8 +289,8 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
                 query.append(" ");
                 query.append("\"" + p.toString() + "\"");
                 query.append(" = '");
-                query.append(Util.escapeSQL(item.getItemProperty(p)
-                        .getValue().toString()));
+                query.append(Util.escapeSQL(item.getItemProperty(p).getValue()
+                        .toString()));
                 query.append("'");
             }
             if (count < propIds.size()) {
