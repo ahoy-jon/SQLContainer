@@ -42,6 +42,7 @@ public class SearchView extends Panel {
         fieldToSearch = new NativeSelect("Field to search");
         saveSearch = new CheckBox("Save search");
         searchName = new TextField("Search name");
+        searchName.setVisible(false);
         Button search = new Button("Search");
 
         /* Initialize fieldToSearch */
