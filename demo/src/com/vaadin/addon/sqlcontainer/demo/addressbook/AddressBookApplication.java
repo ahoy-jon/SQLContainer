@@ -160,6 +160,7 @@ public class AddressBookApplication extends Application implements
 
         if (source == search) {
             showSearchView();
+            tree.select(NavigationTree.SEARCH);
         } else if (source == help) {
             showHelpWindow();
         } else if (source == share) {
@@ -217,6 +218,9 @@ public class AddressBookApplication extends Application implements
 
     private void addNewContact() {
         showListView();
+        tree.select(NavigationTree.SHOW_ALL);
+        /* Clear all filters from person container */
+        getDbHelp().getPersonContainer().removeAllContainerFilters();
         personForm.addContact();
     }
 
