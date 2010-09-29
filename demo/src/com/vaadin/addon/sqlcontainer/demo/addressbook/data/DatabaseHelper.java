@@ -100,12 +100,14 @@ public class DatabaseHelper implements Serializable {
             q1.setVersionColumn("VERSION");
             q1.setDebug(debugMode);
             personContainer = new SQLContainer(q1);
+            personContainer.setDebugMode(debugMode);
 
             /* TableQuery and SQLContainer for city -table */
             TableQuery q2 = new TableQuery("city", connectionPool);
             q2.setVersionColumn("VERSION");
             q2.setDebug(debugMode);
             cityContainer = new SQLContainer(q2);
+            cityContainer.setDebugMode(debugMode);
         } catch (SQLException e) {
             e.printStackTrace();
         }
