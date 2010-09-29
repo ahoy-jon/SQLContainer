@@ -83,6 +83,9 @@ public class SQLContainer implements Container, Container.Filterable,
     private List<RowItem> addedItems = new ArrayList<RowItem>();
     private List<RowItem> modifiedItems = new ArrayList<RowItem>();
 
+    /* Enable to output possible stack traces and diagnostic information */
+    private boolean debugMode;
+
     /**
      * Prevent instantiation without a QueryDelegate.
      */
@@ -144,13 +147,14 @@ public class SQLContainer implements Container, Container.Filterable,
                 delegate.storeRow(newRowItem);
                 delegate.commit();
                 refresh();
+                debug(null, "Row added to DB...");
                 return itemId;
             } catch (SQLException e) {
-                e.printStackTrace();
+                debug(e, null);
                 try {
                     delegate.rollback();
                 } catch (SQLException ee) {
-                    /* Nothing can be done here */
+                    debug(ee, null);
                 }
                 return null;
             }
@@ -185,6 +189,7 @@ public class SQLContainer implements Container, Container.Filterable,
             return delegate.containsRowWithKey(((RowId) itemId).getId());
         } catch (Exception e) {
             /* Query failed, just return false. */
+            debug(e, null);
         }
         return false;
     }
@@ -266,9 +271,11 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             delegate.commit();
         } catch (SQLException e) {
+            debug(e, null);
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
+                debug(e1, null);
             }
             throw new RuntimeException("Failed to fetch item indexes.", e);
         }
@@ -330,12 +337,17 @@ public class SQLContainer implements Container, Container.Filterable,
                 boolean success = delegate.removeRow((RowItem) i);
                 delegate.commit();
                 refresh();
+                if (success) {
+                    debug(null, "Row removed from DB...");
+                }
                 return success;
             } catch (SQLException e) {
+                debug(e, null);
                 try {
                     delegate.rollback();
                 } catch (SQLException ee) {
                     /* Nothing can be done here */
+                    debug(ee, null);
                 }
                 return false;
             }
@@ -369,16 +381,19 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
                 if (success) {
                     delegate.commit();
+                    debug(null, "All rows removed from DB...");
                     refresh();
                 } else {
                     delegate.rollback();
                 }
                 return success;
             } catch (SQLException e) {
+                debug(e, null);
                 try {
                     delegate.rollback();
                 } catch (SQLException ee) {
                     /* Nothing can be done here */
+                    debug(ee, null);
                 }
                 return false;
             }
@@ -642,6 +657,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 try {
                     asc = ascending[i];
                 } catch (Exception e) {
+                    debug(e, null);
                 }
                 sorters.add(new OrderBy((String) propertyId[i], asc));
             }
@@ -796,6 +812,7 @@ public class SQLContainer implements Container, Container.Filterable,
      */
     public void commit() throws UnsupportedOperationException, SQLException {
         try {
+            debug(null, "Commiting changes through delegate...");
             delegate.beginTransaction();
             /* Perform buffered deletions */
             for (RowItem item : removedItems.values()) {
@@ -829,6 +846,7 @@ public class SQLContainer implements Container, Container.Filterable,
      * @throws SQLException
      */
     public void rollback() throws UnsupportedOperationException, SQLException {
+        debug(null, "Rolling back changes...");
         /* Discard removed, added and modified items */
         removedItems.clear();
         addedItems.clear();
@@ -854,11 +872,14 @@ public class SQLContainer implements Container, Container.Filterable,
                 delegate.beginTransaction();
                 delegate.storeRow(changedItem);
                 delegate.commit();
+                debug(null, "Row updated to DB...");
             } catch (SQLException e) {
+                debug(e, null);
                 try {
                     delegate.rollback();
                 } catch (SQLException ee) {
                     /* Nothing can be done here */
+                    debug(e, null);
                 }
             }
         } else {
@@ -902,11 +923,13 @@ public class SQLContainer implements Container, Container.Filterable,
                 delegate.setFilters(filters, currentFilteringMode);
             } catch (UnsupportedOperationException e) {
                 /* The query delegate doesn't support filtering. */
+                debug(e, null);
             }
             try {
                 delegate.setOrderBy(sorters);
             } catch (UnsupportedOperationException e) {
                 /* The query delegate doesn't support filtering. */
+                debug(e, null);
             }
             int newSize = delegate.getCount();
             if (newSize != size) {
@@ -915,6 +938,7 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             sizeUpdated = new Date();
             sizeDirty = false;
+            debug(null, "Updated row count. New count is: " + size);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to update item set size.", e);
         }
@@ -953,7 +977,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     try {
                         type = Class.forName(rsmd.getColumnClassName(i));
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        debug(e, null);
                         type = Object.class;
                     }
                 }
@@ -976,10 +1000,13 @@ public class SQLContainer implements Container, Container.Filterable,
                 propertyTypes.put(colName, type);
             }
             delegate.commit();
+            debug(null, "Property IDs fetched.");
         } catch (SQLException e) {
+            debug(e, null);
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
+                debug(e1, null);
             }
             throw new RuntimeException("Failed to fetch property id's.", e);
         }
@@ -1004,6 +1031,7 @@ public class SQLContainer implements Container, Container.Filterable,
             } catch (UnsupportedOperationException e) {
                 /* The query delegate doesn't support sorting. */
                 /* No need to do anything. */
+                debug(e, null);
             }
             delegate.beginTransaction();
             rs = delegate.getResults(currentOffset, pageLength * CACHE_RATIO);
@@ -1061,10 +1089,14 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
             }
             delegate.commit();
+            debug(null, "Fetched " + pageLength * CACHE_RATIO
+                    + " rows starting from " + currentOffset);
         } catch (SQLException e) {
+            debug(e, null);
             try {
                 delegate.rollback();
             } catch (SQLException e1) {
+                debug(e1, null);
             }
             throw new RuntimeException("Failed to fetch page.", e);
         }
@@ -1301,6 +1333,30 @@ public class SQLContainer implements Container, Container.Filterable,
 
         public int getCacheLimit() {
             return cacheLimit;
+        }
+    }
+
+    public boolean isDebugMode() {
+        return debugMode;
+    }
+
+    public void setDebugMode(boolean debugMode) {
+        this.debugMode = debugMode;
+    }
+
+    /**
+     * Output a debug message or a stack trace of an exception
+     * 
+     * @param message
+     */
+    private void debug(Exception e, String message) {
+        if (debugMode) {
+            if (message != null) {
+                System.err.println(message);
+            }
+            if (e != null) {
+                e.printStackTrace();
+            }
         }
     }
 }
