@@ -178,8 +178,6 @@ public class AddressBookApplication extends Application implements
     }
 
     private void showListView() {
-        /* Clear all filters from person container */
-        getDbHelp().getPersonContainer().removeAllContainerFilters();
         setMainComponent(getListView());
         personList.fixVisibleAndSelectedItem();
     }
@@ -204,6 +202,9 @@ public class AddressBookApplication extends Application implements
             Object itemId = event.getItemId();
             if (itemId != null) {
                 if (NavigationTree.SHOW_ALL.equals(itemId)) {
+                    /* Clear all filters from person container */
+                    getDbHelp().getPersonContainer()
+                            .removeAllContainerFilters();
                     showListView();
                 } else if (NavigationTree.SEARCH.equals(itemId)) {
                     showSearchView();
