@@ -215,8 +215,10 @@ public class SQLContainerTableQueryTest {
     public void getItem_table5000RowsWithParameter1337_returnsItemWithId1337()
             throws SQLException {
         addFiveThousand();
-        SQLContainer container = new SQLContainer(new TableQuery("people",
-                connectionPool, AllTests.sqlGen));
+        TableQuery query = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+        SQLContainer container = new SQLContainer(query);
+
         Item item;
         if (AllTests.db == 4) {
             item = container.getItem(new RowId(new Object[] { new BigDecimal(
@@ -500,6 +502,29 @@ public class SQLContainerTableQueryTest {
     }
 
     @Test
+    public void allIdsFound_table5000RowsLastId_shouldSucceed()
+            throws SQLException {
+        addFiveThousand();
+        SQLContainer container = new SQLContainer(new TableQuery("people",
+                connectionPool, AllTests.sqlGen));
+        for (int i = 0; i < 5000; i++) {
+            Assert.assertTrue(container.containsId(container.getIdByIndex(i)));
+        }
+    }
+
+    @Test
+    public void allIdsFound_table5000RowsLastId_autoCommit_shouldSucceed()
+            throws SQLException {
+        addFiveThousand();
+        SQLContainer container = new SQLContainer(new TableQuery("people",
+                connectionPool, AllTests.sqlGen));
+        container.setAutoCommit(true);
+        for (int i = 0; i < 5000; i++) {
+            Assert.assertTrue(container.containsId(container.getIdByIndex(i)));
+        }
+    }
+
+    @Test
     public void refresh_table_sizeShouldUpdate() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
@@ -607,6 +632,33 @@ public class SQLContainerTableQueryTest {
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.addItem();
         Assert.assertNotNull(itemId);
+    }
+
+    @Test
+    public void addItem_tableAddOneNewItem_autoCommit_returnsFinalItemId()
+            throws SQLException {
+        TableQuery query = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+        query.setVersionColumn("ID");
+        SQLContainer container = new SQLContainer(query);
+        container.setAutoCommit(true);
+        Object itemId = container.addItem();
+        Assert.assertNotNull(itemId);
+        Assert.assertTrue(itemId instanceof RowId);
+        Assert.assertFalse(itemId instanceof TemporaryRowId);
+    }
+
+    @Test
+    public void addItem_tableAddOneNewItem_autoCommit_sizeIsIncreased()
+            throws SQLException {
+        TableQuery query = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+        query.setVersionColumn("ID");
+        SQLContainer container = new SQLContainer(query);
+        container.setAutoCommit(true);
+        int originalSize = container.size();
+        container.addItem();
+        Assert.assertEquals(originalSize + 1, container.size());
     }
 
     @Test
