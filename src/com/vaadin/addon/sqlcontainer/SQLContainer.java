@@ -124,7 +124,7 @@ public class SQLContainer implements Container, Container.Filterable,
      */
     public Object addItem() throws UnsupportedOperationException {
         Object emptyKey[] = new Object[delegate.getPrimaryKeyColumns().size()];
-        TemporaryRowId itemId = new TemporaryRowId(emptyKey);
+        RowId itemId = new TemporaryRowId(emptyKey);
         // Create new empty column properties for the row item.
         List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
         for (String propertyId : propertyIds) {
@@ -143,9 +143,14 @@ public class SQLContainer implements Container, Container.Filterable,
          */
         if (autoCommit) {
             try {
-                delegate.beginTransaction();
-                delegate.storeRow(newRowItem);
-                delegate.commit();
+                if (delegate instanceof TableQuery) {
+                    itemId = ((TableQuery) delegate)
+                            .storeRowImmediately(newRowItem);
+                } else {
+                    delegate.beginTransaction();
+                    delegate.storeRow(newRowItem);
+                    delegate.commit();
+                }
                 refresh();
                 debug(null, "Row added to DB...");
                 return itemId;
@@ -503,15 +508,12 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
             }
             // load in the next page.
-            int nextIndex = currentOffset
-                    + (int) (pageLength * CACHE_RATIO * 1.5f);
+            int nextIndex = (currentOffset / (pageLength * CACHE_RATIO) + 1)
+                    * (pageLength * CACHE_RATIO);
             if (nextIndex >= size) {
-                // Wrap around.
+                // Container wrapped around, start from index 0.
                 wrappedAround = true;
-                // this will load from index 0 forward, since
-                // updateOffsetAndCache loads from index - pageLength *
-                // CACHE_RATIO / 2.
-                nextIndex = pageLength * CACHE_RATIO / 2;
+                nextIndex = 0;
             }
             updateOffsetAndCache(nextIndex);
         }
@@ -598,7 +600,7 @@ public class SQLContainer implements Container, Container.Filterable,
         if (addedItems.isEmpty()) {
             int lastIx = size() - 1;
             if (!itemIndexes.containsKey(lastIx)) {
-                updateOffsetAndCache(size - pageLength * CACHE_RATIO / 2);
+                updateOffsetAndCache(size - 1);
             }
             return itemIndexes.get(lastIx);
         } else {
@@ -902,7 +904,8 @@ public class SQLContainer implements Container, Container.Filterable,
         if (itemIndexes.containsKey(index)) {
             return;
         }
-        currentOffset = index - (pageLength * CACHE_RATIO) / 2;
+        currentOffset = (index / (pageLength * CACHE_RATIO))
+                * (pageLength * CACHE_RATIO);
         if (currentOffset < 0) {
             currentOffset = 0;
         }

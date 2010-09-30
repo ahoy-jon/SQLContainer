@@ -192,6 +192,50 @@ public class TableQuery implements QueryDelegate,
         }
     }
 
+    /**
+     * Inserts the given row in the database table immediately. Begins and
+     * commits the transaction needed. This method was added specifically to
+     * solve the problem of returning the final RowId immediately on the
+     * SQLContainer.addItem() call when auto commit mode is enabled in the
+     * SQLContainer.
+     * 
+     * @param row
+     *            RowItem to add to the database
+     * @return Final RowId of the added row
+     * @throws SQLException
+     */
+    public RowId storeRowImmediately(RowItem row) throws SQLException {
+        beginTransaction();
+        /* Set version column */
+        try {
+            ((ColumnProperty) row.getItemProperty(versionColumn))
+                    .setVersionColumn(true);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Version column not set or does not exist.", e);
+        }
+        /* Generate query */
+        String query = sqlGenerator.generateInsertQuery(tableName, row);
+        debug("DB -> " + query);
+        /* Execute the update */
+        Statement statement = activeConnection.createStatement();
+        int result = statement.executeUpdate(query, primaryKeyColumns
+                .toArray(new String[0]));
+        if (result > 0) {
+            /*
+             * If affected rows exist, we'll get the new RowId, commit the
+             * transaction and return the new RowId.
+             */
+            RowId newId = getNewRowId(row, statement.getGeneratedKeys());
+            bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
+            commit();
+            return newId;
+        } else {
+            /* On failure return null */
+            return null;
+        }
+    }
+
     /*
      * (non-Javadoc)
      * 
@@ -381,7 +425,7 @@ public class TableQuery implements QueryDelegate,
      * if a transaction is already open, or a new connection from this query's
      * connection pool.
      * 
-     * Additionally notifies registered RowIdChangeListeners of a changed RowId.
+     * Additionally adds a new RowIdChangeEvent to the event buffer.
      * 
      * @param query
      *            Query to execute
@@ -402,47 +446,8 @@ public class TableQuery implements QueryDelegate,
             debug("DB -> " + query);
             int result = statement.executeUpdate(query, primaryKeyColumns
                     .toArray(new String[0]));
-
-            try {
-                /* Fetch primary key values and generate a map out of them. */
-                Map<String, Object> values = new HashMap<String, Object>();
-                ResultSet genKeys = statement.getGeneratedKeys();
-                ResultSetMetaData rsmd = genKeys.getMetaData();
-                int colCount = rsmd.getColumnCount();
-                if (genKeys.next()) {
-                    for (int i = 1; i <= colCount; i++) {
-                        values.put(rsmd.getColumnName(i), genKeys.getObject(i));
-                    }
-                }
-                /* Generate new RowId */
-                List<Object> newRowId = new ArrayList<Object>();
-                if (values.size() == 1) {
-                    if (primaryKeyColumns.size() == 1) {
-                        newRowId.add(values.get(values.keySet().iterator()
-                                .next()));
-                    } else {
-                        for (String s : primaryKeyColumns) {
-                            if (!((ColumnProperty) row.getItemProperty(s))
-                                    .isReadOnlyChangeAllowed()) {
-                                newRowId.add(values.get(values.keySet()
-                                        .iterator().next()));
-                            } else {
-                                newRowId.add(values.get(s));
-                            }
-                        }
-                    }
-                } else {
-                    for (String s : primaryKeyColumns) {
-                        newRowId.add(values.get(s));
-                    }
-                }
-                RowId newId = new RowId(newRowId.toArray());
-                bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
-            } catch (Exception e) {
-                e.printStackTrace();
-                debug("Failed to fetch key values on insert: " + e.getMessage());
-            }
-
+            RowId newId = getNewRowId(row, statement.getGeneratedKeys());
+            bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
             return result;
         } finally {
             if (!transactionOpen) {
@@ -504,6 +509,45 @@ public class TableQuery implements QueryDelegate,
             throw new RuntimeException(e);
         } finally {
             connectionPool.releaseConnection(c);
+        }
+    }
+
+    private RowId getNewRowId(RowItem row, ResultSet genKeys) {
+        try {
+            /* Fetch primary key values and generate a map out of them. */
+            Map<String, Object> values = new HashMap<String, Object>();
+            ResultSetMetaData rsmd = genKeys.getMetaData();
+            int colCount = rsmd.getColumnCount();
+            if (genKeys.next()) {
+                for (int i = 1; i <= colCount; i++) {
+                    values.put(rsmd.getColumnName(i), genKeys.getObject(i));
+                }
+            }
+            /* Generate new RowId */
+            List<Object> newRowId = new ArrayList<Object>();
+            if (values.size() == 1) {
+                if (primaryKeyColumns.size() == 1) {
+                    newRowId.add(values.get(values.keySet().iterator().next()));
+                } else {
+                    for (String s : primaryKeyColumns) {
+                        if (!((ColumnProperty) row.getItemProperty(s))
+                                .isReadOnlyChangeAllowed()) {
+                            newRowId.add(values.get(values.keySet().iterator()
+                                    .next()));
+                        } else {
+                            newRowId.add(values.get(s));
+                        }
+                    }
+                }
+            } else {
+                for (String s : primaryKeyColumns) {
+                    newRowId.add(values.get(s));
+                }
+            }
+            return new RowId(newRowId.toArray());
+        } catch (Exception e) {
+            debug("Failed to fetch key values on insert: " + e.getMessage());
+            return null;
         }
     }
 
