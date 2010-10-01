@@ -92,8 +92,10 @@ public class SQLContainer implements Container, Container.Filterable,
 
     /*
      * SQLContainer instance reference list and dead reference queue. Used for
-     * the cache flush notification feature.
+     * the cache flush notification feature. Also a switch for whether the
+     * notification system is enabled or not. Disabled by default.
      */
+    private boolean notificationsEnabled;
     private static List<WeakReference<SQLContainer>> allInstances = new ArrayList<WeakReference<SQLContainer>>();
     private static ReferenceQueue<SQLContainer> deadInstances = new ReferenceQueue<SQLContainer>();
 
@@ -119,7 +121,6 @@ public class SQLContainer implements Container, Container.Filterable,
         this.delegate = delegate;
         getPropertyIds();
         cachedItems.setCacheLimit(CACHE_RATIO * getPageLength());
-        SQLContainer.addInstance(this);
     }
 
     /**************************************/
@@ -164,7 +165,9 @@ public class SQLContainer implements Container, Container.Filterable,
                     delegate.commit();
                 }
                 refresh();
-                SQLContainer.notifyOfCacheFlush(this);
+                if (notificationsEnabled) {
+                    SQLContainer.notifyOfCacheFlush(this);
+                }
                 debug(null, "Row added to DB...");
                 return itemId;
             } catch (SQLException e) {
@@ -203,11 +206,13 @@ public class SQLContainer implements Container, Container.Filterable,
             return false;
         }
 
-        try {
-            return delegate.containsRowWithKey(((RowId) itemId).getId());
-        } catch (Exception e) {
-            /* Query failed, just return false. */
-            debug(e, null);
+        if (!(itemId instanceof TemporaryRowId)) {
+            try {
+                return delegate.containsRowWithKey(((RowId) itemId).getId());
+            } catch (Exception e) {
+                /* Query failed, just return false. */
+                debug(e, null);
+            }
         }
         return false;
     }
@@ -355,7 +360,9 @@ public class SQLContainer implements Container, Container.Filterable,
                 boolean success = delegate.removeRow((RowItem) i);
                 delegate.commit();
                 refresh();
-                SQLContainer.notifyOfCacheFlush(this);
+                if (notificationsEnabled) {
+                    SQLContainer.notifyOfCacheFlush(this);
+                }
                 if (success) {
                     debug(null, "Row removed from DB...");
                 }
@@ -402,7 +409,9 @@ public class SQLContainer implements Container, Container.Filterable,
                     delegate.commit();
                     debug(null, "All rows removed from DB...");
                     refresh();
-                    SQLContainer.notifyOfCacheFlush(this);
+                    if (notificationsEnabled) {
+                        SQLContainer.notifyOfCacheFlush(this);
+                    }
                 } else {
                     delegate.rollback();
                 }
@@ -849,7 +858,9 @@ public class SQLContainer implements Container, Container.Filterable,
             addedItems.clear();
             modifiedItems.clear();
             refresh();
-            SQLContainer.notifyOfCacheFlush(this);
+            if (notificationsEnabled) {
+                SQLContainer.notifyOfCacheFlush(this);
+            }
         } catch (SQLException e) {
             delegate.rollback();
             throw e;
@@ -890,7 +901,9 @@ public class SQLContainer implements Container, Container.Filterable,
                 delegate.beginTransaction();
                 delegate.storeRow(changedItem);
                 delegate.commit();
-                SQLContainer.notifyOfCacheFlush(this);
+                if (notificationsEnabled) {
+                    SQLContainer.notifyOfCacheFlush(this);
+                }
                 debug(null, "Row updated to DB...");
             } catch (SQLException e) {
                 debug(e, null);
@@ -1392,6 +1405,13 @@ public class SQLContainer implements Container, Container.Filterable,
     /*********************************************/
     /** Cache flush notification implementation **/
     /*********************************************/
+
+    public void enableCacheFlushNotifications() {
+        if (!notificationsEnabled) {
+            notificationsEnabled = true;
+            SQLContainer.addInstance(this);
+        }
+    }
 
     /**
      * Adds the given SQLContainer to the cache flush notification receiver list
