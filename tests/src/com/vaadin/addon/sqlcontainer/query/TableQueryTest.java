@@ -301,7 +301,6 @@ public class TableQueryTest {
             throws SQLException {
         TableQuery tQuery = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
-
         Assert.assertTrue(tQuery.containsRowWithKey(1));
     }
 

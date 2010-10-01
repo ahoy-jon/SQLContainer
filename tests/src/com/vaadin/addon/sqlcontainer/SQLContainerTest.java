@@ -1691,10 +1691,12 @@ public class SQLContainerTest {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));
                                 return gen.generateSelectQuery("people", null,
-                                        ob, offset, limit, null);
+                                        ob, offset, limit, null)
+                                        .getQueryString();
                             } else {
                                 return gen.generateSelectQuery("people", null,
-                                        orderBys, offset, limit, null);
+                                        orderBys, offset, limit, null)
+                                        .getQueryString();
                             }
                         } else if (AllTests.db == 4) {
                             SQLGenerator gen = new OracleGenerator();
@@ -1702,10 +1704,12 @@ public class SQLContainerTest {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));
                                 return gen.generateSelectQuery("people", null,
-                                        ob, offset, limit, null);
+                                        ob, offset, limit, null)
+                                        .getQueryString();
                             } else {
                                 return gen.generateSelectQuery("people", null,
-                                        orderBys, offset, limit, null);
+                                        orderBys, offset, limit, null)
+                                        .getQueryString();
                             }
                         } else {
                             StringBuffer query = new StringBuffer(
@@ -1796,10 +1800,12 @@ public class SQLContainerTest {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));
                                 return gen.generateSelectQuery("people", null,
-                                        ob, offset, limit, null);
+                                        ob, offset, limit, null)
+                                        .getQueryString();
                             } else {
                                 return gen.generateSelectQuery("people", null,
-                                        orderBys, offset, limit, null);
+                                        orderBys, offset, limit, null)
+                                        .getQueryString();
                             }
                         } else if (AllTests.db == 4) {
                             SQLGenerator gen = new OracleGenerator();
@@ -1807,10 +1813,12 @@ public class SQLContainerTest {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));
                                 return gen.generateSelectQuery("people", null,
-                                        ob, offset, limit, null);
+                                        ob, offset, limit, null)
+                                        .getQueryString();
                             } else {
                                 return gen.generateSelectQuery("people", null,
-                                        orderBys, offset, limit, null);
+                                        orderBys, offset, limit, null)
+                                        .getQueryString();
                             }
                         } else {
                             StringBuffer query = new StringBuffer(
@@ -1889,17 +1897,19 @@ public class SQLContainerTest {
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new MSSQLGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else if (AllTests.db == 4) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -1990,17 +2000,19 @@ public class SQLContainerTest {
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new MSSQLGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else if (AllTests.db == 4) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -2090,17 +2102,19 @@ public class SQLContainerTest {
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new MSSQLGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else if (AllTests.db == 4) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -2190,17 +2204,19 @@ public class SQLContainerTest {
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new MSSQLGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else if (AllTests.db == 4) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -2296,17 +2312,19 @@ public class SQLContainerTest {
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new MSSQLGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else if (AllTests.db == 4) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -2402,17 +2420,19 @@ public class SQLContainerTest {
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
                         if (AllTests.db == 3) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new MSSQLGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else if (AllTests.db == 4) {
+                            // TODO: This won't work: filter values are wrong
                             SQLGenerator gen = new OracleGenerator();
                             List<OrderBy> ob = new ArrayList<OrderBy>();
                             ob.add(new OrderBy("ID", true));
                             return gen.generateSelectQuery("people", filters,
-                                    ob, offset, limit, null);
+                                    ob, offset, limit, null).getQueryString();
                         } else {
                             StringBuffer query = new StringBuffer(
                                     "SELECT * FROM people");
@@ -2535,10 +2555,12 @@ public class SQLContainerTest {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));
                                 return gen.generateSelectQuery("people", null,
-                                        ob, offset, limit, null);
+                                        ob, offset, limit, null)
+                                        .getQueryString();
                             } else {
                                 return gen.generateSelectQuery("people", null,
-                                        orderBys, offset, limit, null);
+                                        orderBys, offset, limit, null)
+                                        .getQueryString();
                             }
                         } else if (AllTests.db == 4) {
                             SQLGenerator gen = new OracleGenerator();
@@ -2546,10 +2568,12 @@ public class SQLContainerTest {
                                 List<OrderBy> ob = new ArrayList<OrderBy>();
                                 ob.add(new OrderBy("ID", true));
                                 return gen.generateSelectQuery("people", null,
-                                        ob, offset, limit, null);
+                                        ob, offset, limit, null)
+                                        .getQueryString();
                             } else {
                                 return gen.generateSelectQuery("people", null,
-                                        orderBys, offset, limit, null);
+                                        orderBys, offset, limit, null)
+                                        .getQueryString();
                             }
                         } else {
                             StringBuffer query = new StringBuffer(

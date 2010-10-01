@@ -929,8 +929,9 @@ public class SQLContainerTableQueryTest {
     @Test
     public void containsId_tableAddedItemRemoved_returnsFalse()
             throws SQLException {
-        SQLContainer container = new SQLContainer(new TableQuery("people",
-                connectionPool, AllTests.sqlGen));
+        TableQuery query = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+        SQLContainer container = new SQLContainer(query);
         Object id = container.addItem();
         Assert.assertTrue(container.containsId(id));
         Assert.assertTrue(container.removeItem(id));

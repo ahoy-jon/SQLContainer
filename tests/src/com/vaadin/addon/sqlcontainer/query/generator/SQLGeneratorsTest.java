@@ -99,16 +99,17 @@ public class SQLGeneratorsTest {
     @Test
     public void generateSelectQuery_basicQuery_shouldSucceed() {
         SQLGenerator sg = new DefaultSQLGenerator();
-        String query = sg.generateSelectQuery("TABLE", null, null, 0, 0, null);
-        Assert.assertEquals(query, "SELECT * FROM TABLE");
+        StatementHelper sh = sg.generateSelectQuery("TABLE", null, null, 0, 0,
+                null);
+        Assert.assertEquals(sh.getQueryString(), "SELECT * FROM TABLE");
     }
 
     @Test
     public void generateSelectQuery_pagingAndColumnsSet_shouldSucceed() {
         SQLGenerator sg = new DefaultSQLGenerator();
-        String query = sg.generateSelectQuery("TABLE", null, null, 4, 8,
+        StatementHelper sh = sg.generateSelectQuery("TABLE", null, null, 4, 8,
                 "COL1, COL2, COL3");
-        Assert.assertEquals(query,
+        Assert.assertEquals(sh.getQueryString(),
                 "SELECT COL1, COL2, COL3 FROM TABLE LIMIT 8 OFFSET 4");
     }
 
@@ -121,10 +122,10 @@ public class SQLGeneratorsTest {
         List<Filter> f = Arrays.asList(new Filter("name",
                 Filter.ComparisonType.ENDS_WITH, "lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        String query = sg.generateSelectQuery("TABLE", f, ob, 0, 0, null);
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 0, 0, null);
         Assert
-                .assertEquals(query,
-                        "SELECT * FROM TABLE WHERE \"name\" LIKE '%lle' ORDER BY \"name\" ASC");
+                .assertEquals(sh.getQueryString(),
+                        "SELECT * FROM TABLE WHERE \"name\" LIKE ? ORDER BY \"name\" ASC");
     }
 
     @Test
@@ -134,11 +135,12 @@ public class SQLGeneratorsTest {
                 Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
                 Filter.ComparisonType.STARTS_WITH, "vi"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        String query = sg.generateSelectQuery("TABLE", f,
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f,
                 FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 0, 0, null);
-        Assert.assertEquals(query,
-                "SELECT * FROM TABLE WHERE \"name\" LIKE '%lle' "
-                        + "OR \"name\" LIKE 'vi%' ORDER BY \"name\" ASC");
+        // TODO
+        Assert.assertEquals(sh.getQueryString(),
+                "SELECT * FROM TABLE WHERE \"name\" LIKE ? "
+                        + "OR \"name\" LIKE ? ORDER BY \"name\" ASC");
     }
 
     @Test
@@ -157,12 +159,12 @@ public class SQLGeneratorsTest {
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
 
-        String queryString = sg.generateDeleteQuery("people",
+        StatementHelper sh = sg.generateDeleteQuery("people",
                 (RowItem) container.getItem(container.getItemIds().iterator()
                         .next()));
         int id = offset;
-        Assert.assertEquals(queryString, "DELETE FROM people WHERE \"ID\" = '"
-                + id + "' AND \"NAME\" = 'Ville'");
+        Assert.assertEquals(sh.getQueryString(),
+                "DELETE FROM people WHERE \"ID\" = ? AND \"NAME\" = ?");
     }
 
     @Test
@@ -184,11 +186,10 @@ public class SQLGeneratorsTest {
                 .iterator().next());
         ri.getItemProperty("NAME").setValue("Viljami");
 
-        String queryString = sg.generateUpdateQuery("people", ri);
+        StatementHelper sh = sg.generateUpdateQuery("people", ri);
         int id = offset;
-        Assert.assertEquals(queryString,
-                "UPDATE people SET \"NAME\" = 'Viljami' WHERE \"ID\" = '" + id
-                        + "'");
+        Assert.assertEquals(sh.getQueryString(),
+                "UPDATE people SET \"NAME\" = ? WHERE \"ID\" = ?");
     }
 
     @Test
@@ -209,10 +210,10 @@ public class SQLGeneratorsTest {
         RowItem ri = (RowItem) container.getItem(container.addItem());
         ri.getItemProperty("NAME").setValue("Viljami");
 
-        String queryString = sg.generateInsertQuery("people", ri);
+        StatementHelper sh = sg.generateInsertQuery("people", ri);
 
-        Assert.assertEquals(queryString,
-                "INSERT INTO people (\"NAME\") VALUES ('Viljami')");
+        Assert.assertEquals(sh.getQueryString(),
+                "INSERT INTO people (\"NAME\") VALUES (?)");
     }
 
     @Test
@@ -222,12 +223,13 @@ public class SQLGeneratorsTest {
         List<Filter> f = Arrays.asList(new Filter("name",
                 Filter.ComparisonType.ENDS_WITH, "lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        String query = sg.generateSelectQuery("TABLE", f, ob, 4, 8, "NAME, ID");
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
+                "NAME, ID");
         Assert
                 .assertEquals(
-                        query,
+                        sh.getQueryString(),
                         "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
-                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE '%lle'"
+                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
                                 + " ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
     }
 
@@ -238,11 +240,13 @@ public class SQLGeneratorsTest {
         List<Filter> f = Arrays.asList(new Filter("name",
                 Filter.ComparisonType.ENDS_WITH, "lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        String query = sg.generateSelectQuery("TABLE", f, ob, 4, 8, "NAME, ID");
-        Assert.assertEquals(query, "SELECT * FROM (SELECT row_number() OVER "
-                + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
-                + "FROM TABLE WHERE \"name\" LIKE '%lle') "
-                + "AS a WHERE a.rownum BETWEEN 5 AND 12");
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
+                "NAME, ID");
+        Assert.assertEquals(sh.getQueryString(),
+                "SELECT * FROM (SELECT row_number() OVER "
+                        + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
+                        + "FROM TABLE WHERE \"name\" LIKE ?) "
+                        + "AS a WHERE a.rownum BETWEEN 5 AND 12");
     }
 
     @Test
@@ -253,14 +257,14 @@ public class SQLGeneratorsTest {
                 Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
                 Filter.ComparisonType.STARTS_WITH, "vi"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        String query = sg.generateSelectQuery("TABLE", f,
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f,
                 FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
         Assert
                 .assertEquals(
-                        query,
+                        sh.getQueryString(),
                         "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
-                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE '%lle'"
-                                + " OR \"name\" LIKE 'vi%' "
+                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
+                                + " OR \"name\" LIKE ? "
                                 + "ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
     }
 
@@ -272,12 +276,13 @@ public class SQLGeneratorsTest {
                 Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
                 Filter.ComparisonType.STARTS_WITH, "vi"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        String query = sg.generateSelectQuery("TABLE", f,
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f,
                 FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
-        Assert.assertEquals(query, "SELECT * FROM (SELECT row_number() OVER "
-                + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
-                + "FROM TABLE WHERE \"name\" LIKE '%lle' "
-                + "OR \"name\" LIKE 'vi%') "
-                + "AS a WHERE a.rownum BETWEEN 5 AND 12");
+        Assert.assertEquals(sh.getQueryString(),
+                "SELECT * FROM (SELECT row_number() OVER "
+                        + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
+                        + "FROM TABLE WHERE \"name\" LIKE ? "
+                        + "OR \"name\" LIKE ?) "
+                        + "AS a WHERE a.rownum BETWEEN 5 AND 12");
     }
 }
