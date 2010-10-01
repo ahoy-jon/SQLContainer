@@ -1,5 +1,8 @@
 package com.vaadin.addon.sqlcontainer;
 
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -16,6 +19,7 @@ import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
@@ -86,6 +90,13 @@ public class SQLContainer implements Container, Container.Filterable,
     /* Enable to output possible stack traces and diagnostic information */
     private boolean debugMode;
 
+    /*
+     * SQLContainer instance reference list and dead reference queue. Used for
+     * the cache flush notification feature.
+     */
+    private static List<WeakReference<SQLContainer>> allInstances = new ArrayList<WeakReference<SQLContainer>>();
+    private static ReferenceQueue<SQLContainer> deadInstances = new ReferenceQueue<SQLContainer>();
+
     /**
      * Prevent instantiation without a QueryDelegate.
      */
@@ -108,6 +119,7 @@ public class SQLContainer implements Container, Container.Filterable,
         this.delegate = delegate;
         getPropertyIds();
         cachedItems.setCacheLimit(CACHE_RATIO * getPageLength());
+        SQLContainer.addInstance(this);
     }
 
     /**************************************/
@@ -152,6 +164,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     delegate.commit();
                 }
                 refresh();
+                SQLContainer.notifyOfCacheFlush(this);
                 debug(null, "Row added to DB...");
                 return itemId;
             } catch (SQLException e) {
@@ -342,6 +355,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 boolean success = delegate.removeRow((RowItem) i);
                 delegate.commit();
                 refresh();
+                SQLContainer.notifyOfCacheFlush(this);
                 if (success) {
                     debug(null, "Row removed from DB...");
                 }
@@ -388,6 +402,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     delegate.commit();
                     debug(null, "All rows removed from DB...");
                     refresh();
+                    SQLContainer.notifyOfCacheFlush(this);
                 } else {
                     delegate.rollback();
                 }
@@ -834,6 +849,7 @@ public class SQLContainer implements Container, Container.Filterable,
             addedItems.clear();
             modifiedItems.clear();
             refresh();
+            SQLContainer.notifyOfCacheFlush(this);
         } catch (SQLException e) {
             delegate.rollback();
             throw e;
@@ -874,6 +890,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 delegate.beginTransaction();
                 delegate.storeRow(changedItem);
                 delegate.commit();
+                SQLContainer.notifyOfCacheFlush(this);
                 debug(null, "Row updated to DB...");
             } catch (SQLException e) {
                 debug(e, null);
@@ -1153,6 +1170,15 @@ public class SQLContainer implements Container, Container.Filterable,
         return true;
     }
 
+    /**
+     * Returns the QueryDelegate set for this SQLContainer.
+     * 
+     * @return current querydelegate
+     */
+    protected QueryDelegate getQueryDelegate() {
+        return delegate;
+    }
+
     /************************************/
     /** UNSUPPORTED CONTAINER FEATURES **/
     /************************************/
@@ -1359,6 +1385,71 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             if (e != null) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    /*********************************************/
+    /** Cache flush notification implementation **/
+    /*********************************************/
+
+    /**
+     * Adds the given SQLContainer to the cache flush notification receiver list
+     * 
+     * @param c
+     *            Container to add
+     */
+    public static void addInstance(SQLContainer c) {
+        removeDeadReferences();
+        if (c != null) {
+            allInstances.add(new WeakReference<SQLContainer>(c, deadInstances));
+        }
+    }
+
+    /**
+     * Removes dead references from instance list
+     */
+    private static void removeDeadReferences() {
+        Reference<? extends SQLContainer> dead = deadInstances.poll();
+        while (dead != null) {
+            allInstances.remove(dead);
+            dead = deadInstances.poll();
+        }
+    }
+
+    /**
+     * Iterates through the instances and notifies containers which are
+     * connected to the same table or are using the same query string.
+     * 
+     * @param c
+     *            SQLContainer that issued the cache flush notification
+     */
+    public static void notifyOfCacheFlush(SQLContainer c) {
+        removeDeadReferences();
+        for (WeakReference<SQLContainer> wr : allInstances) {
+            if (wr.get() != null) {
+                SQLContainer wrc = wr.get();
+                /*
+                 * If the reference points to the container sending the
+                 * notification, do nothing.
+                 */
+                if (wrc.equals(c)) {
+                    continue;
+                }
+                /* Compare QueryDelegate types and tableName/queryString */
+                QueryDelegate wrQd = wrc.getQueryDelegate();
+                QueryDelegate qd = c.getQueryDelegate();
+                if (wrQd instanceof TableQuery
+                        && qd instanceof TableQuery
+                        && ((TableQuery) wrQd).getTableName().equals(
+                                ((TableQuery) qd).getTableName())) {
+                    wrc.refresh();
+                } else if (wrQd instanceof FreeformQuery
+                        && qd instanceof FreeformQuery
+                        && ((FreeformQuery) wrQd).getQueryString().equals(
+                                ((FreeformQuery) qd).getQueryString())) {
+                    wrc.refresh();
+                }
             }
         }
     }
