@@ -61,7 +61,7 @@ public class RowId implements Serializable {
     public String toString() {
         StringBuffer s = new StringBuffer();
         for (int i = 0; i < id.length; i++) {
-            s.append(id[i].toString());
+            s.append(id[i]);
             if (i < id.length - 1) {
                 s.append("/");
             }
