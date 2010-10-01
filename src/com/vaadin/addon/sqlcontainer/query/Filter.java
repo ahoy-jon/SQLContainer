@@ -21,7 +21,6 @@ public class Filter {
 
     private ComparisonType comparisonType;
     private boolean isCaseSensitive = true;
-    private boolean needsQuotes = false;
 
     /**
      * Prevent instantiation without required parameters.
@@ -34,7 +33,6 @@ public class Filter {
         setColumn(column);
         setComparisonType(comparisonType);
         setValue(value);
-        setNeedsQuotes(false);
     }
 
     public Filter(String column, ComparisonType comparisonType, Object value,
@@ -91,14 +89,127 @@ public class Filter {
         return isCaseSensitive;
     }
 
-    public boolean isNeedsQuotes() {
-        return needsQuotes;
+    public boolean passes(Object testValue) {
+        /* Handle null values. Here null will equal null. */
+        if (value == null) {
+            return testValue == null ? true : false;
+        }
+        if (value != null && testValue == null) {
+            return false;
+        }
+        switch (getComparisonType()) {
+        case EQUALS:
+            return compareValues(testValue, value) == 0;
+        case GREATER:
+            return compareValues(testValue, value) > 0;
+        case LESS:
+            return compareValues(testValue, value) < 0;
+        case GREATER_OR_EQUAL:
+            return compareValues(testValue, value) >= 0;
+        case LESS_OR_EQUAL:
+            return compareValues(testValue, value) <= 0;
+        case STARTS_WITH:
+            if (testValue instanceof String) {
+                if (isCaseSensitive) {
+                    return ((String) testValue).startsWith(String
+                            .valueOf(value));
+                } else {
+                    return ((String) testValue).toUpperCase().startsWith(
+                            String.valueOf(value).toUpperCase());
+                }
+            }
+            break;
+        case ENDS_WITH:
+            if (testValue instanceof String) {
+                if (isCaseSensitive) {
+                    return ((String) testValue).endsWith(String.valueOf(value));
+                } else {
+                    return ((String) testValue).toUpperCase().endsWith(
+                            String.valueOf(value).toUpperCase());
+                }
+            }
+            break;
+        case CONTAINS:
+            if (testValue instanceof String) {
+                if (isCaseSensitive) {
+                    return ((String) testValue).contains(String.valueOf(value));
+                } else {
+                    return ((String) testValue).toUpperCase().contains(
+                            String.valueOf(value).toUpperCase());
+                }
+            }
+            break;
+        case BETWEEN:
+            break;
+        }
+        return false;
     }
 
-    public void setNeedsQuotes(boolean needsQuotes) {
-        this.needsQuotes = needsQuotes;
+    /**
+     * Returns this filtering rule as a string that can be used when generating
+     * PreparedStatement objects
+     */
+    public String toPreparedStatementString() {
+        if (value == null) {
+            return null;
+        }
+        StringBuffer where = new StringBuffer();
+        if (isCaseSensitive()) {
+            where.append("\"" + getEscapedColumn() + "\"");
+        } else {
+            where.append("UPPER(\"").append(getEscapedColumn()).append("\")");
+        }
+        switch (getComparisonType()) {
+        case EQUALS:
+            where.append(" = ?");
+            break;
+        case GREATER:
+            where.append(" > ?");
+            break;
+        case LESS:
+            where.append(" < ?");
+            break;
+        case GREATER_OR_EQUAL:
+            where.append(" >= ?");
+            break;
+        case LESS_OR_EQUAL:
+            where.append(" <= ?");
+            break;
+        case STARTS_WITH:
+        case CONTAINS:
+        case ENDS_WITH:
+            where.append(" LIKE ?");
+            break;
+        case BETWEEN:
+            where.append(" BETWEEN ? AND ?");
+            break;
+        }
+        return where.toString();
     }
 
+    /**
+     * Returns the value of this rule to be inserted as a parameter into a
+     * PreparedStatement
+     */
+    public Object getPreparedStatementValue() {
+        switch (getComparisonType()) {
+        case STARTS_WITH:
+            return upperCaseIfCaseInsensitive(String.valueOf(getValue())) + "%";
+        case ENDS_WITH:
+            return "%" + upperCaseIfCaseInsensitive(String.valueOf(getValue()));
+        case CONTAINS:
+            return "%" + upperCaseIfCaseInsensitive(String.valueOf(getValue()))
+                    + "%";
+        default:
+            return getValue();
+        }
+    }
+
+    /**
+     * Returns this filtering rule as a string that can be used when generating
+     * Statement objects
+     */
+    @Deprecated
     public String toWhereString() {
         /* Null filter equates to 1=1 where clause */
         if (value == null) {
@@ -150,78 +261,11 @@ public class Filter {
         return where.toString();
     }
 
-    private String format(Object value) {
-        if (value instanceof String) {
-            return "'"
-                    + Util.escapeSQL(upperCaseIfCaseInsensitive(String
-                            .valueOf(value))) + "'";
-        }
-        return Util
-                .escapeSQL(upperCaseIfCaseInsensitive(String.valueOf(value)));
-    }
-
     private String upperCaseIfCaseInsensitive(String value) {
         if (isCaseSensitive()) {
             return value;
         }
         return value.toUpperCase();
-    }
-
-    public boolean passes(Object testValue) {
-        /* Handle null values. Here null will equal null. */
-        if (value == null) {
-            return testValue == null ? true : false;
-        }
-        if (value != null && testValue == null) {
-            return false;
-        }
-
-        switch (getComparisonType()) {
-        case EQUALS:
-            return compareValues(testValue, value) == 0;
-        case GREATER:
-            return compareValues(testValue, value) > 0;
-        case LESS:
-            return compareValues(testValue, value) < 0;
-        case GREATER_OR_EQUAL:
-            return compareValues(testValue, value) >= 0;
-        case LESS_OR_EQUAL:
-            return compareValues(testValue, value) <= 0;
-        case STARTS_WITH:
-            if (testValue instanceof String) {
-                if (isCaseSensitive) {
-                    return ((String) testValue).startsWith(String
-                            .valueOf(value));
-                } else {
-                    return ((String) testValue).toUpperCase().startsWith(
-                            String.valueOf(value).toUpperCase());
-                }
-            }
-            break;
-        case ENDS_WITH:
-            if (testValue instanceof String) {
-                if (isCaseSensitive) {
-                    return ((String) testValue).endsWith(String.valueOf(value));
-                } else {
-                    return ((String) testValue).toUpperCase().endsWith(
-                            String.valueOf(value).toUpperCase());
-                }
-            }
-            break;
-        case CONTAINS:
-            if (testValue instanceof String) {
-                if (isCaseSensitive) {
-                    return ((String) testValue).contains(String.valueOf(value));
-                } else {
-                    return ((String) testValue).toUpperCase().contains(
-                            String.valueOf(value).toUpperCase());
-                }
-            }
-            break;
-        case BETWEEN:
-            break;
-        }
-        return false;
     }
 
     private int compareValues(Object value1, Object value2) {
@@ -246,5 +290,15 @@ public class Filter {
         }
         throw new IllegalArgumentException("Could not compare the arguments: "
                 + value1 + ", " + value2);
+    }
+
+    @Deprecated
+    private String format(Object value) {
+        String toReturn = Util.escapeSQL(upperCaseIfCaseInsensitive(String
+                .valueOf(value)));
+        if (value instanceof String) {
+            return "'" + toReturn + "'";
+        }
+        return toReturn;
     }
 }

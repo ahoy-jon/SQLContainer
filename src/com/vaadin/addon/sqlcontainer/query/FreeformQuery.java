@@ -72,6 +72,7 @@ public class FreeformQuery implements QueryDelegate {
             Statement statement = conn.createStatement(
                     ResultSet.TYPE_SCROLL_INSENSITIVE,
                     ResultSet.CONCUR_READ_ONLY);
+
             ResultSet rs = statement.executeQuery(queryString);
             if (rs.last()) {
                 count = rs.getRow();

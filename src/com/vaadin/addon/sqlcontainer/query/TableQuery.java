@@ -3,10 +3,10 @@ package com.vaadin.addon.sqlcontainer.query;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EventObject;
@@ -19,11 +19,13 @@ import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
+import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 
 @SuppressWarnings("serial")
 public class TableQuery implements QueryDelegate,
@@ -106,14 +108,14 @@ public class TableQuery implements QueryDelegate,
      */
     public int getCount() throws SQLException {
         debug("Fetching count...");
-        String query = sqlGenerator.generateSelectQuery(tableName, filters,
-                filterMode, null, 0, 0, "COUNT(*)");
+        StatementHelper sh = sqlGenerator.generateSelectQuery(tableName,
+                filters, filterMode, null, 0, 0, "COUNT(*)");
         boolean shouldCloseTransaction = false;
         if (!transactionOpen) {
             shouldCloseTransaction = true;
             beginTransaction();
         }
-        ResultSet r = executeQuery(query);
+        ResultSet r = executeQuery(sh);
         r.next();
         int count = r.getInt(1);
         if (shouldCloseTransaction) {
@@ -129,7 +131,7 @@ public class TableQuery implements QueryDelegate,
      * int)
      */
     public ResultSet getResults(int offset, int pagelength) throws SQLException {
-        String query;
+        StatementHelper sh;
         /*
          * If no ordering is explicitly set, results will be ordered by the
          * first primary key column.
@@ -137,13 +139,13 @@ public class TableQuery implements QueryDelegate,
         if (orderBys == null || orderBys.isEmpty()) {
             List<OrderBy> ob = new ArrayList<OrderBy>();
             ob.add(new OrderBy(primaryKeyColumns.get(0), true));
-            query = sqlGenerator.generateSelectQuery(tableName, filters,
+            sh = sqlGenerator.generateSelectQuery(tableName, filters,
                     filterMode, ob, offset, pagelength, null);
         } else {
-            query = sqlGenerator.generateSelectQuery(tableName, filters,
+            sh = sqlGenerator.generateSelectQuery(tableName, filters,
                     filterMode, orderBys, offset, pagelength, null);
         }
-        return executeQuery(query);
+        return executeQuery(sh);
     }
 
     /*
@@ -168,7 +170,7 @@ public class TableQuery implements QueryDelegate,
         if (row == null) {
             throw new IllegalArgumentException("Row argument must be non-null.");
         }
-        String query = null;
+        StatementHelper sh;
         if (row.getId() instanceof TemporaryRowId) {
             try {
                 ((ColumnProperty) row.getItemProperty(versionColumn))
@@ -177,8 +179,8 @@ public class TableQuery implements QueryDelegate,
                 throw new IllegalStateException(
                         "Version column not set or does not exist.", e);
             }
-            query = sqlGenerator.generateInsertQuery(tableName, row);
-            return executeUpdateReturnKeys(query, row);
+            sh = sqlGenerator.generateInsertQuery(tableName, row);
+            return executeUpdateReturnKeys(sh, row);
         } else {
             try {
                 ((ColumnProperty) row.getItemProperty(versionColumn))
@@ -187,8 +189,8 @@ public class TableQuery implements QueryDelegate,
                 throw new IllegalStateException(
                         "Version column not set or does not exist.", e);
             }
-            query = sqlGenerator.generateUpdateQuery(tableName, row);
-            return executeUpdate(query);
+            sh = sqlGenerator.generateUpdateQuery(tableName, row);
+            return executeUpdate(sh);
         }
     }
 
@@ -215,19 +217,18 @@ public class TableQuery implements QueryDelegate,
                     "Version column not set or does not exist.", e);
         }
         /* Generate query */
-        String query = sqlGenerator.generateInsertQuery(tableName, row);
-        debug("DB -> " + query);
-        /* Execute the update */
-        Statement statement = activeConnection.createStatement();
-        int result = statement.executeUpdate(query, primaryKeyColumns
-                .toArray(new String[0]));
+        StatementHelper sh = sqlGenerator.generateInsertQuery(tableName, row);
+        PreparedStatement pstmt = activeConnection.prepareStatement(sh
+                .getQueryString(), primaryKeyColumns.toArray(new String[0]));
+        sh.setParameterValuesToStatement(pstmt);
+        debug("DB -> " + sh.getQueryString());
+        int result = pstmt.executeUpdate();
         if (result > 0) {
             /*
              * If affected rows exist, we'll get the new RowId, commit the
              * transaction and return the new RowId.
              */
-            RowId newId = getNewRowId(row, statement.getGeneratedKeys());
-            bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
+            RowId newId = getNewRowId(row, pstmt.getGeneratedKeys());
             commit();
             return newId;
         } else {
@@ -377,17 +378,17 @@ public class TableQuery implements QueryDelegate,
      * @return ResultSet of the query
      * @throws SQLException
      */
-    private ResultSet executeQuery(String query) throws SQLException {
+    private ResultSet executeQuery(StatementHelper sh) throws SQLException {
         Connection c = null;
         if (transactionOpen && activeConnection != null) {
             c = activeConnection;
         } else {
             throw new SQLException("No active transaction!");
         }
-        Statement statement = c.createStatement(
-                ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-        debug("DB -> " + query);
-        return statement.executeQuery(query);
+        PreparedStatement pstmt = c.prepareStatement(sh.getQueryString());
+        sh.setParameterValuesToStatement(pstmt);
+        debug("DB -> " + sh.getQueryString());
+        return pstmt.executeQuery();
     }
 
     /**
@@ -400,7 +401,7 @@ public class TableQuery implements QueryDelegate,
      * @return Number of affected rows
      * @throws SQLException
      */
-    private int executeUpdate(String query) throws SQLException {
+    private int executeUpdate(StatementHelper sh) throws SQLException {
         Connection c = null;
         try {
             if (transactionOpen && activeConnection != null) {
@@ -408,11 +409,10 @@ public class TableQuery implements QueryDelegate,
             } else {
                 c = connectionPool.reserveConnection();
             }
-            Statement statement = c.createStatement(
-                    ResultSet.TYPE_SCROLL_INSENSITIVE,
-                    ResultSet.CONCUR_READ_ONLY);
-            debug("DB -> " + query);
-            return statement.executeUpdate(query);
+            PreparedStatement pstmt = c.prepareStatement(sh.getQueryString());
+            sh.setParameterValuesToStatement(pstmt);
+            debug("DB -> " + sh.getQueryString());
+            return pstmt.executeUpdate();
         } finally {
             if (!transactionOpen) {
                 connectionPool.releaseConnection(c);
@@ -432,7 +432,7 @@ public class TableQuery implements QueryDelegate,
      * @return Number of affected rows
      * @throws SQLException
      */
-    private int executeUpdateReturnKeys(String query, RowItem row)
+    private int executeUpdateReturnKeys(StatementHelper sh, RowItem row)
             throws SQLException {
         Connection c = null;
         try {
@@ -441,12 +441,12 @@ public class TableQuery implements QueryDelegate,
             } else {
                 c = connectionPool.reserveConnection();
             }
-            Statement statement = c.createStatement();
-
-            debug("DB -> " + query);
-            int result = statement.executeUpdate(query, primaryKeyColumns
-                    .toArray(new String[0]));
-            RowId newId = getNewRowId(row, statement.getGeneratedKeys());
+            PreparedStatement pstmt = c.prepareStatement(sh.getQueryString(),
+                    primaryKeyColumns.toArray(new String[0]));
+            sh.setParameterValuesToStatement(pstmt);
+            debug("DB -> " + sh.getQueryString());
+            int result = pstmt.executeUpdate();
+            RowId newId = getNewRowId(row, pstmt.getGeneratedKeys());
             bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
             return result;
         } finally {
@@ -467,6 +467,7 @@ public class TableQuery implements QueryDelegate,
             c = connectionPool.reserveConnection();
             DatabaseMetaData dbmd = c.getMetaData();
             if (dbmd != null) {
+                tableName = Util.escapeSQL(tableName);
                 ResultSet tables = dbmd.getTables(null, null, tableName, null);
                 if (!tables.next()) {
                     tables = dbmd.getTables(null, null,
@@ -582,10 +583,10 @@ public class TableQuery implements QueryDelegate,
         int ix = 0;
         for (String colName : primaryKeyColumns) {
             filtersAndKeys.add(new Filter(colName, ComparisonType.EQUALS,
-                    String.valueOf(keys[ix])));
+                    keys[ix]));
             ix++;
         }
-        String query = sqlGenerator.generateSelectQuery(tableName,
+        StatementHelper sh = sqlGenerator.generateSelectQuery(tableName,
                 filtersAndKeys, orderBys, 0, 0, "*");
 
         boolean shouldCloseTransaction = false;
@@ -594,7 +595,7 @@ public class TableQuery implements QueryDelegate,
             beginTransaction();
         }
         try {
-            ResultSet rs = executeQuery(query);
+            ResultSet rs = executeQuery(sh);
             boolean contains = rs.next();
             rs.close();
             return contains;

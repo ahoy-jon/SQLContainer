@@ -32,10 +32,12 @@ public interface SQLGenerator extends Serializable {
      *            The number of rows to be returned when the query executes
      * @param toSelect
      *            String containing what to select, e.g. "*", "COUNT(*)"
-     * @return a string with the SQL query that will return the wanted results.
+     * @return StatementHelper instance containing the query string for a
+     *         PreparedStatement and the values required for the parameters
      */
-    public String generateSelectQuery(String tableName, List<Filter> filters,
-            List<OrderBy> orderBys, int offset, int pagelength, String toSelect);
+    public StatementHelper generateSelectQuery(String tableName,
+            List<Filter> filters, List<OrderBy> orderBys, int offset,
+            int pagelength, String toSelect);
 
     /**
      * Generates a SELECT query with the provided parameters.
@@ -54,11 +56,12 @@ public interface SQLGenerator extends Serializable {
      *            The number of rows to be returned when the query executes
      * @param toSelect
      *            String containing what to select, e.g. "*", "COUNT(*)"
-     * @return a string with the SQL query that will return the wanted results.
+     * @return StatementHelper instance containing the query string for a
+     *         PreparedStatement and the values required for the parameters
      */
-    public String generateSelectQuery(String tableName, List<Filter> filters,
-            FilteringMode filterMode, List<OrderBy> orderBys, int offset,
-            int pagelength, String toSelect);
+    public StatementHelper generateSelectQuery(String tableName,
+            List<Filter> filters, FilteringMode filterMode,
+            List<OrderBy> orderBys, int offset, int pagelength, String toSelect);
 
     /**
      * Generates an UPDATE query with the provided parameters.
@@ -67,10 +70,10 @@ public interface SQLGenerator extends Serializable {
      *            Name of the table queried
      * @param item
      *            RowItem containing the updated values update.
-     * @return a string with the SQL query that will update a specific row's
-     *         values.
+     * @return StatementHelper instance containing the query string for a
+     *         PreparedStatement and the values required for the parameters
      */
-    public String generateUpdateQuery(String tableName, RowItem item);
+    public StatementHelper generateUpdateQuery(String tableName, RowItem item);
 
     /**
      * Generates an INSERT query for inserting a new row with the provided
@@ -80,10 +83,10 @@ public interface SQLGenerator extends Serializable {
      *            Name of the table queried
      * @param item
      *            New RowItem to be inserted into the database.
-     * @return a string with the SQL query that will insert a new row with the
-     *         given values.
+     * @return StatementHelper instance containing the query string for a
+     *         PreparedStatement and the values required for the parameters
      */
-    public String generateInsertQuery(String tableName, RowItem item);
+    public StatementHelper generateInsertQuery(String tableName, RowItem item);
 
     /**
      * Generates a DELETE query for deleting data related to the given RowItem
@@ -93,7 +96,8 @@ public interface SQLGenerator extends Serializable {
      *            Name of the table queried
      * @param item
      *            Item to be deleted from the database
-     * @return a string with the SQL query that will delete the given row.
+     * @return StatementHelper instance containing the query string for a
+     *         PreparedStatement and the values required for the parameters
      */
-    public String generateDeleteQuery(String tableName, RowItem item);
+    public StatementHelper generateDeleteQuery(String tableName, RowItem item);
 }
