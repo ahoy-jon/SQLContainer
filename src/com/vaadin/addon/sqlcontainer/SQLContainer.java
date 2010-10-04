@@ -1,6 +1,5 @@
 package com.vaadin.addon.sqlcontainer;
 
-import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.sql.ResultSet;
@@ -23,6 +22,7 @@ import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeListener;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
@@ -87,8 +87,8 @@ public class SQLContainer implements Container, Container.Filterable,
     private List<RowItem> addedItems = new ArrayList<RowItem>();
     private List<RowItem> modifiedItems = new ArrayList<RowItem>();
 
-    /* Enable to output possible stack traces and diagnostic information */
-    private boolean debugMode;
+    /* List of references to other SQLContainers */
+    private Map<SQLContainer, Reference> references = new HashMap<SQLContainer, Reference>();
 
     /*
      * SQLContainer instance reference list and dead reference queue. Used for
@@ -98,6 +98,9 @@ public class SQLContainer implements Container, Container.Filterable,
     private boolean notificationsEnabled;
     private static List<WeakReference<SQLContainer>> allInstances = new ArrayList<WeakReference<SQLContainer>>();
     private static ReferenceQueue<SQLContainer> deadInstances = new ReferenceQueue<SQLContainer>();
+
+    /* Enable to output possible stack traces and diagnostic information */
+    private boolean debugMode;
 
     /**
      * Prevent instantiation without a QueryDelegate.
@@ -192,6 +195,9 @@ public class SQLContainer implements Container, Container.Filterable,
      * @see com.vaadin.data.Container#containsId(java.lang.Object)
      */
     public boolean containsId(Object itemId) {
+        if (itemId == null) {
+            return false;
+        }
         if (cachedItems.containsKey(itemId)) {
             return true;
         } else {
@@ -777,12 +783,15 @@ public class SQLContainer implements Container, Container.Filterable,
      * Sets the page length used in lazy fetching of items from the data source.
      * Also resets the cache size to match the new page length.
      * 
+     * As a side effect the container will be refreshed.
+     * 
      * @param pageLength
      *            new page length
      */
     public void setPageLength(int pageLength) {
         this.pageLength = pageLength > 0 ? pageLength : DEFAULT_PAGE_LENGTH;
         cachedItems.setCacheLimit(CACHE_RATIO * getPageLength());
+        refresh();
     }
 
     /**
@@ -1430,7 +1439,8 @@ public class SQLContainer implements Container, Container.Filterable,
      * Removes dead references from instance list
      */
     private static void removeDeadReferences() {
-        Reference<? extends SQLContainer> dead = deadInstances.poll();
+        java.lang.ref.Reference<? extends SQLContainer> dead = deadInstances
+                .poll();
         while (dead != null) {
             allInstances.remove(dead);
             dead = deadInstances.poll();
@@ -1471,6 +1481,194 @@ public class SQLContainer implements Container, Container.Filterable,
                     wrc.refresh();
                 }
             }
+        }
+    }
+
+    /******************************************/
+    /** Referencing mechanism implementation **/
+    /******************************************/
+
+    /**
+     * Adds a new reference to the given SQLContainer. In addition to the
+     * container you must provide the column (property) names used for the
+     * reference in both this and the referenced SQLContainer.
+     * 
+     * Note that multiple references pointing to the same SQLContainer are not
+     * supported.
+     * 
+     * @param refdCont
+     *            Target SQLContainer of the new reference
+     * @param refingCol
+     *            Column (property) name in this container storing the (foreign
+     *            key) reference
+     * @param refdCol
+     *            Column (property) name in the referenced container storing the
+     *            referenced key
+     */
+    public void addReference(SQLContainer refdCont, String refingCol,
+            String refdCol) {
+        if (refdCont == null) {
+            throw new IllegalArgumentException(
+                    "Referenced SQLContainer can not be null.");
+        }
+        if (!getContainerPropertyIds().contains(refingCol)) {
+            throw new IllegalArgumentException(
+                    "Given referencing column name is invalid."
+                            + " Please ensure that this container"
+                            + " contains a property ID named: " + refingCol);
+        }
+        if (!refdCont.getContainerPropertyIds().contains(refdCol)) {
+            throw new IllegalArgumentException(
+                    "Given referenced column name is invalid."
+                            + " Please ensure that the referenced container"
+                            + " contains a property ID named: " + refdCol);
+        }
+        if (references.keySet().contains(refdCont)) {
+            throw new IllegalArgumentException(
+                    "An SQLContainer instance can only be referenced once.");
+        }
+        references.put(refdCont, new Reference(refdCont, refingCol, refdCol));
+    }
+
+    /**
+     * Removes the reference pointing to the given SQLContainer.
+     * 
+     * @param refdCont
+     *            Target SQLContainer of the reference
+     * @return true if successful, false if the reference did not exist
+     */
+    public boolean removeReference(SQLContainer refdCont) {
+        if (refdCont == null) {
+            throw new IllegalArgumentException(
+                    "Referenced SQLContainer can not be null.");
+        }
+        return references.remove(refdCont) == null ? false : true;
+    }
+
+    /**
+     * Sets the referenced item. The referencing column of the item in this
+     * container is updated accordingly.
+     * 
+     * @param itemId
+     *            Item Id of the reference source (from this container)
+     * @param refdItemId
+     *            Item Id of the reference target (from referenced container)
+     * @param refdCont
+     *            Target SQLContainer of the reference
+     * @return true if the referenced item was successfully set, false on
+     *         failure
+     */
+    public boolean setReferencedItem(Object itemId, Object refdItemId,
+            SQLContainer refdCont) {
+        if (refdCont == null) {
+            throw new IllegalArgumentException(
+                    "Referenced SQLContainer can not be null.");
+        }
+        Reference r = references.get(refdCont);
+        if (r == null) {
+            throw new IllegalArgumentException(
+                    "Reference to the given SQLContainer not defined.");
+        }
+        try {
+            getContainerProperty(itemId, r.getReferencingColumn()).setValue(
+                    refdCont.getContainerProperty(refdItemId, r
+                            .getReferencedColumn()));
+            return true;
+        } catch (Exception e) {
+            debug(e, "Setting referenced item failed.");
+            return false;
+        }
+    }
+
+    /**
+     * Fetches the Item Id of the referenced item from the target SQLContainer.
+     * 
+     * @param itemId
+     *            Item Id of the reference source (from this container)
+     * @param refdCont
+     *            Target SQLContainer of the reference
+     * @return Item Id of the referenced item, or null if not found
+     */
+    public Object getReferencedItemId(Object itemId, SQLContainer refdCont) {
+        if (refdCont == null) {
+            throw new IllegalArgumentException(
+                    "Referenced SQLContainer can not be null.");
+        }
+        Reference r = references.get(refdCont);
+        if (r == null) {
+            throw new IllegalArgumentException(
+                    "Reference to the given SQLContainer not defined.");
+        }
+        Object refKey = getContainerProperty(itemId, r.getReferencingColumn())
+                .getValue();
+
+        refdCont.removeAllContainerFilters();
+        refdCont.addFilter(new Filter(r.getReferencedColumn(),
+                ComparisonType.EQUALS, refKey));
+        Object toReturn = refdCont.firstItemId();
+        refdCont.removeAllContainerFilters();
+        return toReturn;
+    }
+
+    /**
+     * Fetches the referenced item from the target SQLContainer.
+     * 
+     * @param itemId
+     *            Item Id of the reference source (from this container)
+     * @param refdCont
+     *            Target SQLContainer of the reference
+     * @return The referenced item, or null if not found
+     */
+    public Item getReferencedItem(Object itemId, SQLContainer refdCont) {
+        return refdCont.getItem(getReferencedItemId(itemId, refdCont));
+    }
+
+    /**
+     * The reference class represents a simple [usually foreign key] reference
+     * to another SQLContainer. Actual foreign key reference in the database is
+     * not required, but it is recommended to make sure that certain constraints
+     * are followed.
+     */
+    class Reference {
+
+        /**
+         * The SQLContainer that this reference points to.
+         */
+        private SQLContainer referencedContainer;
+
+        /**
+         * The column ID/name in the referencing SQLContainer that contains the
+         * key used for the reference.
+         */
+        private String referencingColumn;
+
+        /**
+         * The column ID/name in the referenced SQLContainer that contains the
+         * key used for the reference.
+         */
+        private String referencedColumn;
+
+        /**
+         * Constructs a new reference to be used within the SQLContainer to
+         * reference another SQLContainer.
+         */
+        Reference(SQLContainer referencedContainer, String referencingColumn,
+                String referencedColumn) {
+            this.referencedContainer = referencedContainer;
+            this.referencingColumn = referencingColumn;
+            this.referencedColumn = referencedColumn;
+        }
+
+        SQLContainer getReferencedContainer() {
+            return referencedContainer;
+        }
+
+        String getReferencingColumn() {
+            return referencingColumn;
+        }
+
+        String getReferencedColumn() {
+            return referencedColumn;
         }
     }
 }
