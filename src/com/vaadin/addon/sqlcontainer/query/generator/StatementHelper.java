@@ -54,75 +54,29 @@ public class StatementHelper {
     public void setParameterValuesToStatement(PreparedStatement pstmt)
             throws SQLException {
         for (int i = 0; i < parameters.size(); i++) {
-            if (dataTypes.get(i) == null) {
+            if (parameters.get(i) == null) {
                 handleNullValue(i, pstmt);
             } else {
                 pstmt.setObject(i + 1, parameters.get(i));
             }
-
-            // } else if (parameters.get(i) instanceof BigDecimal) {
-            // pstmt.setBigDecimal(i + 1, (BigDecimal) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Boolean) {
-            // pstmt.setBoolean(i + 1, (Boolean) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Byte) {
-            // pstmt.setByte(i + 1, (Byte) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Date) {
-            // pstmt.setDate(i + 1, (Date) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Double) {
-            // pstmt.setDouble(i + 1, (Double) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Float) {
-            // pstmt.setFloat(i + 1, (Float) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Integer) {
-            // pstmt.setInt(i + 1, (Integer) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Long) {
-            // pstmt.setLong(i + 1, (Long) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Short) {
-            // pstmt.setShort(i + 1, (Short) parameters.get(i));
-            // } else if (parameters.get(i) instanceof String) {
-            // pstmt.setString(i + 1, (String) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Time) {
-            // pstmt.setTime(i + 1, (Time) parameters.get(i));
-            // } else if (parameters.get(i) instanceof Timestamp) {
-            // pstmt.setTimestamp(i + 1, (Timestamp) parameters.get(i));
-            // } else {
-            // throw new SQLException(
-            // "Data type not supported by SQLContainer: "
-            // + parameters.get(i).getClass().toString());
         }
 
         /*
-         * The following setX methods of PreparedStatement are NOT used here ->
-         * these data types are not supported.
+         * The following list contains the data types supported by
+         * PreparedStatement but not supported by SQLContainer:
          * 
-         * setNCharacterStream(int parameterIndex, Reader value)
+         * [The list is provided as PreparedStatement method signatures]
          * 
-         * setNClob(int parameterIndex, NClob value)
-         * 
-         * setNString(int parameterIndex, String value)
-         * 
-         * setObject(int parameterIndex, Object x)
-         * 
-         * setRef(int parameterIndex, Ref x)
-         * 
-         * setRowId(int parameterIndex, RowId x)
-         * 
-         * setSQLXML(int parameterIndex, SQLXML xmlObject)
-         * 
-         * setBytes(int parameterIndex, byte[] x)
-         * 
-         * setCharacterStream(int parameterIndex, Reader reader)
-         * 
-         * setClob(int parameterIndex, Clob x)
-         * 
-         * setURL(int parameterIndex, URL x)
-         * 
-         * setArray(int parameterIndex, Array x)
-         * 
-         * setAsciiStream(int parameterIndex, InputStream x)
-         * 
-         * setBinaryStream(int parameterIndex, InputStream x)
-         * 
-         * setBlob(int parameterIndex, Blob x)
+         * setNCharacterStream(int parameterIndex, Reader value) setNClob(int
+         * parameterIndex, NClob value) setNString(int parameterIndex, String
+         * value) setObject(int parameterIndex, Object x) setRef(int
+         * parameterIndex, Ref x) setRowId(int parameterIndex, RowId x)
+         * setSQLXML(int parameterIndex, SQLXML xmlObject) setBytes(int
+         * parameterIndex, byte[] x) setCharacterStream(int parameterIndex,
+         * Reader reader) setClob(int parameterIndex, Clob x) setURL(int
+         * parameterIndex, URL x) setArray(int parameterIndex, Array x)
+         * setAsciiStream(int parameterIndex, InputStream x) setBinaryStream(int
+         * parameterIndex, InputStream x) setBlob(int parameterIndex, Blob x)
          */
     }
 
