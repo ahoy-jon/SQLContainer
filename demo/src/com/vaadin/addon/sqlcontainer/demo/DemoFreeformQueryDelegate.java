@@ -10,24 +10,39 @@ import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
-import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
+import com.vaadin.addon.sqlcontainer.query.FreeformStatementDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
+import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 
-public class DemoFreeformQueryDelegate implements FreeformQueryDelegate {
+@SuppressWarnings("serial")
+public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
 
     private List<Filter> filters;
     private List<OrderBy> orderBys;
 
+    @Deprecated
     public String getQueryString(int offset, int limit)
             throws UnsupportedOperationException {
-        StringBuffer query = new StringBuffer("SELECT * FROM PEOPLE");
-        query.append(getFiltersString());
+        throw new UnsupportedOperationException("Use getQueryStatement method.");
+    }
+
+    public StatementHelper getQueryStatement(int offset, int limit)
+            throws UnsupportedOperationException {
+        StatementHelper sh = new StatementHelper();
+        StringBuffer query = new StringBuffer("SELECT * FROM PEOPLE ");
+        if (filters != null) {
+            for (Filter f : filters) {
+                generateFilter(query, f, filters.indexOf(f) == 0,
+                        FilteringMode.FILTERING_MODE_INCLUSIVE, sh);
+            }
+        }
         query.append(getOrderByString());
         if (offset != 0 || limit != 0) {
             query.append(" LIMIT ").append(limit);
             query.append(" OFFSET ").append(offset);
         }
-        return query.toString();
+        sh.setQueryString(query.toString());
+        return sh;
     }
 
     private String getOrderByString() {
@@ -50,28 +65,29 @@ public class DemoFreeformQueryDelegate implements FreeformQueryDelegate {
         return orderBuffer.toString();
     }
 
-    private String getFiltersString() {
-        StringBuffer filterBuffer = new StringBuffer("");
-        if (filters != null && !filters.isEmpty()) {
-            Filter lastFilter = filters.get(filters.size() - 1);
-            filterBuffer.append(" WHERE ");
-            for (Filter filter : filters) {
-                filterBuffer.append(filter.toWhereString());
-                if (filter != lastFilter) {
-                    filterBuffer.append(" AND ");
-                }
-            }
-        }
-        return filterBuffer.toString();
+    @Deprecated
+    public String getCountQuery() throws UnsupportedOperationException {
+        throw new UnsupportedOperationException("Use getCountStatement method.");
     }
 
-    public String getCountQuery() throws UnsupportedOperationException {
-        return "SELECT COUNT(*) FROM PEOPLE" + getFiltersString();
+    public StatementHelper getCountStatement()
+            throws UnsupportedOperationException {
+        StatementHelper sh = new StatementHelper();
+        StringBuffer query = new StringBuffer("SELECT COUNT(*) FROM PEOPLE ");
+        if (filters != null) {
+            for (Filter f : filters) {
+                generateFilter(query, f, filters.indexOf(f) == 0,
+                        FilteringMode.FILTERING_MODE_INCLUSIVE, sh);
+            }
+        }
+        sh.setQueryString(query.toString());
+        return sh;
     }
 
     public void setFilters(List<Filter> filters, FilteringMode filteringMode)
             throws UnsupportedOperationException {
-        // TODO: Implement ?
+        throw new UnsupportedOperationException(
+                "Only default filtering mode is supported.");
     }
 
     public void setFilters(List<Filter> filters)
@@ -142,9 +158,55 @@ public class DemoFreeformQueryDelegate implements FreeformQueryDelegate {
         return rowsChanged == 1;
     }
 
+    @Deprecated
     public String getContainsRowQueryString(Object... keys)
             throws UnsupportedOperationException {
-        return "SELECT * FROM people WHERE ID = "
-                + Util.escapeSQL(String.valueOf(keys[0]));
+        throw new UnsupportedOperationException(
+                "Please use getContainsRowQueryStatement method.");
+        // return "SELECT * FROM people WHERE ID = "
+        // + Util.escapeSQL(String.valueOf(keys[0]));
+    }
+
+    public StatementHelper getContainsRowQueryStatement(Object... keys)
+            throws UnsupportedOperationException {
+        StatementHelper sh = new StatementHelper();
+        StringBuffer query = new StringBuffer(
+                "SELECT * FROM people WHERE ID = ?");
+        sh.addParameterValue(keys[0]);
+        sh.setQueryString(query.toString());
+        return sh;
+    }
+
+    protected StringBuffer generateFilter(StringBuffer sb, Filter f,
+            boolean firstFilter, FilteringMode filterMode, StatementHelper sh) {
+        if (f.getValue() == null) {
+            return sb;
+        }
+        if (Filter.ComparisonType.BETWEEN.equals(f.getComparisonType())) {
+            if (f.getValue() != null && f.getSecondValue() != null) {
+                sh.addParameterValue(f.getValue());
+                sh.addParameterValue(f.getSecondValue());
+            } else {
+                return sb;
+            }
+        } else {
+            if (f.getValue() != null) {
+                sh.addParameterValue(f.getPreparedStatementValue());
+            } else {
+                return sb;
+            }
+        }
+        if (firstFilter) {
+            sb.append(" WHERE ");
+        } else {
+            if (FilteringMode.FILTERING_MODE_INCLUSIVE.equals(filterMode)) {
+                sb.append(" AND ");
+            } else if (FilteringMode.FILTERING_MODE_EXCLUSIVE
+                    .equals(filterMode)) {
+                sb.append(" OR ");
+            }
+        }
+        sb.append(f.toPreparedStatementString());
+        return sb;
     }
 }
