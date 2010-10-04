@@ -84,10 +84,13 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
         return sh;
     }
 
+    /**
+     * Note: Only default filtering mode supported. FilteringMode parameter is
+     * ignored.
+     */
     public void setFilters(List<Filter> filters, FilteringMode filteringMode)
             throws UnsupportedOperationException {
-        throw new UnsupportedOperationException(
-                "Only default filtering mode is supported.");
+        setFilters(filters);
     }
 
     public void setFilters(List<Filter> filters)
