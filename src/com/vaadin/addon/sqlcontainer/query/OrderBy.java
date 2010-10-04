@@ -1,5 +1,7 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.io.Serializable;
+
 /**
  * OrderBy represents a sorting rule to be applied to a query made by the
  * SQLContainer's QueryDelegate.
@@ -7,7 +9,7 @@ package com.vaadin.addon.sqlcontainer.query;
  * The sorting rule is simple and contains only the affected column's name and
  * the direction of the sort.
  */
-public class OrderBy {
+public class OrderBy implements Serializable {
     private String column;
     private boolean isAscending;
 

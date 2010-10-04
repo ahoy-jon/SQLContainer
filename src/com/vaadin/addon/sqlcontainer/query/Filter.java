@@ -1,5 +1,7 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.io.Serializable;
+
 import com.vaadin.addon.sqlcontainer.Util;
 
 /**
@@ -9,7 +11,7 @@ import com.vaadin.addon.sqlcontainer.Util;
  * Filter adds a few features on top of what the default sorting methods of
  * containers offer.
  */
-public class Filter {
+public class Filter implements Serializable {
 
     public enum ComparisonType {
         EQUALS, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, STARTS_WITH, ENDS_WITH, CONTAINS, BETWEEN;
