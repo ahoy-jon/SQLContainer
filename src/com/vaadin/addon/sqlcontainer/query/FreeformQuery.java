@@ -229,13 +229,7 @@ public class FreeformQuery implements QueryDelegate {
      */
     public void setFilters(List<Filter> filters)
             throws UnsupportedOperationException {
-        if (delegate != null) {
-            filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
-            delegate.setFilters(filters);
-        } else if (filters != null) {
-            throw new UnsupportedOperationException(
-                    "FreeFormQueryDelegate not set!");
-        }
+        this.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
     }
 
     public void setOrderBy(List<OrderBy> orderBys)
