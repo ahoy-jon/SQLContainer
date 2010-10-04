@@ -1,5 +1,6 @@
 package com.vaadin.addon.sqlcontainer;
 
+import java.io.Serializable;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.sql.ResultSet;
@@ -1629,7 +1630,8 @@ public class SQLContainer implements Container, Container.Filterable,
      * not required, but it is recommended to make sure that certain constraints
      * are followed.
      */
-    class Reference {
+    @SuppressWarnings("serial")
+    class Reference implements Serializable {
 
         /**
          * The SQLContainer that this reference points to.
