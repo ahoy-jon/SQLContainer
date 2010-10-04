@@ -1,12 +1,13 @@
 package com.vaadin.addon.sqlcontainer.query;
 
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
 
-public interface FreeformQueryDelegate {
+public interface FreeformQueryDelegate extends Serializable {
     /**
      * Should return the SQL query string to be performed. This method is
      * responsible for gluing together the select query from the filters and the
@@ -17,7 +18,10 @@ public interface FreeformQueryDelegate {
      * @param pagelength
      *            the number of records (rows) to fetch. 0 means all records
      *            starting from offset.
+     * @deprecated Implement {@link FreeformStatementDelegate} instead of
+     *             {@link FreeformQueryDelegate}
      */
+    @Deprecated
     public String getQueryString(int offset, int limit)
             throws UnsupportedOperationException;
 
@@ -28,7 +32,10 @@ public interface FreeformQueryDelegate {
      * 
      * @return row count
      * @throws SQLException
+     * @deprecated Implement {@link FreeformStatementDelegate} instead of
+     *             {@link FreeformQueryDelegate}
      */
+    @Deprecated
     public String getCountQuery() throws UnsupportedOperationException;
 
     /**
@@ -116,7 +123,10 @@ public interface FreeformQueryDelegate {
      *            the values of the primary keys
      * @throws UnsupportedOperationException
      *             to use the default logic in FreeformQuery
+     * @deprecated Implement {@link FreeformStatementDelegate} instead of
+     *             {@link FreeformQueryDelegate}
      */
+    @Deprecated
     public String getContainsRowQueryString(Object... keys)
             throws UnsupportedOperationException;
 }

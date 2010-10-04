@@ -2,6 +2,7 @@ package com.vaadin.addon.sqlcontainer.query;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -11,6 +12,7 @@ import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
+import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 
 @SuppressWarnings("serial")
 public class FreeformQuery implements QueryDelegate {
@@ -85,25 +87,48 @@ public class FreeformQuery implements QueryDelegate {
         return count;
     }
 
+    @SuppressWarnings("deprecation")
     private int countByDelegate() throws SQLException {
         int count = -1;
-        if (delegate != null) {
+        if (delegate == null) {
+            return count;
+        }
+        /* First try using prepared statement */
+        if (delegate instanceof FreeformStatementDelegate) {
             try {
-                String countQuery = delegate.getCountQuery();
-                if (countQuery != null) {
-                    Connection conn = getConnection();
-                    Statement statement = conn.createStatement();
-                    ResultSet rs = statement.executeQuery(countQuery);
-                    rs.next();
-                    count = rs.getInt(1);
-                    rs.close();
-                    releaseConnection(conn);
-                    return count;
-                }
+                StatementHelper sh = ((FreeformStatementDelegate) delegate)
+                        .getCountStatement();
+                Connection c = getConnection();
+                PreparedStatement pstmt = c.prepareStatement(sh
+                        .getQueryString());
+                sh.setParameterValuesToStatement(pstmt);
+                ResultSet rs = pstmt.executeQuery();
+                rs.next();
+                count = rs.getInt(1);
+                rs.close();
+                pstmt.close();
+                releaseConnection(c);
+                return count;
             } catch (UnsupportedOperationException e) {
-                // No go, the count query wasn't implemented.
-                // Do it all below...
+                // Count statement generation not supported
             }
+        }
+        /* Try using regular statement */
+        try {
+            String countQuery = delegate.getCountQuery();
+            if (countQuery != null) {
+                Connection conn = getConnection();
+                Statement statement = conn.createStatement();
+                ResultSet rs = statement.executeQuery(countQuery);
+                rs.next();
+                count = rs.getInt(1);
+                rs.close();
+                statement.close();
+                releaseConnection(conn);
+                return count;
+            }
+        } catch (UnsupportedOperationException e) {
+            // Count query generation not supported
         }
         return count;
     }
@@ -127,26 +152,54 @@ public class FreeformQuery implements QueryDelegate {
      * @see com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate#getQueryString(int,
      *      int) {@inheritDoc}
      */
+    @SuppressWarnings("deprecation")
     public ResultSet getResults(int offset, int pagelength) throws SQLException {
+        if (activeConnection == null) {
+            throw new SQLException("No active transaction!");
+        }
         String query = queryString;
         if (delegate != null) {
+            /* First try using prepared statement */
+            if (delegate instanceof FreeformStatementDelegate) {
+                try {
+                    StatementHelper sh = ((FreeformStatementDelegate) delegate)
+                            .getQueryStatement(offset, pagelength);
+                    PreparedStatement pstmt = activeConnection
+                            .prepareStatement(sh.getQueryString());
+                    sh.setParameterValuesToStatement(pstmt);
+                    return pstmt.executeQuery();
+                } catch (UnsupportedOperationException e) {
+                    // Statement generation not supported, continue...
+                }
+            }
             try {
                 query = delegate.getQueryString(offset, pagelength);
             } catch (UnsupportedOperationException e) {
                 // This is fine, we'll just use the default queryString.
             }
         }
-        if (activeConnection == null) {
-            throw new SQLException("No active transaction!");
-        }
         Statement statement = activeConnection.createStatement();
         ResultSet rs = statement.executeQuery(query);
         return rs;
     }
 
+    @SuppressWarnings("deprecation")
     public boolean implementationRespectsPagingLimits() {
         if (delegate == null) {
             return false;
+        }
+        /* First try using prepared statement */
+        if (delegate instanceof FreeformStatementDelegate) {
+            try {
+                StatementHelper sh = ((FreeformStatementDelegate) delegate)
+                        .getCountStatement();
+                if (sh != null && sh.getQueryString() != null
+                        && sh.getQueryString().length() > 0) {
+                    return true;
+                }
+            } catch (UnsupportedOperationException e) {
+                // Statement generation not supported, continue...
+            }
         }
         try {
             String queryString = delegate.getQueryString(0, 50);
@@ -176,7 +229,13 @@ public class FreeformQuery implements QueryDelegate {
      */
     public void setFilters(List<Filter> filters)
             throws UnsupportedOperationException {
-        this.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        if (delegate != null) {
+            filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
+            delegate.setFilters(filters);
+        } else if (filters != null) {
+            throw new UnsupportedOperationException(
+                    "FreeFormQueryDelegate not set!");
+        }
     }
 
     public void setOrderBy(List<OrderBy> orderBys)
@@ -272,9 +331,29 @@ public class FreeformQuery implements QueryDelegate {
      * 
      *      {@inheritDoc}
      */
+    @SuppressWarnings("deprecation")
     public boolean containsRowWithKey(Object... keys) throws SQLException {
         String query = null;
+        boolean contains = false;
         if (delegate != null) {
+            if (delegate instanceof FreeformStatementDelegate) {
+                try {
+                    StatementHelper sh = ((FreeformStatementDelegate) delegate)
+                            .getContainsRowQueryStatement(keys);
+                    Connection c = getConnection();
+                    PreparedStatement pstmt = c.prepareStatement(sh
+                            .getQueryString());
+                    sh.setParameterValuesToStatement(pstmt);
+                    ResultSet rs = pstmt.executeQuery();
+                    contains = rs.next();
+                    rs.close();
+                    pstmt.close();
+                    releaseConnection(c);
+                    return contains;
+                } catch (UnsupportedOperationException e) {
+                    // Statement generation not supported, continue...
+                }
+            }
             try {
                 query = delegate.getContainsRowQueryString(keys);
             } catch (UnsupportedOperationException e) {
@@ -283,8 +362,6 @@ public class FreeformQuery implements QueryDelegate {
         } else {
             query = modifyWhereClause(keys);
         }
-
-        boolean contains = false;
         Connection conn = getConnection();
         try {
             Statement statement = conn.createStatement();
