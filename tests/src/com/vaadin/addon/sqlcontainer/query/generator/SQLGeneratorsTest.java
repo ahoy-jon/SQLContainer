@@ -162,7 +162,6 @@ public class SQLGeneratorsTest {
         StatementHelper sh = sg.generateDeleteQuery("people",
                 (RowItem) container.getItem(container.getItemIds().iterator()
                         .next()));
-        int id = offset;
         Assert.assertEquals(sh.getQueryString(),
                 "DELETE FROM people WHERE \"ID\" = ? AND \"NAME\" = ?");
     }
@@ -187,7 +186,6 @@ public class SQLGeneratorsTest {
         ri.getItemProperty("NAME").setValue("Viljami");
 
         StatementHelper sh = sg.generateUpdateQuery("people", ri);
-        int id = offset;
         Assert.assertEquals(sh.getQueryString(),
                 "UPDATE people SET \"NAME\" = ? WHERE \"ID\" = ?");
     }
