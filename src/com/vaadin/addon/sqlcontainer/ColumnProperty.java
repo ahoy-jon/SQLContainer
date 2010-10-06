@@ -162,7 +162,7 @@ final public class ColumnProperty implements Property {
     public String toString() {
         Object val = getValue();
         if (val == null) {
-            return null;
+            return "";
         }
         return val.toString();
     }
