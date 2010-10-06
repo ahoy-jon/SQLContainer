@@ -82,6 +82,7 @@ public class FreeformQuery implements QueryDelegate {
                 count = 0;
             }
             rs.close();
+            statement.close();
             releaseConnection(conn);
         }
         return count;
