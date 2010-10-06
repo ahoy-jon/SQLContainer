@@ -30,35 +30,35 @@ import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 @SuppressWarnings("serial")
 public class TableQuery implements QueryDelegate,
         QueryDelegate.RowIdChangeNotifier {
-
+    /** Currently set filtering mode */
     private FilteringMode filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
+    /** Table name, primary key column name(s) and version column name */
     private String tableName;
     private List<String> primaryKeyColumns;
     private String versionColumn;
 
+    /** Currently set Filters and OrderBys */
     private List<Filter> filters;
     private List<OrderBy> orderBys;
 
+    /** SQLGenerator instance to use for generating queries */
     private SQLGenerator sqlGenerator;
 
+    /** Fields related to Connection and Transaction handling */
     private JDBCConnectionPool connectionPool;
-
-    /** Transaction handling */
     private transient Connection activeConnection;
     private boolean transactionOpen;
-
-    /** Set to true to output generated SQL Queries to System.out */
-    private boolean debug = false;
 
     /** Row ID change listeners */
     private LinkedList<RowIdChangeListener> rowIdChangeListeners;
     /** Row ID change events, stored until commit() is called */
     private List<RowIdChangeEvent> bufferedEvents = new ArrayList<RowIdChangeEvent>();
 
-    /**
-     * Prevent no-parameters instantiation of TableQuery
-     */
+    /** Set to true to output generated SQL Queries to System.out */
+    private boolean debug = false;
+
+    /** Prevent no-parameters instantiation of TableQuery */
     @SuppressWarnings("unused")
     private TableQuery() {
     }
@@ -626,6 +626,9 @@ public class TableQuery implements QueryDelegate,
         this.debug = debug;
     }
 
+    /**
+     * Custom writeObject to call rollback() if object is serialized.
+     */
     private void writeObject(java.io.ObjectOutputStream out) throws IOException {
         try {
             rollback();
@@ -639,7 +642,6 @@ public class TableQuery implements QueryDelegate,
      */
     public class RowIdChangeEvent extends EventObject implements
             QueryDelegate.RowIdChangeEvent {
-
         private RowId oldId;
         private RowId newId;
 
@@ -658,6 +660,9 @@ public class TableQuery implements QueryDelegate,
         }
     }
 
+    /**
+     * Adds RowIdChangeListener to this query
+     */
     public void addListener(RowIdChangeListener listener) {
         if (rowIdChangeListeners == null) {
             rowIdChangeListeners = new LinkedList<QueryDelegate.RowIdChangeListener>();
@@ -665,6 +670,9 @@ public class TableQuery implements QueryDelegate,
         rowIdChangeListeners.add(listener);
     }
 
+    /**
+     * Removes the given RowIdChangeListener from this query
+     */
     public void removeListener(RowIdChangeListener listener) {
         if (rowIdChangeListeners != null) {
             rowIdChangeListeners.remove(listener);
