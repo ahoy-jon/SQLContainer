@@ -25,10 +25,9 @@ public class OracleGenerator extends DefaultSQLGenerator {
             throw new IllegalArgumentException("Table name must be given.");
         }
         /* Adjust offset and page length parameters to match "row numbers" */
-        if (pagelength > 1) {
-            offset++;
-            pagelength--;
-        }
+        offset = pagelength > 1 ? ++offset : offset;
+        pagelength = pagelength > 1 ? --pagelength : pagelength;
+        toSelect = toSelect == null ? "*" : toSelect;
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer();
 
@@ -50,14 +49,8 @@ public class OracleGenerator extends DefaultSQLGenerator {
 
         /* SELECT without row number constraints */
         if (offset == 0 && pagelength == 0) {
-            query.append("SELECT ");
-            if (toSelect != null) {
-                query.append(toSelect);
-            } else {
-                query.append("*");
-            }
-            query.append(" FROM ");
-            query.append(tableName);
+            query.append("SELECT ").append(toSelect).append(" FROM ").append(
+                    tableName);
             if (filters != null) {
                 for (Filter f : filters) {
                     generateFilter(query, f, filters.indexOf(f) == 0,
@@ -73,16 +66,10 @@ public class OracleGenerator extends DefaultSQLGenerator {
             return sh;
         }
 
-        if (toSelect == null) {
-            query
-                    .append("SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT * FROM ");
-        } else {
-            query
-                    .append("SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT "
-                            + toSelect + " FROM ");
-        }
-        query.append(tableName);
-
+        /* Remaining SELECT cases are handled here */
+        query.append("SELECT * FROM ").append(
+                "(SELECT x.*, ROWNUM AS \"rownum\" FROM (SELECT " + toSelect
+                        + " FROM ").append(tableName);
         if (filters != null) {
             for (Filter f : filters) {
                 generateFilter(query, f, filters.indexOf(f) == 0, filterMode,

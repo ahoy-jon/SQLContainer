@@ -35,15 +35,11 @@ public class DefaultSQLGenerator implements SQLGenerator {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
+        toSelect = toSelect == null ? "*" : toSelect;
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer();
-        if (toSelect == null) {
-            query.append("SELECT * FROM ").append(Util.escapeSQL(tableName));
-        } else {
-            query.append("SELECT " + toSelect + " FROM ").append(
-                    Util.escapeSQL(tableName));
-        }
-
+        query.append("SELECT " + toSelect + " FROM ").append(
+                Util.escapeSQL(tableName));
         if (filters != null) {
             for (Filter f : filters) {
                 generateFilter(query, f, filters.indexOf(f) == 0, filterMode,
@@ -95,29 +91,9 @@ public class DefaultSQLGenerator implements SQLGenerator {
         StringBuffer query = new StringBuffer();
         query.append("UPDATE ").append(tableName).append(" SET");
 
-        /* Generate column<->value map */
-        Map<String, Object> columnToValueMap = new HashMap<String, Object>();
-        Map<String, Object> rowIdentifiers = new HashMap<String, Object>();
-        for (Object id : item.getItemPropertyIds()) {
-            ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
-            /* Prevent "rownum" usage as a column name if MSSQL or ORACLE */
-            if ((this instanceof MSSQLGenerator || this instanceof OracleGenerator)
-                    && cp.getPropertyId().equalsIgnoreCase("rownum")) {
-                continue;
-            }
-            Object value = cp.getValue() == null ? null : cp.getValue();
-            /*
-             * Only include properties whose read-only status can be altered,
-             * and which are not set as version columns. The rest of the columns
-             * are used as identifiers.
-             */
-            if (cp.isReadOnlyChangeAllowed() && !cp.isVersionColumn()) {
-                columnToValueMap.put(cp.getPropertyId(), value);
-            } else {
-                rowIdentifiers.put(cp.getPropertyId(), value);
-            }
-        }
-
+        /* Generate column<->value and rowidentifiers map */
+        Map<String, Object> columnToValueMap = generateColumnToValueMap(item);
+        Map<String, Object> rowIdentifiers = generateRowIdentifiers(item);
         /* Generate columns and values to update */
         boolean first = true;
         for (String column : columnToValueMap.keySet()) {
@@ -130,7 +106,6 @@ public class DefaultSQLGenerator implements SQLGenerator {
                     .getItemProperty(column).getType());
             first = false;
         }
-
         /* Generate identifiers for the row to be updated */
         first = true;
         for (String column : rowIdentifiers.keySet()) {
@@ -170,21 +145,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         query.append("INSERT INTO ").append(tableName).append(" (");
 
         /* Generate column<->value map */
-        Map<String, Object> columnToValueMap = new HashMap<String, Object>();
-        for (Object id : item.getItemPropertyIds()) {
-            ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
-            /* Prevent "rownum" usage as a column name if MSSQL or ORACLE */
-            if ((this instanceof MSSQLGenerator || this instanceof OracleGenerator)
-                    && cp.getPropertyId().equalsIgnoreCase("rownum")) {
-                continue;
-            }
-            Object value = cp.getValue() == null ? null : cp.getValue();
-            /* Only include properties whose read-only status can be altered */
-            if (cp.isReadOnlyChangeAllowed() && !cp.isVersionColumn()) {
-                columnToValueMap.put(cp.getPropertyId(), value);
-            }
-        }
-
+        Map<String, Object> columnToValueMap = generateColumnToValueMap(item);
         /* Generate column names for insert query */
         boolean first = true;
         for (String column : columnToValueMap.keySet()) {
@@ -209,6 +170,51 @@ public class DefaultSQLGenerator implements SQLGenerator {
         }
         query.append(")");
         sh.setQueryString(query.toString());
+        return sh;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
+     * generateDeleteQuery(java.lang.String,
+     * com.vaadin.addon.sqlcontainer.RowItem)
+     */
+    public StatementHelper generateDeleteQuery(String tableName, RowItem item) {
+        if (tableName == null || tableName.trim().equals("")) {
+            throw new IllegalArgumentException("Table name must be given.");
+        }
+        if (item == null) {
+            throw new IllegalArgumentException(
+                    "Item to be deleted must be given.");
+        }
+        StatementHelper sh = new StatementHelper();
+        StringBuffer query = new StringBuffer();
+        query.append("DELETE FROM ").append(tableName).append(" WHERE");
+        Collection<?> propIds = item.getItemPropertyIds();
+        int count = 1;
+        for (Object p : propIds) {
+            if ((this instanceof MSSQLGenerator || this instanceof OracleGenerator)
+                    && p.toString().equalsIgnoreCase("rownum")) {
+                count++;
+                continue;
+            }
+            if (item.getItemProperty(p).getValue() != null) {
+                query.append(" \"" + p.toString() + "\" = ?");
+                sh.addParameterValue(item.getItemProperty(p).getValue(), item
+                        .getItemProperty(p).getType());
+            }
+            if (count < propIds.size()) {
+                query.append(" AND");
+            }
+            count++;
+        }
+        /* Make sure that the where clause does not end with an AND */
+        if (" AND".equals(query.substring(query.length() - 4))) {
+            sh.setQueryString(query.substring(0, query.length() - 4));
+        } else {
+            sh.setQueryString(query.toString());
+        }
         return sh;
     }
 
@@ -320,48 +326,38 @@ public class DefaultSQLGenerator implements SQLGenerator {
         return sb;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
-     * generateDeleteQuery(java.lang.String,
-     * com.vaadin.addon.sqlcontainer.RowItem)
-     */
-    public StatementHelper generateDeleteQuery(String tableName, RowItem item) {
-        if (tableName == null || tableName.trim().equals("")) {
-            throw new IllegalArgumentException("Table name must be given.");
-        }
-        if (item == null) {
-            throw new IllegalArgumentException(
-                    "Item to be deleted must be given.");
-        }
-        StatementHelper sh = new StatementHelper();
-        StringBuffer query = new StringBuffer();
-        query.append("DELETE FROM ").append(tableName).append(" WHERE");
-        Collection<?> propIds = item.getItemPropertyIds();
-        int count = 1;
-        for (Object p : propIds) {
+    protected Map<String, Object> generateColumnToValueMap(RowItem item) {
+        Map<String, Object> columnToValueMap = new HashMap<String, Object>();
+        for (Object id : item.getItemPropertyIds()) {
+            ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
+            /* Prevent "rownum" usage as a column name if MSSQL or ORACLE */
             if ((this instanceof MSSQLGenerator || this instanceof OracleGenerator)
-                    && p.toString().equalsIgnoreCase("rownum")) {
-                count++;
+                    && cp.getPropertyId().equalsIgnoreCase("rownum")) {
                 continue;
             }
-            if (item.getItemProperty(p).getValue() != null) {
-                query.append(" \"" + p.toString() + "\" = ?");
-                sh.addParameterValue(item.getItemProperty(p).getValue(), item
-                        .getItemProperty(p).getType());
+            Object value = cp.getValue() == null ? null : cp.getValue();
+            /* Only include properties whose read-only status can be altered */
+            if (cp.isReadOnlyChangeAllowed() && !cp.isVersionColumn()) {
+                columnToValueMap.put(cp.getPropertyId(), value);
             }
-            if (count < propIds.size()) {
-                query.append(" AND");
+        }
+        return columnToValueMap;
+    }
+
+    protected Map<String, Object> generateRowIdentifiers(RowItem item) {
+        Map<String, Object> rowIdentifiers = new HashMap<String, Object>();
+        for (Object id : item.getItemPropertyIds()) {
+            ColumnProperty cp = (ColumnProperty) item.getItemProperty(id);
+            /* Prevent "rownum" usage as a column name if MSSQL or ORACLE */
+            if ((this instanceof MSSQLGenerator || this instanceof OracleGenerator)
+                    && cp.getPropertyId().equalsIgnoreCase("rownum")) {
+                continue;
             }
-            count++;
+            Object value = cp.getValue() == null ? null : cp.getValue();
+            if (!cp.isReadOnlyChangeAllowed() || cp.isVersionColumn()) {
+                rowIdentifiers.put(cp.getPropertyId(), value);
+            }
         }
-        /* Make sure that the where clause does not end with an AND */
-        if (" AND".equals(query.substring(query.length() - 4))) {
-            sh.setQueryString(query.substring(0, query.length() - 4));
-        } else {
-            sh.setQueryString(query.toString());
-        }
-        return sh;
+        return rowIdentifiers;
     }
 }

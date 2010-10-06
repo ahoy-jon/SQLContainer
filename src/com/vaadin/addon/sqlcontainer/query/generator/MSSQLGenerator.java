@@ -24,18 +24,17 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
-        if (pagelength > 1) {
-            offset++;
-            pagelength--;
-        }
+        /* Adjust offset and page length parameters to match "row numbers" */
+        offset = pagelength > 1 ? ++offset : offset;
+        pagelength = pagelength > 1 ? --pagelength : pagelength;
+        toSelect = toSelect == null ? "*" : toSelect;
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer();
 
         /* Row count request is handled here */
         if ("COUNT(*)".equalsIgnoreCase(toSelect)) {
-            query
-                    .append("SELECT COUNT(*) AS \"rowcount\" FROM (SELECT * FROM ");
-            query.append(tableName);
+            query.append("SELECT COUNT(*)").append(
+                    " AS \"rowcount\" FROM (SELECT * FROM ").append(tableName);
             if (filters != null && !filters.isEmpty()) {
                 for (Filter f : filters) {
                     generateFilter(query, f, filters.indexOf(f) == 0,
@@ -49,14 +48,8 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
 
         /* SELECT without row number constraints */
         if (offset == 0 && pagelength == 0) {
-            query.append("SELECT ");
-            if (toSelect != null) {
-                query.append(toSelect);
-            } else {
-                query.append("*");
-            }
-            query.append(" FROM ");
-            query.append(tableName);
+            query.append("SELECT ").append(toSelect).append(" FROM ").append(
+                    tableName);
             if (filters != null) {
                 for (Filter f : filters) {
                     generateFilter(query, f, filters.indexOf(f) == 0,
@@ -79,21 +72,13 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
                 generateOrderBy(query, o, orderBys.indexOf(o) == 0);
             }
         }
-        if (toSelect == null) {
-            query.append(") AS rownum, * FROM ");
-        } else {
-            query.append(") AS rownum, " + toSelect + " FROM ");
-        }
-
-        query.append(tableName);
-
+        query.append(") AS rownum, " + toSelect + " FROM ").append(tableName);
         if (filters != null) {
             for (Filter f : filters) {
                 generateFilter(query, f, filters.indexOf(f) == 0, filterMode,
                         sh);
             }
         }
-
         query.append(") AS a WHERE a.rownum BETWEEN ").append(offset).append(
                 " AND ").append(Integer.toString(offset + pagelength));
         sh.setQueryString(query.toString());

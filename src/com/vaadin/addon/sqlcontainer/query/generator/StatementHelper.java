@@ -67,16 +67,33 @@ public class StatementHelper {
          * 
          * [The list is provided as PreparedStatement method signatures]
          * 
-         * setNCharacterStream(int parameterIndex, Reader value) setNClob(int
-         * parameterIndex, NClob value) setNString(int parameterIndex, String
-         * value) setObject(int parameterIndex, Object x) setRef(int
-         * parameterIndex, Ref x) setRowId(int parameterIndex, RowId x)
-         * setSQLXML(int parameterIndex, SQLXML xmlObject) setBytes(int
-         * parameterIndex, byte[] x) setCharacterStream(int parameterIndex,
-         * Reader reader) setClob(int parameterIndex, Clob x) setURL(int
-         * parameterIndex, URL x) setArray(int parameterIndex, Array x)
-         * setAsciiStream(int parameterIndex, InputStream x) setBinaryStream(int
-         * parameterIndex, InputStream x) setBlob(int parameterIndex, Blob x)
+         * setNCharacterStream(int parameterIndex, Reader value)
+         * 
+         * setNClob(int parameterIndex, NClob value)
+         * 
+         * setNString(int parameterIndex, String value)
+         * 
+         * setRef(int parameterIndex, Ref x)
+         * 
+         * setRowId(int parameterIndex, RowId x)
+         * 
+         * setSQLXML(int parameterIndex, SQLXML xmlObject)
+         * 
+         * setBytes(int parameterIndex, byte[] x)
+         * 
+         * setCharacterStream(int parameterIndex, Reader reader)
+         * 
+         * setClob(int parameterIndex, Clob x)
+         * 
+         * setURL(int parameterIndex, URL x)
+         * 
+         * setArray(int parameterIndex, Array x)
+         * 
+         * setAsciiStream(int parameterIndex, InputStream x)
+         * 
+         * setBinaryStream(int parameterIndex, InputStream x)
+         * 
+         * setBlob(int parameterIndex, Blob x)
          */
     }
 
