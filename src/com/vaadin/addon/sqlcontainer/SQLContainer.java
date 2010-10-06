@@ -1,25 +1,21 @@
 package com.vaadin.addon.sqlcontainer;
 
-import java.io.Serializable;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.EventObject;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.query.Filter;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
-import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
@@ -35,72 +31,66 @@ public class SQLContainer implements Container, Container.Filterable,
         Container.Indexed, Container.Sortable, Container.ItemSetChangeNotifier {
     private static final long serialVersionUID = -3863564310693712511L;
 
-    /* Filtering mode setting. Default mode = INCLUSIVE */
-    private FilteringMode currentFilteringMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
-
-    /* Query delegate and related settings */
+    /** Query delegate */
     private QueryDelegate delegate;
+    /** Auto commit mode, default = false */
     private boolean autoCommit = false;
 
-    /* Page length = number of items fetched in one query */
-    public static final int DEFAULT_PAGE_LENGTH = 100;
+    /** Page length = number of items contained in one page */
     private int pageLength = DEFAULT_PAGE_LENGTH;
+    public static final int DEFAULT_PAGE_LENGTH = 100;
 
-    /* Number of items to cache = CACHE_RATIO x pageLength */
+    /** Number of items to cache = CACHE_RATIO x pageLength */
     public static final int CACHE_RATIO = 2;
 
-    /* Item and index caches */
+    /** Item and index caches */
     private Map<Integer, RowId> itemIndexes = new HashMap<Integer, RowId>();
     private CacheMap<RowId, RowItem> cachedItems = new CacheMap<RowId, RowItem>();
 
-    /* Container properties = column names and data types */
+    /** Container properties = column names, data types and statuses */
     private List<String> propertyIds = new ArrayList<String>();
     private Map<String, Class<?>> propertyTypes = new HashMap<String, Class<?>>();
     private Map<String, Boolean> propertyReadOnly = new HashMap<String, Boolean>();
     private Map<String, Boolean> propertyNullable = new HashMap<String, Boolean>();
 
-    /* Filters (WHERE) and sorters (ORDER BY) */
+    /** Filters (WHERE) and sorters (ORDER BY) */
     private List<Filter> filters = new ArrayList<Filter>();
     private List<OrderBy> sorters = new ArrayList<OrderBy>();
+    /** Filtering mode setting. Default mode = FILTERING_MODE_INCLUSIVE */
+    private FilteringMode currentFilteringMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
-    /*
-     * Size = total number of items available in the data source using the
-     * current query, filters and sorters.
+    /**
+     * Total number of items available in the data source using the current
+     * query, filters and sorters.
      */
     private int size;
 
-    /*
-     * Do not update size from data source if it has been updated in the last n
-     * milliseconds
+    /**
+     * Size updating logic. Do not update size from data source if it has been
+     * updated in the last sizeValidMilliSeconds milliseconds.
      */
     private final int sizeValidMilliSeconds = 10000;
     private boolean sizeDirty = true;
     private Date sizeUpdated = new Date();
 
-    /* Currently fetched page number */
+    /** Starting row number of the currently fetched page */
     private int currentOffset;
 
-    /* Listeners */
+    /** ItemSetChangeListeners */
     private LinkedList<Container.ItemSetChangeListener> itemSetChangeListeners;
 
-    /* Temporary storage for items to be removed and added */
+    /** Temporary storage for modified items and items to be removed and added */
     private Map<RowId, RowItem> removedItems = new HashMap<RowId, RowItem>();
     private List<RowItem> addedItems = new ArrayList<RowItem>();
     private List<RowItem> modifiedItems = new ArrayList<RowItem>();
 
-    /* List of references to other SQLContainers */
+    /** List of references to other SQLContainers */
     private Map<SQLContainer, Reference> references = new HashMap<SQLContainer, Reference>();
 
-    /*
-     * SQLContainer instance reference list and dead reference queue. Used for
-     * the cache flush notification feature. Also a switch for whether the
-     * notification system is enabled or not. Disabled by default.
-     */
+    /** Cache flush notification system enabled. Disabled by default. */
     private boolean notificationsEnabled;
-    private static List<WeakReference<SQLContainer>> allInstances = new ArrayList<WeakReference<SQLContainer>>();
-    private static ReferenceQueue<SQLContainer> deadInstances = new ReferenceQueue<SQLContainer>();
 
-    /* Enable to output possible stack traces and diagnostic information */
+    /** Enable to output possible stack traces and diagnostic information */
     private boolean debugMode;
 
     /**
@@ -154,11 +144,8 @@ public class SQLContainer implements Container, Container.Filterable,
         }
         RowItem newRowItem = new RowItem(this, itemId, itemProperties);
 
-        /*
-         * If auto commit mode is enabled, the added row will be instantly
-         * committed.
-         */
         if (autoCommit) {
+            /* Add and commit instantly */
             try {
                 if (delegate instanceof TableQuery) {
                     itemId = ((TableQuery) delegate)
@@ -170,7 +157,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
                 refresh();
                 if (notificationsEnabled) {
-                    SQLContainer.notifyOfCacheFlush(this);
+                    CacheFlushNotifier.notifyOfCacheFlush(this);
                 }
                 debug(null, "Row added to DB...");
                 return itemId;
@@ -208,11 +195,9 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
             }
         }
-
         if (removedItems.containsKey(itemId)) {
             return false;
         }
-
         if (!(itemId instanceof TemporaryRowId)) {
             try {
                 return delegate.containsRowWithKey(((RowId) itemId).getId());
@@ -347,7 +332,6 @@ public class SQLContainer implements Container, Container.Filterable,
         if (!containsId(itemId)) {
             return false;
         }
-
         for (RowItem item : addedItems) {
             if (item.getId().equals(itemId)) {
                 addedItems.remove(item);
@@ -356,8 +340,8 @@ public class SQLContainer implements Container, Container.Filterable,
             }
         }
 
-        /* If auto commit mode is enabled, the row will be instantly removed. */
         if (autoCommit) {
+            /* Remove and commit instantly. */
             Item i = getItem(itemId);
             if (i == null) {
                 return false;
@@ -368,7 +352,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 delegate.commit();
                 refresh();
                 if (notificationsEnabled) {
-                    SQLContainer.notifyOfCacheFlush(this);
+                    CacheFlushNotifier.notifyOfCacheFlush(this);
                 }
                 if (success) {
                     debug(null, "Row removed from DB...");
@@ -398,12 +382,8 @@ public class SQLContainer implements Container, Container.Filterable,
      * @see com.vaadin.data.Container#removeAllItems()
      */
     public boolean removeAllItems() throws UnsupportedOperationException {
-        /*
-         * If auto commit mode is enabled, all the rows will be instantly
-         * removed. Note that they are still removed within one transaction so
-         * if any removal fails, all actions will be rolled back.
-         */
         if (autoCommit) {
+            /* Remove and commit instantly. */
             try {
                 delegate.beginTransaction();
                 boolean success = true;
@@ -417,7 +397,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     debug(null, "All rows removed from DB...");
                     refresh();
                     if (notificationsEnabled) {
-                        SQLContainer.notifyOfCacheFlush(this);
+                        CacheFlushNotifier.notifyOfCacheFlush(this);
                     }
                 } else {
                     delegate.rollback();
@@ -716,9 +696,6 @@ public class SQLContainer implements Container, Container.Filterable,
      * <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code> and
      * <code>FilteringMode.FILTERING_MODE_EXCLUSIVE</code>.
      * 
-     * With other inputs this method defaults to
-     * <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code>.
-     * 
      * @param filteringMode
      *            Filtering mode to set.
      */
@@ -857,9 +834,17 @@ public class SQLContainer implements Container, Container.Filterable,
                             + item.getId());
                 }
             }
+            /* Perform buffered modifications */
             for (RowItem item : modifiedItems) {
-                delegate.storeRow(item);
+                if (delegate.storeRow(item) == 0) {
+                    delegate.rollback();
+                    refresh();
+                    throw new ConcurrentModificationException(
+                            "Item with the ID '" + item.getId()
+                                    + "' has been externally modified.");
+                }
             }
+            /* Perform buffered additions */
             for (RowItem item : addedItems) {
                 delegate.storeRow(item);
             }
@@ -869,7 +854,7 @@ public class SQLContainer implements Container, Container.Filterable,
             modifiedItems.clear();
             refresh();
             if (notificationsEnabled) {
-                SQLContainer.notifyOfCacheFlush(this);
+                CacheFlushNotifier.notifyOfCacheFlush(this);
             }
         } catch (SQLException e) {
             delegate.rollback();
@@ -886,14 +871,9 @@ public class SQLContainer implements Container, Container.Filterable,
      */
     public void rollback() throws UnsupportedOperationException, SQLException {
         debug(null, "Rolling back changes...");
-        /* Discard removed, added and modified items */
         removedItems.clear();
         addedItems.clear();
         modifiedItems.clear();
-        /*
-         * Refresh container to clear item cache ,container size etc. which may
-         * contain modifications
-         */
         refresh();
     }
 
@@ -909,10 +889,16 @@ public class SQLContainer implements Container, Container.Filterable,
         if (autoCommit) {
             try {
                 delegate.beginTransaction();
-                delegate.storeRow(changedItem);
+                if (delegate.storeRow(changedItem) == 0) {
+                    delegate.rollback();
+                    refresh();
+                    throw new ConcurrentModificationException(
+                            "Item with the ID '" + changedItem.getId()
+                                    + "' has been externally modified.");
+                }
                 delegate.commit();
                 if (notificationsEnabled) {
-                    SQLContainer.notifyOfCacheFlush(this);
+                    CacheFlushNotifier.notifyOfCacheFlush(this);
                 }
                 debug(null, "Row updated to DB...");
             } catch (SQLException e) {
@@ -923,6 +909,7 @@ public class SQLContainer implements Container, Container.Filterable,
                     /* Nothing can be done here */
                     debug(e, null);
                 }
+                throw new RuntimeException(e);
             }
         } else {
             if (!(changedItem.getId() instanceof TemporaryRowId)
@@ -1010,10 +997,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
                 String colName = rsmd.getColumnName(i);
                 propertyIds.add(colName);
-                /*
-                 * Try to determine the column's JDBC class by all means. On
-                 * failure revert to Object and hope for the best.
-                 */
+                /* Try to determine the column's JDBC class by all means. */
                 if (resultExists && rs.getObject(i) != null) {
                     type = rs.getObject(i).getClass();
                 } else {
@@ -1021,6 +1005,7 @@ public class SQLContainer implements Container, Container.Filterable,
                         type = Class.forName(rsmd.getColumnClassName(i));
                     } catch (Exception e) {
                         debug(e, null);
+                        /* On failure revert to Object and hope for the best. */
                         type = Object.class;
                     }
                 }
@@ -1064,8 +1049,6 @@ public class SQLContainer implements Container, Container.Filterable,
         updateCount();
         ResultSet rs = null;
         ResultSetMetaData rsmd = null;
-        // Clear the caches so that we don't fill up memory with (possibly)
-        // millions of records
         cachedItems.clear();
         itemIndexes.clear();
         try {
@@ -1105,24 +1088,19 @@ public class SQLContainer implements Container, Container.Filterable,
                         }
                         String colName = rsmd.getColumnName(i);
                         Object value = rs.getObject(i);
-                        if (value != null) {
-                            cp = new ColumnProperty(colName, propertyReadOnly
-                                    .get(colName), !propertyReadOnly
-                                    .get(colName), propertyNullable
-                                    .get(colName), value, value.getClass());
-                        } else {
-                            Class<?> colType = Object.class;
+                        Class<?> type = value != null ? value.getClass()
+                                : Object.class;
+                        if (value == null) {
                             for (String propName : propertyTypes.keySet()) {
                                 if (propName.equals(rsmd.getColumnName(i))) {
-                                    colType = propertyTypes.get(propName);
+                                    type = propertyTypes.get(propName);
                                     break;
                                 }
                             }
-                            cp = new ColumnProperty(colName, propertyReadOnly
-                                    .get(colName), !propertyReadOnly
-                                    .get(colName), propertyNullable
-                                    .get(colName), null, colType);
                         }
+                        cp = new ColumnProperty(colName, propertyReadOnly
+                                .get(colName), !propertyReadOnly.get(colName),
+                                propertyNullable.get(colName), value, type);
                         itemProperties.add(cp);
                     }
                     /* Cache item */
@@ -1363,31 +1341,6 @@ public class SQLContainer implements Container, Container.Filterable,
         }
     }
 
-    /**
-     * CacheMap extends LinkedHashMap, adding the possibility to adjust maximum
-     * number of items.
-     * 
-     * In SQLContainer this is used for RowItem -cache. Cache size will be two
-     * times the page length parameter of the container.
-     */
-    public class CacheMap<K, V> extends LinkedHashMap<K, V> {
-        private static final long serialVersionUID = 679999766473555231L;
-        private int cacheLimit = CACHE_RATIO * DEFAULT_PAGE_LENGTH;
-
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-            return size() > cacheLimit;
-        }
-
-        public void setCacheLimit(int limit) {
-            cacheLimit = limit > 0 ? limit : DEFAULT_PAGE_LENGTH;
-        }
-
-        public int getCacheLimit() {
-            return cacheLimit;
-        }
-    }
-
     public boolean isDebugMode() {
         return debugMode;
     }
@@ -1403,6 +1356,8 @@ public class SQLContainer implements Container, Container.Filterable,
      */
     private void debug(Exception e, String message) {
         if (debugMode) {
+            // TODO: Replace with the common Vaadin logging system once it is
+            // available.
             if (message != null) {
                 System.err.println(message);
             }
@@ -1412,76 +1367,14 @@ public class SQLContainer implements Container, Container.Filterable,
         }
     }
 
-    /*********************************************/
-    /** Cache flush notification implementation **/
-    /*********************************************/
-
+    /**
+     * Calling this will enable this SQLContainer to send and receive cache
+     * flush notifications for its lifetime.
+     */
     public void enableCacheFlushNotifications() {
         if (!notificationsEnabled) {
             notificationsEnabled = true;
-            SQLContainer.addInstance(this);
-        }
-    }
-
-    /**
-     * Adds the given SQLContainer to the cache flush notification receiver list
-     * 
-     * @param c
-     *            Container to add
-     */
-    public static void addInstance(SQLContainer c) {
-        removeDeadReferences();
-        if (c != null) {
-            allInstances.add(new WeakReference<SQLContainer>(c, deadInstances));
-        }
-    }
-
-    /**
-     * Removes dead references from instance list
-     */
-    private static void removeDeadReferences() {
-        java.lang.ref.Reference<? extends SQLContainer> dead = deadInstances
-                .poll();
-        while (dead != null) {
-            allInstances.remove(dead);
-            dead = deadInstances.poll();
-        }
-    }
-
-    /**
-     * Iterates through the instances and notifies containers which are
-     * connected to the same table or are using the same query string.
-     * 
-     * @param c
-     *            SQLContainer that issued the cache flush notification
-     */
-    public static void notifyOfCacheFlush(SQLContainer c) {
-        removeDeadReferences();
-        for (WeakReference<SQLContainer> wr : allInstances) {
-            if (wr.get() != null) {
-                SQLContainer wrc = wr.get();
-                /*
-                 * If the reference points to the container sending the
-                 * notification, do nothing.
-                 */
-                if (wrc.equals(c)) {
-                    continue;
-                }
-                /* Compare QueryDelegate types and tableName/queryString */
-                QueryDelegate wrQd = wrc.getQueryDelegate();
-                QueryDelegate qd = c.getQueryDelegate();
-                if (wrQd instanceof TableQuery
-                        && qd instanceof TableQuery
-                        && ((TableQuery) wrQd).getTableName().equals(
-                                ((TableQuery) qd).getTableName())) {
-                    wrc.refresh();
-                } else if (wrQd instanceof FreeformQuery
-                        && qd instanceof FreeformQuery
-                        && ((FreeformQuery) wrQd).getQueryString().equals(
-                                ((FreeformQuery) qd).getQueryString())) {
-                    wrc.refresh();
-                }
-            }
+            CacheFlushNotifier.addInstance(this);
         }
     }
 
@@ -1622,55 +1515,5 @@ public class SQLContainer implements Container, Container.Filterable,
      */
     public Item getReferencedItem(Object itemId, SQLContainer refdCont) {
         return refdCont.getItem(getReferencedItemId(itemId, refdCont));
-    }
-
-    /**
-     * The reference class represents a simple [usually foreign key] reference
-     * to another SQLContainer. Actual foreign key reference in the database is
-     * not required, but it is recommended to make sure that certain constraints
-     * are followed.
-     */
-    @SuppressWarnings("serial")
-    class Reference implements Serializable {
-
-        /**
-         * The SQLContainer that this reference points to.
-         */
-        private SQLContainer referencedContainer;
-
-        /**
-         * The column ID/name in the referencing SQLContainer that contains the
-         * key used for the reference.
-         */
-        private String referencingColumn;
-
-        /**
-         * The column ID/name in the referenced SQLContainer that contains the
-         * key used for the reference.
-         */
-        private String referencedColumn;
-
-        /**
-         * Constructs a new reference to be used within the SQLContainer to
-         * reference another SQLContainer.
-         */
-        Reference(SQLContainer referencedContainer, String referencingColumn,
-                String referencedColumn) {
-            this.referencedContainer = referencedContainer;
-            this.referencingColumn = referencingColumn;
-            this.referencedColumn = referencedColumn;
-        }
-
-        SQLContainer getReferencedContainer() {
-            return referencedContainer;
-        }
-
-        String getReferencingColumn() {
-            return referencingColumn;
-        }
-
-        String getReferencedColumn() {
-            return referencedColumn;
-        }
     }
 }
