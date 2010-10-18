@@ -29,4 +29,4 @@ To disable a build target, e.g. to disable manual building, uncomment to appropr
 =========================================================================================
 To build the project run the Ant target 'all' which will build all targets except the disabled ones.
 Note that for building the manual target you will need an Open Office installation and .odt version
-of the manual in place.			 
+of the manual in place.

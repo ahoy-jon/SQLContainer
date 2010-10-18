@@ -134,10 +134,11 @@
     <!-- Documentation                                                      -->
     <!-- ================================================================== -->
 
-    <!-- Manual -->
+    <!-- Manual and tutorial -->
     <target name="manual" unless="run.no-manual">
         <!-- Must delete the old version or conversion fails -->
         <delete file="${manual.pdf}"/>
+        <delete file="${tutorial.pdf}"/>
 
         <!-- Start OpenOffice service -->
         <exec executable="python" searchpath="true" failonerror="true" >
@@ -145,10 +146,20 @@
             <arg value="start"/>
         </exec>
 
+        <echo>Converting the manual from ${manual.odt} to ${manual.pdf}...</echo>
+
         <!-- Convert the ODF text document to PDF -->
         <java jar="build/lib/jodconverter/jodconverter-cli-2.2.2.jar" fork="true">
             <arg value="${manual.odt}"/>
             <arg value="${manual.pdf}"/>
+        </java>
+
+        <echo>Converting the tutorial from ${tutorial.odt} to ${tutorial.pdf}...</echo>
+
+        <!-- Convert the ODF text document to PDF -->
+        <java jar="build/lib/jodconverter/jodconverter-cli-2.2.2.jar" fork="true">
+            <arg value="${tutorial.odt}"/>
+            <arg value="${tutorial.pdf}"/>
         </java>
 
         <!-- Stop OpenOffice service -->
@@ -200,6 +211,7 @@
     <!-- Create the ZIP distribution package. -->
     <target name="package-zip" depends="package-jar, manual" unless="run.no-package-zip">
         <property name="zip.name" value="${result-path}/${addon.name}-${version}.zip"/>
+        <echo>Packaging Zip ${zip.name}</echo>
 
     	<!-- Make the zip manifest -->
     	<mkdir dir="${result-path}/META-INF"/>
@@ -213,13 +225,13 @@ Implementation-Vendor: ${addon.vendor}
         <zip destfile="${zip.name}">
         	<zipfileset dir="${result-path}" includes="META-INF/MANIFEST.MF" />        	
             <zipfileset prefix="" file="${result-path}/${jar.name}" />              
-            <zipfileset prefix="doc" file="${manual.pdf}" />               
+            <zipfileset prefix="" file="doc/README.TXT" />
+            <zipfileset prefix="doc" file="${manual.pdf}" />
+            <zipfileset prefix="doc" file="${tutorial.pdf}" />
             <zipfileset prefix="doc" dir="doc">
                 <patternset>
-                    <include name="README.TXT" />
                 	<include name="licensing.txt" />
-                    <include name="license-agpl-3.0.txt" />
-                	<include name="license-cval-1.0.txt" />
+                    <include name="license-asl-2.0.txt" />
                 </patternset>
             </zipfileset>
         </zip>
