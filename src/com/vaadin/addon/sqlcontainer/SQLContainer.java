@@ -992,10 +992,10 @@ public class SQLContainer implements Container, Container.Filterable,
             rsmd = rs.getMetaData();
             Class<?> type = null;
             for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
+                if (!isColumnIdentifierValid(rsmd.getColumnLabel(i))) {
                     continue;
                 }
-                String colName = rsmd.getColumnName(i);
+                String colName = rsmd.getColumnLabel(i);
                 propertyIds.add(colName);
                 /* Try to determine the column's JDBC class by all means. */
                 if (resultExists && rs.getObject(i) != null) {
@@ -1018,7 +1018,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 boolean readOnly = rsmd.isAutoIncrement(i)
                         || rsmd.isReadOnly(i);
                 if (delegate instanceof TableQuery
-                        && rsmd.getColumnName(i).equals(
+                        && rsmd.getColumnLabel(i).equals(
                                 ((TableQuery) delegate).getVersionColumn())) {
                     readOnly = true;
                 }
@@ -1083,16 +1083,16 @@ public class SQLContainer implements Container, Container.Filterable,
                 RowId id = new RowId(itemId);
                 if (!removedItems.containsKey(id)) {
                     for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                        if (!isColumnIdentifierValid(rsmd.getColumnName(i))) {
+                        if (!isColumnIdentifierValid(rsmd.getColumnLabel(i))) {
                             continue;
                         }
-                        String colName = rsmd.getColumnName(i);
+                        String colName = rsmd.getColumnLabel(i);
                         Object value = rs.getObject(i);
                         Class<?> type = value != null ? value.getClass()
                                 : Object.class;
                         if (value == null) {
                             for (String propName : propertyTypes.keySet()) {
-                                if (propName.equals(rsmd.getColumnName(i))) {
+                                if (propName.equals(rsmd.getColumnLabel(i))) {
                                     type = propertyTypes.get(propName);
                                     break;
                                 }
