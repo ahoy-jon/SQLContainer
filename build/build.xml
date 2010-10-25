@@ -44,14 +44,22 @@
 	    		<include name="**/*.jar" />
 	    	</fileset>
 
-            <fileset dir="WebContent/WEB-INF/lib">
+	    	<fileset dir="WebContent/WEB-INF/lib">
                 <include name="**/*.jar" />
+            </fileset>
+
+            <fileset dir="build/lib">
+                <include name="junit-4.5.jar" />
             </fileset>
         </path>
 
         <path id="compile.classpath">
-            <fileset dir="build/lib">
-                <include name="junit-4.5.jar" />
+		    <fileset dir="build/lib">
+			    <include name="**/*.jar" />
+            </fileset>
+        	
+            <fileset dir="WebContent/WEB-INF/lib">
+                <include name="**/*.jar" />
             </fileset>
         </path>
 	</target>
@@ -76,15 +84,11 @@
 		 <javac destdir="${result.classes}" target="1.5" source="1.5"> 
 		 <!-- <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true"> -->
 			<src path="src" />
-			<src path="${test.src.base}" />
-			<src path="${demo.src.base}" />
 			<include name="**/*.*" />
 
-			<classpath refid="test.classpath" />
 			<classpath refid="compile.classpath" />
 			<classpath>
 				<path path="src" />
-				<path path="test-src" />
 				<path path="WebContent/WEB-INF/classes" />
 				<path path="${gwt.lib.dir}/gwt-user.jar" />
 				<path path="${gwt.lib.dir}/gwt-dev.jar" />
@@ -92,6 +96,45 @@
 		</javac>
 
 	</target>
+	
+	<target name="compile-tests" depends="init, compile" unless="run.no-compile">
+        <property name="result.test-classes" value="${result-path}/test/classes"/>
+
+        <mkdir dir="${result.test-classes}"/>
+        
+		 <javac destdir="${result.test-classes}" target="1.5" source="1.5"> 
+		 <!-- <javac destdir="${result.test-classes}" target="1.5" source="1.5" debug="true"> -->
+			<src path="${test.src.base}" />
+			<include name="**/*.*" />
+			<classpath refid="test.classpath" />
+		 	<classpath>
+		 		<path path="${result.classes}" />
+		 	</classpath>
+		</javac>
+	</target>
+
+	<target name="compile-demo" depends="init, compile" unless="run.no-compile">
+        <property name="result.demo-classes" value="${result-path}/demo/classes"/>
+
+        <mkdir dir="${result.demo-classes}"/>
+        
+		 <javac destdir="${result.demo-classes}" target="1.5" source="1.5"> 
+		 <!-- <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true"> -->
+			<src path="${demo.src.base}" />
+			<include name="**/*.*" />
+
+			<classpath refid="compile.classpath" />
+			<classpath>
+				<path path="${result.classes}" />
+				<path path="src" />
+				<path path="WebContent/WEB-INF/classes" />
+				<path path="${gwt.lib.dir}/gwt-user.jar" />
+				<path path="${gwt.lib.dir}/gwt-dev.jar" />
+			</classpath>
+		</javac>
+
+	</target>
+
 
     <!-- Refresh the project in a locally running Eclipse. -->
 	<target name="refresh-eclipse" if="eclipse.running">
@@ -103,15 +146,8 @@
     <!-- Testing                                                            -->
     <!-- ================================================================== -->
 
-    <!-- Vaadin TestBench tests -->
-	<target name="testbench-tests">
-		<subant target="run-and-clean-up" antfile="test.xml">
-			<fileset dir="test" includes="test.xml"/>
-		</subant>
-	</target>
-
     <!-- Server-side JUnit tests -->
-	<target name="serverside-tests" depends="compile">
+	<target name="serverside-tests" depends="compile-tests">
         <echo>Running JUnit tests in ${test.src.base}/${test.src.dir}</echo>
 
         <echo>Test source base: ${test.src.base}</echo>
@@ -120,6 +156,7 @@
 		<junit printsummary="yes" showoutput="true"> 
 <!--			<formatter type="brief" usefile="false" />-->
 			<classpath>
+				<pathelement path="${result.test-classes}" />
 				<pathelement path="${result.classes}" />
 				<path refid="compile.classpath"/>
                 <path refid="test.classpath"/>
@@ -188,22 +225,10 @@
             </manifest>
         	
         	<!-- The built server-side classes and the widget set class are here. -->
-            <fileset dir="${result.classes}">
-                <patternset>
-                    <include name="${src.package.dir}/**/*" />
-                	<exclude name="**/tests/**" />
-                	<exclude name="**/demo/**" />
-                </patternset>
-            </fileset> 
+            <fileset dir="${result.classes}" />
 
         	<!-- Especially all the widget set source files are required. -->
-        	<fileset dir="src">
-                <patternset>
-                	<include name="${src.package.dir}/**/*" />
-                	<exclude name="**/demo/**" />
-                	<exclude name="**/tests/**" />
-                </patternset>
-            </fileset>
+        	<fileset dir="src" />
         	
         </jar>
 	</target>		
@@ -237,9 +262,9 @@ Implementation-Vendor: ${addon.vendor}
         </zip>
     </target>
 
-	<target name="demo.war" depends="package-jar">
+	<target name="demo.war" depends="compile-demo,package-jar">
 		<war destfile="${result-path}/${addon.name}.war" webxml="WebContent/WEB-INF/web.xml">
-			<classes dir="${result.classes}"/>
+			<classes dir="${result.demo-classes}"/>
 			<lib dir="WebContent/WEB-INF/lib" excludes="*src*" />
 			<lib file="${jar.path}" />
 			<fileset dir="WebContent">
