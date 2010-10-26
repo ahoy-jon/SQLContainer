@@ -17,11 +17,12 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
 @SuiteClasses({ SimpleJDBCConnectionPoolTest.class, FreeformQueryTest.class,
         RowIdTest.class, SQLContainerTest.class,
         SQLContainerTableQueryTest.class, ColumnPropertyTest.class,
-        TableQueryTest.class, SQLGeneratorsTest.class, UtilTest.class })
+        TableQueryTest.class, SQLGeneratorsTest.class, UtilTest.class,
+        TicketTests.class })
 public class AllTests {
     /* Set the DB used for testing here! */
     /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL, 4 = ORACLE */
-    public static final int db = 0;
+    public static final int db = 1;
 
     /* Auto-increment column offset (HSQLDB = 0, MYSQL = 1, POSTGRES = 1) */
     public static int offset;
@@ -59,9 +60,9 @@ public class AllTests {
             offset = 1;
             createGarbage = "create table GARBAGE (ID integer auto_increment, type varchar(32), PRIMARY KEY(ID))";
             dbDriver = "com.mysql.jdbc.Driver";
-            dbURL = "jdbc:mysql:///accounter";
-            dbUser = "root";
-            dbPwd = "password";
+            dbURL = "jdbc:mysql:///sqlcontainer";
+            dbUser = "sqlcontainer";
+            dbPwd = "sqlcontainer";
             peopleFirst = "create table PEOPLE (ID integer auto_increment not null, NAME varchar(32), primary key(ID))";
             peopleSecond = null;
             break;

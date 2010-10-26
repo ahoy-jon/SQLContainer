@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
-import com.vaadin.addon.sqlcontainer.query.TableQuery;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeListener;
+import com.vaadin.addon.sqlcontainer.query.TableQuery;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.data.Container;
@@ -44,18 +44,18 @@ public class SQLContainer implements Container, Container.Filterable,
     public static final int CACHE_RATIO = 2;
 
     /** Item and index caches */
-    private Map<Integer, RowId> itemIndexes = new HashMap<Integer, RowId>();
-    private CacheMap<RowId, RowItem> cachedItems = new CacheMap<RowId, RowItem>();
+    private final Map<Integer, RowId> itemIndexes = new HashMap<Integer, RowId>();
+    private final CacheMap<RowId, RowItem> cachedItems = new CacheMap<RowId, RowItem>();
 
     /** Container properties = column names, data types and statuses */
-    private List<String> propertyIds = new ArrayList<String>();
-    private Map<String, Class<?>> propertyTypes = new HashMap<String, Class<?>>();
-    private Map<String, Boolean> propertyReadOnly = new HashMap<String, Boolean>();
-    private Map<String, Boolean> propertyNullable = new HashMap<String, Boolean>();
+    private final List<String> propertyIds = new ArrayList<String>();
+    private final Map<String, Class<?>> propertyTypes = new HashMap<String, Class<?>>();
+    private final Map<String, Boolean> propertyReadOnly = new HashMap<String, Boolean>();
+    private final Map<String, Boolean> propertyNullable = new HashMap<String, Boolean>();
 
     /** Filters (WHERE) and sorters (ORDER BY) */
-    private List<Filter> filters = new ArrayList<Filter>();
-    private List<OrderBy> sorters = new ArrayList<OrderBy>();
+    private final List<Filter> filters = new ArrayList<Filter>();
+    private final List<OrderBy> sorters = new ArrayList<OrderBy>();
     /** Filtering mode setting. Default mode = FILTERING_MODE_INCLUSIVE */
     private FilteringMode currentFilteringMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
@@ -80,12 +80,12 @@ public class SQLContainer implements Container, Container.Filterable,
     private LinkedList<Container.ItemSetChangeListener> itemSetChangeListeners;
 
     /** Temporary storage for modified items and items to be removed and added */
-    private Map<RowId, RowItem> removedItems = new HashMap<RowId, RowItem>();
-    private List<RowItem> addedItems = new ArrayList<RowItem>();
-    private List<RowItem> modifiedItems = new ArrayList<RowItem>();
+    private final Map<RowId, RowItem> removedItems = new HashMap<RowId, RowItem>();
+    private final List<RowItem> addedItems = new ArrayList<RowItem>();
+    private final List<RowItem> modifiedItems = new ArrayList<RowItem>();
 
     /** List of references to other SQLContainers */
-    private Map<SQLContainer, Reference> references = new HashMap<SQLContainer, Reference>();
+    private final Map<SQLContainer, Reference> references = new HashMap<SQLContainer, Reference>();
 
     /** Cache flush notification system enabled. Disabled by default. */
     private boolean notificationsEnabled;
@@ -767,9 +767,19 @@ public class SQLContainer implements Container, Container.Filterable,
      *            new page length
      */
     public void setPageLength(int pageLength) {
+        setPageLengthInternal(pageLength);
+        refresh();
+    }
+
+    /**
+     * Sets the page length internally, without refreshing the container.
+     * 
+     * @param pageLength
+     *            the new page length
+     */
+    private void setPageLengthInternal(int pageLength) {
         this.pageLength = pageLength > 0 ? pageLength : DEFAULT_PAGE_LENGTH;
         cachedItems.setCacheLimit(CACHE_RATIO * getPageLength());
-        refresh();
     }
 
     /**
@@ -1071,7 +1081,7 @@ public class SQLContainer implements Container, Container.Filterable,
             int rowCount = currentOffset;
             if (!delegate.implementationRespectsPagingLimits()) {
                 rowCount = currentOffset = 0;
-                setPageLength(size);
+                setPageLengthInternal(size);
             }
             while (rs.next()) {
                 List<ColumnProperty> itemProperties = new ArrayList<ColumnProperty>();
@@ -1098,8 +1108,9 @@ public class SQLContainer implements Container, Container.Filterable,
                                 }
                             }
                         }
-                        cp = new ColumnProperty(colName, propertyReadOnly
-                                .get(colName), !propertyReadOnly.get(colName),
+                        cp = new ColumnProperty(colName,
+                                propertyReadOnly.get(colName),
+                                !propertyReadOnly.get(colName),
                                 propertyNullable.get(colName), value, type);
                         itemProperties.add(cp);
                     }
@@ -1465,8 +1476,8 @@ public class SQLContainer implements Container, Container.Filterable,
         }
         try {
             getContainerProperty(itemId, r.getReferencingColumn()).setValue(
-                    refdCont.getContainerProperty(refdItemId, r
-                            .getReferencedColumn()));
+                    refdCont.getContainerProperty(refdItemId,
+                            r.getReferencedColumn()));
             return true;
         } catch (Exception e) {
             debug(e, "Setting referenced item failed.");

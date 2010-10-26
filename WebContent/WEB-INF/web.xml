@@ -22,7 +22,7 @@
     <url-pattern>/simple/*</url-pattern>
   </servlet-mapping>
   
-    <servlet>
+  <servlet>
     <servlet-name>SQLContainer AddressBook Demo</servlet-name>
     <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
     <init-param>
