@@ -112,13 +112,13 @@ public class FreeformQueryTest {
         new FreeformQuery("", Arrays.asList("ID"), connectionPool);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void construction_nullPrimaryKeys_shouldFail() {
+    @Test
+    public void construction_nullPrimaryKeys_shouldSucceed() {
         new FreeformQuery("SELECT * FROM foo", null, connectionPool);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void construction_emptyPrimaryKeys_shouldFail() {
+    @Test
+    public void construction_emptyPrimaryKeys_shouldSucceed() {
         new FreeformQuery("SELECT * FROM foo", connectionPool);
     }
 

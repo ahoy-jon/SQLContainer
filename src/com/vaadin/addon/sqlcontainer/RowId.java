@@ -16,8 +16,7 @@ public class RowId implements Serializable {
     /**
      * Prevent instantiation without required parameters.
      */
-    @SuppressWarnings("unused")
-    private RowId() {
+    protected RowId() {
     }
 
     public RowId(Object[] id) {

@@ -6,11 +6,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
+import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 
@@ -32,12 +34,25 @@ public class FreeformQuery implements QueryDelegate {
     private FreeformQuery() {
     }
 
+    /**
+     * Creates a new freeform query delegate to be used with the
+     * {@link SQLContainer}.
+     * 
+     * @param queryString
+     *            The actual query to perform.
+     * @param primaryKeyColumns
+     *            The primary key columns. Read-only mode is forced if this
+     *            parameter is null or empty.
+     * @param connectionPool
+     *            the JDBCConnectionPool to use to open connections to the SQL
+     *            database.
+     */
     public FreeformQuery(String queryString, List<String> primaryKeyColumns,
             JDBCConnectionPool connectionPool) {
-        if (primaryKeyColumns == null || primaryKeyColumns.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "The primary key columns must be specified!");
-        } else if (primaryKeyColumns.contains("")) {
+        if (primaryKeyColumns == null) {
+            primaryKeyColumns = new ArrayList<String>();
+        }
+        if (primaryKeyColumns.contains("")) {
             throw new IllegalArgumentException(
                     "The primary key columns contain an empty string!");
         } else if (queryString == null || "".equals(queryString)) {
@@ -53,6 +68,19 @@ public class FreeformQuery implements QueryDelegate {
         this.connectionPool = connectionPool;
     }
 
+    /**
+     * Creates a new freeform query delegate to be used with the
+     * {@link SQLContainer}.
+     * 
+     * @param queryString
+     *            The actual query to perform.
+     * @param connectionPool
+     *            the JDBCConnectionPool to use to open connections to the SQL
+     *            database.
+     * @param primaryKeyColumns
+     *            The primary key columns. Read-only mode is forced if this is
+     *            null or empty.
+     */
     public FreeformQuery(String queryString, JDBCConnectionPool connectionPool,
             String... primaryKeyColumns) {
         this(queryString, Arrays.asList(primaryKeyColumns), connectionPool);
@@ -246,6 +274,9 @@ public class FreeformQuery implements QueryDelegate {
     public int storeRow(RowItem row) throws SQLException {
         if (activeConnection == null) {
             throw new IllegalStateException("No transaction is active!");
+        } else if (primaryKeyColumns.isEmpty()) {
+            throw new UnsupportedOperationException(
+                    "Cannot store items fetched with a read-only freeform query!");
         }
         if (delegate != null) {
             return delegate.storeRow(activeConnection, row);
@@ -258,6 +289,9 @@ public class FreeformQuery implements QueryDelegate {
     public boolean removeRow(RowItem row) throws SQLException {
         if (activeConnection == null) {
             throw new IllegalStateException("No transaction is active!");
+        } else if (primaryKeyColumns.isEmpty()) {
+            throw new UnsupportedOperationException(
+                    "Cannot remove items fetched with a read-only freeform query!");
         }
         if (delegate != null) {
             return delegate.removeRow(activeConnection, row);

@@ -1006,7 +1006,13 @@ public class SQLContainer implements Container, Container.Filterable,
                     continue;
                 }
                 String colName = rsmd.getColumnLabel(i);
-                propertyIds.add(colName);
+                /*
+                 * Make sure not to add the same colName twice. This can easily
+                 * happen if the SQL query joins many tables with an ID column.
+                 */
+                if (!propertyIds.contains(colName)) {
+                    propertyIds.add(colName);
+                }
                 /* Try to determine the column's JDBC class by all means. */
                 if (resultExists && rs.getObject(i) != null) {
                     type = rs.getObject(i).getClass();
@@ -1073,9 +1079,7 @@ public class SQLContainer implements Container, Container.Filterable,
             rs = delegate.getResults(currentOffset, pageLength * CACHE_RATIO);
             rsmd = rs.getMetaData();
             List<String> pKeys = delegate.getPrimaryKeyColumns();
-            if (pKeys == null || pKeys.isEmpty()) {
-                throw new IllegalStateException("No primary key column(s) set.");
-            }
+            // }
             /* Create new items and column properties */
             ColumnProperty cp = null;
             int rowCount = currentOffset;
@@ -1090,7 +1094,14 @@ public class SQLContainer implements Container, Container.Filterable,
                 for (int i = 0; i < pKeys.size(); i++) {
                     itemId[i] = rs.getObject(pKeys.get(i));
                 }
-                RowId id = new RowId(itemId);
+                RowId id = null;
+                if (pKeys.isEmpty()) {
+                    id = new ReadOnlyRowId();
+                } else {
+                    id = new RowId(itemId);
+                }
+                List<String> propertiesToAdd = new ArrayList<String>(
+                        propertyIds);
                 if (!removedItems.containsKey(id)) {
                     for (int i = 1; i <= rsmd.getColumnCount(); i++) {
                         if (!isColumnIdentifierValid(rsmd.getColumnLabel(i))) {
@@ -1108,11 +1119,20 @@ public class SQLContainer implements Container, Container.Filterable,
                                 }
                             }
                         }
-                        cp = new ColumnProperty(colName,
-                                propertyReadOnly.get(colName),
-                                !propertyReadOnly.get(colName),
-                                propertyNullable.get(colName), value, type);
-                        itemProperties.add(cp);
+                        /*
+                         * In case there are more than one column with the same
+                         * name, add only the first one. This can easily happen
+                         * if you join many tables where each table has an ID
+                         * column.
+                         */
+                        if (propertiesToAdd.contains(colName)) {
+                            cp = new ColumnProperty(colName,
+                                    propertyReadOnly.get(colName),
+                                    !propertyReadOnly.get(colName),
+                                    propertyNullable.get(colName), value, type);
+                            itemProperties.add(cp);
+                            propertiesToAdd.remove(colName);
+                        }
                     }
                     /* Cache item */
                     itemIndexes.put(rowCount, id);
