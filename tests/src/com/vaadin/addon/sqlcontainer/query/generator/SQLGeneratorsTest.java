@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.addon.sqlcontainer.AllTests;
+import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
@@ -54,7 +55,7 @@ public class SQLGeneratorsTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
-                if (AllTests.db == 4) {
+                if (AllTests.db == DB.ORACLE) {
                     statement.execute("drop sequence people_seq");
                 }
             } catch (SQLException e) {
@@ -65,10 +66,10 @@ public class SQLGeneratorsTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute(AllTests.peopleThird);
             }
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Ville')");
                 statement.executeUpdate("insert into people values('Kalle')");
                 statement.executeUpdate("insert into people values('Pelle')");
@@ -123,9 +124,8 @@ public class SQLGeneratorsTest {
                 Filter.ComparisonType.ENDS_WITH, "lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 0, 0, null);
-        Assert
-                .assertEquals(sh.getQueryString(),
-                        "SELECT * FROM TABLE WHERE \"name\" LIKE ? ORDER BY \"name\" ASC");
+        Assert.assertEquals(sh.getQueryString(),
+                "SELECT * FROM TABLE WHERE \"name\" LIKE ? ORDER BY \"name\" ASC");
     }
 
     @Test
@@ -159,7 +159,8 @@ public class SQLGeneratorsTest {
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
 
-        StatementHelper sh = sg.generateDeleteQuery("people",
+        StatementHelper sh = sg.generateDeleteQuery(
+                "people",
                 (RowItem) container.getItem(container.getItemIds().iterator()
                         .next()));
         Assert.assertEquals(sh.getQueryString(),
@@ -223,12 +224,11 @@ public class SQLGeneratorsTest {
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
                 "NAME, ID");
-        Assert
-                .assertEquals(
-                        sh.getQueryString(),
-                        "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
-                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
-                                + " ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
+        Assert.assertEquals(
+                sh.getQueryString(),
+                "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
+                        + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
+                        + " ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
     }
 
     @Test
@@ -257,13 +257,12 @@ public class SQLGeneratorsTest {
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         StatementHelper sh = sg.generateSelectQuery("TABLE", f,
                 FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
-        Assert
-                .assertEquals(
-                        sh.getQueryString(),
-                        "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
-                                + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
-                                + " OR \"name\" LIKE ? "
-                                + "ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
+        Assert.assertEquals(
+                sh.getQueryString(),
+                "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
+                        + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
+                        + " OR \"name\" LIKE ? "
+                        + "ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
     }
 
     @Test

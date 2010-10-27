@@ -14,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.addon.sqlcontainer.AllTests;
+import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
@@ -54,7 +55,7 @@ public class FreeformQueryTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
-                if (AllTests.db == 4) {
+                if (AllTests.db == AllTests.DB.ORACLE) {
                     statement.execute("drop sequence people_seq");
                 }
             } catch (SQLException e) {
@@ -65,10 +66,10 @@ public class FreeformQueryTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            if (AllTests.db == 4) {
+            if (AllTests.db == AllTests.DB.ORACLE) {
                 statement.execute(AllTests.peopleThird);
             }
-            if (AllTests.db == 3) {
+            if (AllTests.db == AllTests.DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Ville')");
                 statement.executeUpdate("insert into people values('Kalle')");
                 statement.executeUpdate("insert into people values('Pelle')");
@@ -98,8 +99,8 @@ public class FreeformQueryTest {
 
     @Test
     public void construction_legalParameters_shouldSucceed() {
-        FreeformQuery ffQuery = new FreeformQuery("SELECT * FROM foo", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery ffQuery = new FreeformQuery("SELECT * FROM foo",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertArrayEquals(new Object[] { "ID" }, ffQuery
                 .getPrimaryKeyColumns().toArray());
 
@@ -134,8 +135,8 @@ public class FreeformQueryTest {
 
     @Test
     public void getCount_simpleQuery_returnsFour() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertEquals(4, query.getCount());
     }
 
@@ -145,7 +146,7 @@ public class FreeformQueryTest {
         // Add some people
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
-        if (AllTests.db == 3) {
+        if (AllTests.db == DB.MSSQL) {
             statement.executeUpdate("insert into people values('Bengt')");
             statement.executeUpdate("insert into people values('Ingvar')");
         } else {
@@ -158,8 +159,8 @@ public class FreeformQueryTest {
         conn.commit();
         connectionPool.releaseConnection(conn);
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
 
         Assert.assertEquals(6, query.getCount());
     }
@@ -185,8 +186,8 @@ public class FreeformQueryTest {
     @Test
     public void getCount_delegateRegistered_shouldUseDelegate()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(delegate.getCountQuery()).andReturn(
@@ -204,22 +205,22 @@ public class FreeformQueryTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute("drop sequence garbage_seq");
             }
         } catch (SQLException e) {
             // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             statement.execute(AllTests.createGarbageSecond);
             statement.execute(AllTests.createGarbageThird);
         }
         conn.commit();
         connectionPool.releaseConnection(conn);
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM GARBAGE", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM GARBAGE",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(delegate.getCountQuery()).andReturn(
@@ -262,8 +263,8 @@ public class FreeformQueryTest {
     public void getResults_moreComplexQuery_returnsThreeRecords()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'",
+                Arrays.asList("ID"), connectionPool);
         query.beginTransaction();
         ResultSet rs = query.getResults(0, 0);
 
@@ -289,7 +290,7 @@ public class FreeformQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Person "
                         + i + "')");
             } else {
@@ -301,8 +302,8 @@ public class FreeformQueryTest {
         conn.commit();
         connectionPool.releaseConnection(conn);
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.beginTransaction();
         ResultSet rs = query.getResults(0, 0);
         for (int i = 0; i < 5000; i++) {
@@ -314,32 +315,32 @@ public class FreeformQueryTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void setFilters_noDelegate_shouldFail() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.setFilters(Arrays.asList(new Filter("name",
                 Filter.ComparisonType.ENDS_WITH, "lle")));
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void setOrderBy_noDelegate_shouldFail() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.setOrderBy(Arrays.asList(new OrderBy("name", true)));
     }
 
     @Test(expected = IllegalStateException.class)
     public void storeRow_noDelegateNoTransactionActive_shouldFail()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.storeRow(new RowItem(new SQLContainer(query), new RowId(
                 new Object[] { 1 }), null));
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void storeRow_noDelegate_shouldFail() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
         EasyMock.replay(container);
         query.beginTransaction();
@@ -351,8 +352,8 @@ public class FreeformQueryTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void removeRow_noDelegate_shouldFail() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
         EasyMock.replay(container);
         query.beginTransaction();
@@ -364,54 +365,54 @@ public class FreeformQueryTest {
 
     @Test
     public void beginTransaction_readOnly_shouldSucceed() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.beginTransaction();
     }
 
     @Test
     public void commit_readOnly_shouldSucceed() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.beginTransaction();
         query.commit();
     }
 
     @Test
     public void rollback_readOnly_shouldSucceed() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.beginTransaction();
         query.rollback();
     }
 
     @Test(expected = SQLException.class)
     public void commit_noActiveTransaction_shouldFail() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.commit();
     }
 
     @Test(expected = SQLException.class)
     public void rollback_noActiveTransaction_shouldFail() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.rollback();
     }
 
     @Test
     public void containsRowWithKeys_simpleQueryWithExistingKeys_returnsTrue()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertTrue(query.containsRowWithKey(1));
     }
 
     @Test
     public void containsRowWithKeys_simpleQueryWithNonexistingKeys_returnsTrue()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertFalse(query.containsRowWithKey(1337));
     }
 
@@ -419,8 +420,8 @@ public class FreeformQueryTest {
     @Test
     public void containsRowWithKeys_simpleQueryWithInvalidKeys_shouldFail()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertFalse(query.containsRowWithKey(38796));
     }
 
@@ -428,8 +429,8 @@ public class FreeformQueryTest {
     public void containsRowWithKeys_queryContainingWhereClauseAndExistingKeys_returnsTrue()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertTrue(query.containsRowWithKey(1));
     }
 
@@ -437,8 +438,8 @@ public class FreeformQueryTest {
     public void containsRowWithKeys_queryContainingLowercaseWhereClauseAndExistingKeys_returnsTrue()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "select * from people where \"NAME\" like '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "select * from people where \"NAME\" like '%lle'",
+                Arrays.asList("ID"), connectionPool);
         Assert.assertTrue(query.containsRowWithKey(1));
     }
 
@@ -446,8 +447,8 @@ public class FreeformQueryTest {
     public void containsRowWithKeys_nullKeys_shouldFailAndReleaseConnections()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "select * from people where \"NAME\" like '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "select * from people where \"NAME\" like '%lle'",
+                Arrays.asList("ID"), connectionPool);
         try {
             query.containsRowWithKey(new Object[] { null });
         } catch (SQLException e) {
@@ -463,8 +464,8 @@ public class FreeformQueryTest {
 
     @Test
     public void setDelegate_noExistingDelegate_shouldRegisterNewDelegate() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         query.setDelegate(delegate);
@@ -473,20 +474,18 @@ public class FreeformQueryTest {
 
     @Test
     public void getResults_hasDelegate_shouldCallDelegate() throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        if (AllTests.db == 3) {
-            EasyMock
-                    .expect(delegate.getQueryString(0, 2))
+        if (AllTests.db == DB.MSSQL) {
+            EasyMock.expect(delegate.getQueryString(0, 2))
                     .andReturn(
                             "SELECT * FROM (SELECT row_number()"
                                     + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
                                     + " AS a WHERE a.rownum BETWEEN 0 AND 2");
-        } else if (AllTests.db == 4) {
-            EasyMock
-                    .expect(delegate.getQueryString(0, 2))
+        } else if (AllTests.db == DB.ORACLE) {
+            EasyMock.expect(delegate.getQueryString(0, 2))
                     .andReturn(
                             "SELECT * FROM (SELECT  x.*, ROWNUM AS r FROM"
                                     + " (SELECT * FROM people) x) WHERE r BETWEEN 1 AND 2");
@@ -506,20 +505,18 @@ public class FreeformQueryTest {
     @Test
     public void getResults_delegateImplementsGetQueryString_shouldHonorOffsetAndPagelength()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        if (AllTests.db == 3) {
-            EasyMock
-                    .expect(delegate.getQueryString(0, 2))
+        if (AllTests.db == DB.MSSQL) {
+            EasyMock.expect(delegate.getQueryString(0, 2))
                     .andReturn(
                             "SELECT * FROM (SELECT row_number()"
                                     + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
                                     + " AS a WHERE a.rownum BETWEEN 0 AND 2");
-        } else if (AllTests.db == 4) {
-            EasyMock
-                    .expect(delegate.getQueryString(0, 2))
+        } else if (AllTests.db == DB.ORACLE) {
+            EasyMock.expect(delegate.getQueryString(0, 2))
                     .andReturn(
                             "SELECT * FROM (SELECT  x.*, ROWNUM AS r FROM"
                                     + " (SELECT * FROM people) x) WHERE r BETWEEN 1 AND 2");
@@ -533,7 +530,7 @@ public class FreeformQueryTest {
         query.beginTransaction();
         ResultSet rs = query.getResults(0, 2);
         int rsoffset = 0;
-        if (AllTests.db == 3) {
+        if (AllTests.db == DB.MSSQL) {
             rsoffset++;
         }
         Assert.assertTrue(rs.next());
@@ -556,7 +553,7 @@ public class FreeformQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Person "
                         + i + "')");
             } else {
@@ -569,20 +566,18 @@ public class FreeformQueryTest {
         conn.commit();
         connectionPool.releaseConnection(conn);
 
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        if (AllTests.db == 3) {
-            EasyMock
-                    .expect(delegate.getQueryString(200, 100))
+        if (AllTests.db == DB.MSSQL) {
+            EasyMock.expect(delegate.getQueryString(200, 100))
                     .andReturn(
                             "SELECT * FROM (SELECT row_number()"
                                     + "OVER (ORDER BY id ASC) AS rownum, * FROM people)"
                                     + " AS a WHERE a.rownum BETWEEN 201 AND 300");
-        } else if (AllTests.db == 4) {
-            EasyMock
-                    .expect(delegate.getQueryString(200, 100))
+        } else if (AllTests.db == DB.ORACLE) {
+            EasyMock.expect(delegate.getQueryString(200, 100))
                     .andReturn(
                             "SELECT * FROM (SELECT  x.*, ROWNUM AS r FROM"
                                     + " (SELECT * FROM people ORDER BY ID ASC) x) WHERE r BETWEEN 201 AND 300");
@@ -605,8 +600,8 @@ public class FreeformQueryTest {
 
     @Test
     public void setFilters_delegateImplementsSetFilters_shouldPassFiltersToDelegate() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         List<Filter> filters = Arrays.asList(new Filter("name",
@@ -623,8 +618,8 @@ public class FreeformQueryTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void setFilters_delegateDoesNotImplementSetFilters_shouldFail() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         List<Filter> filters = Arrays.asList(new Filter("name",
@@ -641,8 +636,8 @@ public class FreeformQueryTest {
 
     @Test
     public void setOrderBy_delegateImplementsSetOrderBy_shouldPassArgumentsToDelegate() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         List<OrderBy> orderBys = Arrays.asList(new OrderBy("name", false));
@@ -657,8 +652,8 @@ public class FreeformQueryTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void setOrderBy_delegateDoesNotImplementSetOrderBy_shouldFail() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         List<OrderBy> orderBys = Arrays.asList(new OrderBy("name", false));
@@ -674,28 +669,28 @@ public class FreeformQueryTest {
 
     @Test
     public void setFilters_noDelegateAndNullParameter_shouldSucceed() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.setFilters(null);
     }
 
     @Test
     public void setOrderBy_noDelegateAndNullParameter_shouldSucceed() {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         query.setOrderBy(null);
     }
 
     @Test
     public void storeRow_delegateImplementsStoreRow_shouldPassToDelegate()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.storeRow(EasyMock.isA(Connection.class), EasyMock
-                        .isA(RowItem.class))).andReturn(1);
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andReturn(1);
         SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
         EasyMock.replay(delegate, container);
         query.setDelegate(delegate);
@@ -712,13 +707,13 @@ public class FreeformQueryTest {
     @Test(expected = UnsupportedOperationException.class)
     public void storeRow_delegateDoesNotImplementStoreRow_shouldFail()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.storeRow(EasyMock.isA(Connection.class), EasyMock
-                        .isA(RowItem.class))).andThrow(
+                delegate.storeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andThrow(
                 new UnsupportedOperationException());
         SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
         EasyMock.replay(delegate, container);
@@ -736,13 +731,13 @@ public class FreeformQueryTest {
     @Test
     public void removeRow_delegateImplementsRemoveRow_shouldPassToDelegate()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.removeRow(EasyMock.isA(Connection.class), EasyMock
-                        .isA(RowItem.class))).andReturn(true);
+                delegate.removeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andReturn(true);
         SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
         EasyMock.replay(delegate, container);
         query.setDelegate(delegate);
@@ -759,13 +754,13 @@ public class FreeformQueryTest {
     @Test(expected = UnsupportedOperationException.class)
     public void removeRow_delegateDoesNotImplementRemoveRow_shouldFail()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(
-                delegate.removeRow(EasyMock.isA(Connection.class), EasyMock
-                        .isA(RowItem.class))).andThrow(
+                delegate.removeRow(EasyMock.isA(Connection.class),
+                        EasyMock.isA(RowItem.class))).andThrow(
                 new UnsupportedOperationException());
         SQLContainer container = EasyMock.createNiceMock(SQLContainer.class);
         EasyMock.replay(delegate, container);
@@ -783,8 +778,8 @@ public class FreeformQueryTest {
     @Test
     public void beginTransaction_delegateRegistered_shouldSucceed()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -796,8 +791,8 @@ public class FreeformQueryTest {
     @Test(expected = IllegalStateException.class)
     public void beginTransaction_transactionAlreadyActive_shouldFail()
             throws SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
 
         query.beginTransaction();
         query.beginTransaction();
@@ -806,8 +801,8 @@ public class FreeformQueryTest {
     @Test(expected = SQLException.class)
     public void commit_delegateRegisteredNoActiveTransaction_shouldFail()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -819,8 +814,8 @@ public class FreeformQueryTest {
     @Test
     public void commit_delegateRegisteredActiveTransaction_shouldSucceed()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -833,8 +828,8 @@ public class FreeformQueryTest {
     @Test(expected = SQLException.class)
     public void commit_delegateRegisteredActiveTransactionDoubleCommit_shouldFail()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -848,8 +843,8 @@ public class FreeformQueryTest {
     @Test(expected = SQLException.class)
     public void rollback_delegateRegisteredNoActiveTransaction_shouldFail()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -861,8 +856,8 @@ public class FreeformQueryTest {
     @Test
     public void rollback_delegateRegisteredActiveTransaction_shouldSucceed()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -875,8 +870,8 @@ public class FreeformQueryTest {
     @Test(expected = SQLException.class)
     public void rollback_delegateRegisteredActiveTransactionDoubleRollback_shouldFail()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -890,8 +885,8 @@ public class FreeformQueryTest {
     @Test(expected = SQLException.class)
     public void rollback_delegateRegisteredCommittedTransaction_shouldFail()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -905,8 +900,8 @@ public class FreeformQueryTest {
     @Test(expected = SQLException.class)
     public void commit_delegateRegisteredRollbackedTransaction_shouldFail()
             throws UnsupportedOperationException, SQLException {
-        FreeformQuery query = new FreeformQuery("SELECT * FROM people", Arrays
-                .asList("ID"), connectionPool);
+        FreeformQuery query = new FreeformQuery("SELECT * FROM people",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.replay(delegate);
@@ -921,8 +916,8 @@ public class FreeformQueryTest {
     public void containsRowWithKeys_delegateRegistered_shouldCallGetContainsRowQueryString()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "SELECT * FROM people WHERE name LIKE '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "SELECT * FROM people WHERE name LIKE '%lle'",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(delegate.getContainsRowQueryString(1)).andReturn("");
@@ -938,14 +933,13 @@ public class FreeformQueryTest {
     public void containsRowWithKeys_delegateRegistered_shouldUseResultFromGetContainsRowQueryString()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         // In order to test that this is the query that is actually used, we use
         // a non-existing id in place of the existing one.
-        EasyMock
-                .expect(delegate.getContainsRowQueryString(1))
+        EasyMock.expect(delegate.getContainsRowQueryString(1))
                 .andReturn(
                         "SELECT * FROM people WHERE \"NAME\" LIKE '%lle' AND \"ID\" = 1337");
         EasyMock.replay(delegate);
@@ -961,8 +955,8 @@ public class FreeformQueryTest {
     public void containsRowWithKeys_delegateRegisteredGetContainsRowQueryStringNotImplemented_shouldBuildQueryString()
             throws SQLException {
         FreeformQuery query = new FreeformQuery(
-                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'", Arrays
-                        .asList("ID"), connectionPool);
+                "SELECT * FROM people WHERE \"NAME\" LIKE '%lle'",
+                Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         EasyMock.expect(delegate.getContainsRowQueryString(1)).andThrow(

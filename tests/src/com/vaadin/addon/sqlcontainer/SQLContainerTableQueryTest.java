@@ -15,15 +15,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.SQLContainer.ItemSetChangeEvent;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
-import com.vaadin.data.Item;
 import com.vaadin.data.Container.ItemSetChangeListener;
+import com.vaadin.data.Item;
 
 public class SQLContainerTableQueryTest {
 
@@ -58,7 +59,7 @@ public class SQLContainerTableQueryTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
-                if (AllTests.db == 4) {
+                if (AllTests.db == DB.ORACLE) {
                     statement.execute("drop sequence people_seq");
                 }
             } catch (SQLException e) {
@@ -69,10 +70,10 @@ public class SQLContainerTableQueryTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute(AllTests.peopleThird);
             }
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Ville')");
                 statement.executeUpdate("insert into people values('Kalle')");
                 statement.executeUpdate("insert into people values('Pelle')");
@@ -104,7 +105,7 @@ public class SQLContainerTableQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Person "
                         + i + "')");
             } else {
@@ -147,13 +148,19 @@ public class SQLContainerTableQueryTest {
             throws SQLException {
         TableQuery t = new TableQuery("people", connectionPool, AllTests.sqlGen);
         SQLContainer container = new SQLContainer(t);
-        if (AllTests.db == 4) {
-            Assert.assertEquals("Ville", container.getContainerProperty(
-                    new RowId(new Object[] { new BigDecimal(0 + offset) }),
-                    "NAME").getValue());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    "Ville",
+                    container
+                            .getContainerProperty(
+                                    new RowId(new Object[] { new BigDecimal(
+                                            0 + offset) }), "NAME").getValue());
         } else {
-            Assert.assertEquals("Ville", container.getContainerProperty(
-                    new RowId(new Object[] { 0 + offset }), "NAME").getValue());
+            Assert.assertEquals(
+                    "Ville",
+                    container.getContainerProperty(
+                            new RowId(new Object[] { 0 + offset }), "NAME")
+                            .getValue());
         }
     }
 
@@ -181,18 +188,18 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Collection<?> propertyIds = container.getContainerPropertyIds();
-        if (AllTests.db == 3) {
+        if (AllTests.db == DB.MSSQL) {
             Assert.assertEquals(2, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
-                    .toArray());
-        } else if (AllTests.db == 4) {
+            Assert.assertArrayEquals(new String[] { "ID", "NAME" },
+                    propertyIds.toArray());
+        } else if (AllTests.db == DB.ORACLE) {
             Assert.assertEquals(2, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
-                    .toArray());
+            Assert.assertArrayEquals(new String[] { "ID", "NAME" },
+                    propertyIds.toArray());
         } else {
             Assert.assertEquals(2, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME" }, propertyIds
-                    .toArray());
+            Assert.assertArrayEquals(new String[] { "ID", "NAME" },
+                    propertyIds.toArray());
         }
     }
 
@@ -201,7 +208,7 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Item item;
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             item = container.getItem(new RowId(new Object[] { new BigDecimal(
                     0 + offset) }));
         } else {
@@ -220,7 +227,7 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(query);
 
         Item item;
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             item = container.getItem(new RowId(new Object[] { new BigDecimal(
                     1337 + offset) }));
         } else {
@@ -244,7 +251,7 @@ public class SQLContainerTableQueryTest {
         RowId one = new RowId(new Object[] { 1 + offset });
         RowId two = new RowId(new Object[] { 2 + offset });
         RowId three = new RowId(new Object[] { 3 + offset });
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             String[] correct = new String[] { "1", "2", "3", "4" };
             List<String> oracle = new ArrayList<String>();
             for (Object o : itemIds) {
@@ -268,7 +275,7 @@ public class SQLContainerTableQueryTest {
     public void getType_tableIDPropertyId_returnsInteger() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertEquals(BigDecimal.class, container.getType("ID"));
         } else {
             Assert.assertEquals(Integer.class, container.getType("ID"));
@@ -294,7 +301,7 @@ public class SQLContainerTableQueryTest {
     public void size_tableOneAddedItem_returnsFive() throws SQLException {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
-        if (AllTests.db == 3) {
+        if (AllTests.db == DB.MSSQL) {
             statement.executeUpdate("insert into people values('Bengt')");
         } else {
             statement
@@ -314,12 +321,12 @@ public class SQLContainerTableQueryTest {
             throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertEquals(3, container.indexOfId(new RowId(
                     new Object[] { new BigDecimal(3 + offset) })));
         } else {
-            Assert.assertEquals(3, container.indexOfId(new RowId(
-                    new Object[] { 3 + offset })));
+            Assert.assertEquals(3,
+                    container.indexOfId(new RowId(new Object[] { 3 + offset })));
         }
     }
 
@@ -329,7 +336,7 @@ public class SQLContainerTableQueryTest {
         addFiveThousand();
         TableQuery q = new TableQuery("people", connectionPool, AllTests.sqlGen);
         SQLContainer container = new SQLContainer(q);
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             container.getItem(new RowId(new Object[] { new BigDecimal(
                     1337 + offset) }));
             Assert.assertEquals(1337, container.indexOfId(new RowId(
@@ -348,9 +355,10 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.getIdByIndex(1337);
-        if (AllTests.db == 4) {
-            Assert.assertEquals(new RowId(new Object[] { 1337 + offset })
-                    .toString(), itemId.toString());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    new RowId(new Object[] { 1337 + offset }).toString(),
+                    itemId.toString());
         } else {
             Assert.assertEquals(new RowId(new Object[] { 1337 + offset }),
                     itemId);
@@ -365,9 +373,10 @@ public class SQLContainerTableQueryTest {
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
         Object itemId = container.getIdByIndex(1337);
-        if (AllTests.db == 4) {
-            Assert.assertEquals(new RowId(new Object[] { 1337 + offset })
-                    .toString(), itemId.toString());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    new RowId(new Object[] { 1337 + offset }).toString(),
+                    itemId.toString());
         } else {
             Assert.assertEquals(new RowId(new Object[] { 1337 + offset }),
                     itemId);
@@ -381,9 +390,10 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.getIdByIndex(1337);
-        if (AllTests.db == 4) {
-            Assert.assertEquals(new RowId(new Object[] { 1338 + offset })
-                    .toString(), container.nextItemId(itemId).toString());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    new RowId(new Object[] { 1338 + offset }).toString(),
+                    container.nextItemId(itemId).toString());
         } else {
             Assert.assertEquals(new RowId(new Object[] { 1338 + offset }),
                     container.nextItemId(itemId));
@@ -397,9 +407,10 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.getIdByIndex(1337);
-        if (AllTests.db == 4) {
-            Assert.assertEquals(new RowId(new Object[] { 1336 + offset })
-                    .toString(), container.prevItemId(itemId).toString());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    new RowId(new Object[] { 1336 + offset }).toString(),
+                    container.prevItemId(itemId).toString());
         } else {
             Assert.assertEquals(new RowId(new Object[] { 1336 + offset }),
                     container.prevItemId(itemId));
@@ -410,9 +421,10 @@ public class SQLContainerTableQueryTest {
     public void firstItemId_table_returnsItemId0() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
-            Assert.assertEquals(new RowId(new Object[] { 0 + offset })
-                    .toString(), container.firstItemId().toString());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    new RowId(new Object[] { 0 + offset }).toString(),
+                    container.firstItemId().toString());
         } else {
             Assert.assertEquals(new RowId(new Object[] { 0 + offset }),
                     container.firstItemId());
@@ -426,9 +438,10 @@ public class SQLContainerTableQueryTest {
 
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
-            Assert.assertEquals(new RowId(new Object[] { 4999 + offset })
-                    .toString(), container.lastItemId().toString());
+        if (AllTests.db == DB.ORACLE) {
+            Assert.assertEquals(
+                    new RowId(new Object[] { 4999 + offset }).toString(),
+                    container.lastItemId().toString());
         } else {
             Assert.assertEquals(new RowId(new Object[] { 4999 + offset }),
                     container.lastItemId());
@@ -439,7 +452,7 @@ public class SQLContainerTableQueryTest {
     public void isFirstId_tableActualFirstId_returnsTrue() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertTrue(container.isFirstId(new RowId(
                     new Object[] { new BigDecimal(0 + offset) })));
         } else {
@@ -452,7 +465,7 @@ public class SQLContainerTableQueryTest {
     public void isFirstId_tableSecondId_returnsFalse() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertFalse(container.isFirstId(new RowId(
                     new Object[] { new BigDecimal(1 + offset) })));
         } else {
@@ -465,7 +478,7 @@ public class SQLContainerTableQueryTest {
     public void isLastId_tableSecondId_returnsFalse() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertFalse(container.isLastId(new RowId(
                     new Object[] { new BigDecimal(1 + offset) })));
         } else {
@@ -478,7 +491,7 @@ public class SQLContainerTableQueryTest {
     public void isLastId_tableLastId_returnsTrue() throws SQLException {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertTrue(container.isLastId(new RowId(
                     new Object[] { new BigDecimal(3 + offset) })));
         } else {
@@ -492,7 +505,7 @@ public class SQLContainerTableQueryTest {
         addFiveThousand();
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             Assert.assertTrue(container.isLastId(new RowId(
                     new Object[] { new BigDecimal(4999 + offset) })));
         } else {
@@ -769,14 +782,14 @@ public class SQLContainerTableQueryTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute("drop sequence garbage_seq");
             }
         } catch (SQLException e) {
             // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             statement.execute(AllTests.createGarbageSecond);
             statement.execute(AllTests.createGarbageThird);
         }
@@ -795,14 +808,14 @@ public class SQLContainerTableQueryTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute("drop sequence garbage_seq");
             }
         } catch (SQLException e) {
             // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             statement.execute(AllTests.createGarbageSecond);
             statement.execute(AllTests.createGarbageThird);
         }
@@ -1003,14 +1016,14 @@ public class SQLContainerTableQueryTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute("drop sequence garbage_seq");
             }
         } catch (SQLException e) {
             // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             statement.execute(AllTests.createGarbageSecond);
             statement.execute(AllTests.createGarbageThird);
         }
@@ -1063,14 +1076,14 @@ public class SQLContainerTableQueryTest {
         Statement statement = conn.createStatement();
         try {
             statement.execute("drop table GARBAGE");
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute("drop sequence garbage_seq");
             }
         } catch (SQLException e) {
             // Will fail if table doesn't exist, which is OK.
         }
         statement.execute(createGarbage);
-        if (AllTests.db == 4) {
+        if (AllTests.db == DB.ORACLE) {
             statement.execute(AllTests.createGarbageSecond);
             statement.execute(AllTests.createGarbageThird);
         }
@@ -1179,8 +1192,9 @@ public class SQLContainerTableQueryTest {
         Assert.assertSame(id, container.lastItemId());
         container.commit();
         Assert.assertFalse(container.lastItemId() instanceof TemporaryRowId);
-        Assert.assertEquals("New Name", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("New Name",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1199,11 +1213,12 @@ public class SQLContainerTableQueryTest {
         container.commit();
         Object nextToLast = container.getIdByIndex(container.size() - 2);
         Assert.assertFalse(nextToLast instanceof TemporaryRowId);
-        Assert.assertEquals("Herbert", container.getContainerProperty(
-                nextToLast, "NAME").getValue());
+        Assert.assertEquals("Herbert",
+                container.getContainerProperty(nextToLast, "NAME").getValue());
         Assert.assertFalse(container.lastItemId() instanceof TemporaryRowId);
-        Assert.assertEquals("Larry", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Larry",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1228,8 +1243,9 @@ public class SQLContainerTableQueryTest {
         Object last = container.lastItemId();
         container.getContainerProperty(last, "NAME").setValue("Donald");
         container.commit();
-        Assert.assertEquals("Donald", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Donald",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1365,7 +1381,7 @@ public class SQLContainerTableQueryTest {
         Collection<?> sortableIds = container.getSortableContainerPropertyIds();
         Assert.assertTrue(sortableIds.contains("ID"));
         Assert.assertTrue(sortableIds.contains("NAME"));
-        if (AllTests.db == 3 || AllTests.db == 4) {
+        if (AllTests.db == DB.MSSQL || AllTests.db == DB.ORACLE) {
             Assert.assertEquals(2, sortableIds.size());
             Assert.assertFalse(sortableIds.contains("rownum"));
         } else {
@@ -1379,17 +1395,21 @@ public class SQLContainerTableQueryTest {
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.firstItemId(), "NAME").getValue());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         container.addOrderBy(new OrderBy("NAME", true));
         // Börje, Kalle, Pelle, Ville
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.firstItemId(), "NAME").getValue());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -1405,18 +1425,22 @@ public class SQLContainerTableQueryTest {
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.firstItemId(), "NAME").getValue());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         container.sort(new Object[] { "NAME" }, new boolean[] { true });
 
         // Börje, Kalle, Pelle, Ville
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.firstItemId(), "NAME").getValue());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1426,15 +1450,17 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         container
                 .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
         // Ville, Kalle, Pelle
         Assert.assertEquals(3, container.size());
-        Assert.assertEquals("Pelle", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Pelle",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1449,8 +1475,9 @@ public class SQLContainerTableQueryTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1466,8 +1493,9 @@ public class SQLContainerTableQueryTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1483,14 +1511,16 @@ public class SQLContainerTableQueryTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         container.removeAllContainerFilters();
 
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1505,14 +1535,16 @@ public class SQLContainerTableQueryTest {
 
         // Ville
         Assert.assertEquals(1, container.size());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         container.removeContainerFilters("NAME");
 
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
     @Test
@@ -1523,8 +1555,9 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         Object id1 = container.addItem();
         container.getContainerProperty(id1, "NAME").setValue("Palle");
@@ -1536,14 +1569,22 @@ public class SQLContainerTableQueryTest {
 
         // Ville, Kalle, Pelle, Palle
         Assert.assertEquals(4, container.size());
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.getIdByIndex(0), "NAME").getValue());
-        Assert.assertEquals("Kalle", container.getContainerProperty(
-                container.getIdByIndex(1), "NAME").getValue());
-        Assert.assertEquals("Pelle", container.getContainerProperty(
-                container.getIdByIndex(2), "NAME").getValue());
-        Assert.assertEquals("Palle", container.getContainerProperty(
-                container.getIdByIndex(3), "NAME").getValue());
+        Assert.assertEquals(
+                "Ville",
+                container.getContainerProperty(container.getIdByIndex(0),
+                        "NAME").getValue());
+        Assert.assertEquals(
+                "Kalle",
+                container.getContainerProperty(container.getIdByIndex(1),
+                        "NAME").getValue());
+        Assert.assertEquals(
+                "Pelle",
+                container.getContainerProperty(container.getIdByIndex(2),
+                        "NAME").getValue());
+        Assert.assertEquals(
+                "Palle",
+                container.getContainerProperty(container.getIdByIndex(3),
+                        "NAME").getValue());
 
         Assert.assertNull(container.getIdByIndex(4));
         Assert.assertNull(container.nextItemId(container.getIdByIndex(3)));
@@ -1565,10 +1606,12 @@ public class SQLContainerTableQueryTest {
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
         // Ville, Kalle, Pelle, Börje
-        Assert.assertEquals("Ville", container.getContainerProperty(
-                container.firstItemId(), "NAME").getValue());
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Ville",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
 
         Object id1 = container.addItem();
         container.getContainerProperty(id1, "NAME").setValue("Wilbert");
@@ -1578,13 +1621,17 @@ public class SQLContainerTableQueryTest {
         container.sort(new Object[] { "NAME" }, new boolean[] { true });
 
         // Börje, Kalle, Pelle, Ville, Wilbert, Albert
-        Assert.assertEquals("Börje", container.getContainerProperty(
-                container.firstItemId(), "NAME").getValue());
-        Assert.assertEquals("Wilbert", container.getContainerProperty(
-                container.getIdByIndex(container.size() - 2), "NAME")
-                .getValue());
-        Assert.assertEquals("Albert", container.getContainerProperty(
-                container.lastItemId(), "NAME").getValue());
+        Assert.assertEquals("Börje",
+                container.getContainerProperty(container.firstItemId(), "NAME")
+                        .getValue());
+        Assert.assertEquals(
+                "Wilbert",
+                container.getContainerProperty(
+                        container.getIdByIndex(container.size() - 2), "NAME")
+                        .getValue());
+        Assert.assertEquals("Albert",
+                container.getContainerProperty(container.lastItemId(), "NAME")
+                        .getValue());
     }
 
 }

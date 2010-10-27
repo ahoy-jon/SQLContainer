@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.addon.sqlcontainer.AllTests;
+import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
@@ -51,7 +52,7 @@ public class TableQueryTest {
             Statement statement = conn.createStatement();
             try {
                 statement.execute("drop table PEOPLE");
-                if (AllTests.db == 4) {
+                if (AllTests.db == DB.ORACLE) {
                     statement.execute("drop sequence people_seq");
                 }
             } catch (SQLException e) {
@@ -62,10 +63,10 @@ public class TableQueryTest {
             if (AllTests.peopleSecond != null) {
                 statement.execute(AllTests.peopleSecond);
             }
-            if (AllTests.db == 4) {
+            if (AllTests.db == DB.ORACLE) {
                 statement.execute(AllTests.peopleThird);
             }
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Ville')");
                 statement.executeUpdate("insert into people values('Kalle')");
                 statement.executeUpdate("insert into people values('Pelle')");
@@ -154,7 +155,7 @@ public class TableQueryTest {
         // Add some people
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
-        if (AllTests.db == 3) {
+        if (AllTests.db == DB.MSSQL) {
             statement.executeUpdate("insert into people values('Bengt')");
             statement.executeUpdate("insert into people values('Ingvar')");
         } else {
@@ -218,7 +219,7 @@ public class TableQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == 3) {
+            if (AllTests.db == DB.MSSQL) {
                 statement.executeUpdate("insert into people values('Person "
                         + i + "')");
             } else {

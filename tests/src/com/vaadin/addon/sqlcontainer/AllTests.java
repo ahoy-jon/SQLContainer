@@ -21,8 +21,12 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
         TicketTests.class })
 public class AllTests {
     /* Set the DB used for testing here! */
+    public enum DB {
+        HSQLDB, MYSQL, POSTGRESQL, MSSQL, ORACLE;
+    }
+
     /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL, 4 = ORACLE */
-    public static final int db = 1;
+    public static final DB db = DB.HSQLDB;
 
     /* Auto-increment column offset (HSQLDB = 0, MYSQL = 1, POSTGRES = 1) */
     public static int offset;
@@ -46,7 +50,7 @@ public class AllTests {
     static {
         sqlGen = new DefaultSQLGenerator();
         switch (db) {
-        case 0:
+        case HSQLDB:
             offset = 0;
             createGarbage = "create table garbage (id integer generated always as identity, type varchar(32), PRIMARY KEY(id))";
             dbDriver = "org.hsqldb.jdbc.JDBCDriver";
@@ -56,7 +60,7 @@ public class AllTests {
             peopleFirst = "create table people (id integer generated always as identity, name varchar(32))";
             peopleSecond = "alter table people add primary key (id)";
             break;
-        case 1:
+        case MYSQL:
             offset = 1;
             createGarbage = "create table GARBAGE (ID integer auto_increment, type varchar(32), PRIMARY KEY(ID))";
             dbDriver = "com.mysql.jdbc.Driver";
@@ -66,7 +70,7 @@ public class AllTests {
             peopleFirst = "create table PEOPLE (ID integer auto_increment not null, NAME varchar(32), primary key(ID))";
             peopleSecond = null;
             break;
-        case 2:
+        case POSTGRESQL:
             offset = 1;
             createGarbage = "create table GARBAGE (\"ID\" serial PRIMARY KEY, \"TYPE\" varchar(32))";
             dbDriver = "org.postgresql.Driver";
@@ -76,7 +80,7 @@ public class AllTests {
             peopleFirst = "create table PEOPLE (\"ID\" serial primary key, \"NAME\" VARCHAR(32))";
             peopleSecond = null;
             break;
-        case 3:
+        case MSSQL:
             offset = 1;
             createGarbage = "create table GARBAGE (\"ID\" int identity(1,1) primary key, \"TYPE\" varchar(32))";
             dbDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
@@ -87,7 +91,7 @@ public class AllTests {
             peopleSecond = null;
             sqlGen = new MSSQLGenerator();
             break;
-        case 4:
+        case ORACLE:
             offset = 1;
             createGarbage = "create table GARBAGE (\"ID\" integer primary key, \"TYPE\" varchar2(32))";
             createGarbageSecond = "create sequence garbage_seq start with 1 increment by 1 nomaxvalue";
