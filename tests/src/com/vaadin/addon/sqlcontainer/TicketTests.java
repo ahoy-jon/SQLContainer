@@ -16,8 +16,8 @@ public class TicketTests {
     public void ticket5867_throwsIllegalState_transactionAlreadyActive()
             throws SQLException {
         SimpleJDBCConnectionPool connectionPool = new SimpleJDBCConnectionPool(
-                "com.mysql.jdbc.Driver", "jdbc:mysql://localhost/sqlcontainer",
-                "sqlcontainer", "sqlcontainer", 2, 2);
+                AllTests.dbDriver, AllTests.dbURL, AllTests.dbUser,
+                AllTests.dbPwd, 2, 2);
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Table table = new Table();
