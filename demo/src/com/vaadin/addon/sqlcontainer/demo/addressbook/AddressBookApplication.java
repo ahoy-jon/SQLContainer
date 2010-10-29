@@ -12,9 +12,9 @@ import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonList;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SearchView;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SharingOptions;
 import com.vaadin.addon.sqlcontainer.query.Filter;
+import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeEvent;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
@@ -25,14 +25,14 @@ import com.vaadin.event.ItemClickEvent.ItemClickListener;
 import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
+import com.vaadin.ui.Button.ClickEvent;
+import com.vaadin.ui.Button.ClickListener;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Embedded;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.SplitPanel;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
-import com.vaadin.ui.Button.ClickEvent;
-import com.vaadin.ui.Button.ClickListener;
 import com.vaadin.ui.Window.Notification;
 
 @SuppressWarnings("serial")
@@ -40,13 +40,13 @@ public class AddressBookApplication extends Application implements
         ClickListener, ValueChangeListener, ItemClickListener,
         QueryDelegate.RowIdChangeListener {
 
-    private NavigationTree tree = new NavigationTree(this);
+    private final NavigationTree tree = new NavigationTree(this);
 
-    private Button newContact = new Button("Add contact");
-    private Button search = new Button("Search");
-    private Button share = new Button("Share");
-    private Button help = new Button("Help");
-    private SplitPanel horizontalSplit = new SplitPanel(
+    private final Button newContact = new Button("Add contact");
+    private final Button search = new Button("Search");
+    private final Button share = new Button("Share");
+    private final Button help = new Button("Help");
+    private final SplitPanel horizontalSplit = new SplitPanel(
             SplitPanel.ORIENTATION_HORIZONTAL);
 
     // Lazily created UI references
@@ -58,7 +58,7 @@ public class AddressBookApplication extends Application implements
     private SharingOptions sharingOptions = null;
 
     /* Helper class that creates the tables and SQLContainers. */
-    private DatabaseHelper dbHelp = new DatabaseHelper();
+    private final DatabaseHelper dbHelp = new DatabaseHelper();
 
     @Override
     public void init() {
@@ -233,16 +233,13 @@ public class AddressBookApplication extends Application implements
         /* Clear all filters from person container. */
         getDbHelp().getPersonContainer().removeAllContainerFilters();
         /*
-         * Set the appropriate filtering mode. In this application, multiple
+         * Set the exclusive filtering mode. In this application, multiple
          * filters are only used to filter for more than one city since they are
          * actually filtered by their keys. This filter has to be of the
          * exclusive type.
          */
-        if (searchFilters.length > 1) {
-            c.setFilteringMode(FilteringMode.FILTERING_MODE_EXCLUSIVE);
-        } else {
-            c.setFilteringMode(FilteringMode.FILTERING_MODE_INCLUSIVE);
-        }
+        c.setFilteringMode(FilteringMode.FILTERING_MODE_EXCLUSIVE);
+
         /* Add the filter(s) to the person container. */
         for (SearchFilter searchFilter : searchFilters) {
             Filter f = new Filter((String) searchFilter.getPropertyId(),
@@ -250,8 +247,8 @@ public class AddressBookApplication extends Application implements
             if (Integer.class.equals(c.getType(searchFilter.getPropertyId()))) {
                 try {
                     f = new Filter((String) searchFilter.getPropertyId(),
-                            ComparisonType.EQUALS, Integer
-                                    .parseInt(searchFilter.getTerm()));
+                            ComparisonType.EQUALS,
+                            Integer.parseInt(searchFilter.getTerm()));
                 } catch (NumberFormatException nfe) {
                     getMainWindow().showNotification("Invalid search term!");
                     return;
