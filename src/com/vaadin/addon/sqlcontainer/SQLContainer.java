@@ -186,6 +186,7 @@ public class SQLContainer implements Container, Container.Filterable,
         if (itemId == null) {
             return false;
         }
+
         if (cachedItems.containsKey(itemId)) {
             return true;
         } else {
@@ -198,6 +199,12 @@ public class SQLContainer implements Container, Container.Filterable,
         if (removedItems.containsKey(itemId)) {
             return false;
         }
+
+        if (itemId instanceof ReadOnlyRowId) {
+            int rowNum = ((ReadOnlyRowId) itemId).getRowNum();
+            return rowNum >= 0 && rowNum < size;
+        }
+
         if (!(itemId instanceof TemporaryRowId)) {
             try {
                 return delegate.containsRowWithKey(((RowId) itemId).getId());
@@ -274,13 +281,19 @@ public class SQLContainer implements Container, Container.Filterable,
             rs = delegate.getResults(0, 0);
             List<String> pKeys = delegate.getPrimaryKeyColumns();
             while (rs.next()) {
-                /* Generate itemId for the row based on primary key(s) */
-                Object[] itemId = new Object[pKeys.size()];
-                for (int i = 0; i < pKeys.size(); i++) {
-                    itemId[i] = rs.getObject(pKeys.get(i));
+                RowId id = null;
+                if (pKeys.isEmpty()) {
+                    /* Create a read only itemId */
+                    id = new ReadOnlyRowId(rs.getRow());
+                } else {
+                    /* Generate itemId for the row based on primary key(s) */
+                    Object[] itemId = new Object[pKeys.size()];
+                    for (int i = 0; i < pKeys.size(); i++) {
+                        itemId[i] = rs.getObject(pKeys.get(i));
+                    }
+                    id = new RowId(itemId);
                 }
-                RowId id = new RowId(itemId);
-                if (!removedItems.containsKey(id)) {
+                if (id != null && !removedItems.containsKey(id)) {
                     ids.add(id);
                 }
             }
@@ -1096,7 +1109,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 }
                 RowId id = null;
                 if (pKeys.isEmpty()) {
-                    id = new ReadOnlyRowId();
+                    id = new ReadOnlyRowId(rs.getRow());
                 } else {
                     id = new RowId(itemId);
                 }

@@ -1,19 +1,17 @@
 package com.vaadin.addon.sqlcontainer;
 
-import java.util.UUID;
-
 public class ReadOnlyRowId extends RowId {
     private static final long serialVersionUID = -2626764781642012467L;
-    private final UUID uuid;
+    private final Integer rowNum;
 
-    public ReadOnlyRowId() {
+    public ReadOnlyRowId(int rowNum) {
         super();
-        uuid = UUID.randomUUID();
+        this.rowNum = rowNum;
     }
 
     @Override
     public int hashCode() {
-        return uuid.hashCode();
+        return rowNum.hashCode();
     }
 
     @Override
@@ -21,6 +19,10 @@ public class ReadOnlyRowId extends RowId {
         if (obj == null || !(obj instanceof ReadOnlyRowId)) {
             return false;
         }
-        return uuid.equals(((ReadOnlyRowId) obj).uuid);
+        return rowNum.equals(((ReadOnlyRowId) obj).rowNum);
+    }
+
+    public int getRowNum() {
+        return rowNum;
     }
 }
