@@ -81,8 +81,8 @@
 
         <mkdir dir="${result.classes}"/>
         
-		 <javac destdir="${result.classes}" target="1.5" source="1.5"> 
-		 <!-- <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true"> -->
+		 <!-- <javac destdir="${result.classes}" target="1.5" source="1.5"> --> 
+		 <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true">
 			<src path="src" />
 			<include name="**/*.*" />
 
@@ -139,7 +139,7 @@
     <!-- Refresh the project in a locally running Eclipse. -->
 	<target name="refresh-eclipse" if="eclipse.running">
 		<echo>Refreshing project folder</echo>
-		<eclipse.refreshLocal resource="ColorPickerTest" depth="infinite" />
+		<eclipse.refreshLocal resource="SQLContainer" depth="infinite" />
 	</target>
 
     <!-- ================================================================== -->
