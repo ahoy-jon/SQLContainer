@@ -297,10 +297,14 @@ public class SQLContainer implements Container, Container.Filterable,
                     ids.add(id);
                 }
             }
+            rs.getStatement().close();
+            rs.close();
             delegate.commit();
         } catch (SQLException e) {
             debug(e, null);
             try {
+                rs.getStatement().close();
+                rs.close();
                 delegate.rollback();
             } catch (SQLException e1) {
                 debug(e1, null);
@@ -1056,11 +1060,15 @@ public class SQLContainer implements Container, Container.Filterable,
                         rsmd.isNullable(i) == ResultSetMetaData.columnNullable);
                 propertyTypes.put(colName, type);
             }
+            rs.getStatement().close();
+            rs.close();
             delegate.commit();
             debug(null, "Property IDs fetched.");
         } catch (SQLException e) {
             debug(e, null);
             try {
+                rs.getStatement().close();
+                rs.close();
                 delegate.rollback();
             } catch (SQLException e1) {
                 debug(e1, null);
@@ -1153,12 +1161,16 @@ public class SQLContainer implements Container, Container.Filterable,
                     rowCount++;
                 }
             }
+            rs.getStatement().close();
+            rs.close();
             delegate.commit();
             debug(null, "Fetched " + pageLength * CACHE_RATIO
                     + " rows starting from " + currentOffset);
         } catch (SQLException e) {
             debug(e, null);
             try {
+                rs.getStatement().close();
+                rs.close();
                 delegate.rollback();
             } catch (SQLException e1) {
                 debug(e1, null);

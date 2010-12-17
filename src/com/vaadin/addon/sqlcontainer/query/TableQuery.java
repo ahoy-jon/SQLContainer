@@ -53,7 +53,7 @@ public class TableQuery implements QueryDelegate,
     /** Row ID change listeners */
     private LinkedList<RowIdChangeListener> rowIdChangeListeners;
     /** Row ID change events, stored until commit() is called */
-    private List<RowIdChangeEvent> bufferedEvents = new ArrayList<RowIdChangeEvent>();
+    private final List<RowIdChangeEvent> bufferedEvents = new ArrayList<RowIdChangeEvent>();
 
     /** Set to true to output generated SQL Queries to System.out */
     private boolean debug = false;
@@ -118,6 +118,8 @@ public class TableQuery implements QueryDelegate,
         ResultSet r = executeQuery(sh);
         r.next();
         int count = r.getInt(1);
+        r.getStatement().close();
+        r.close();
         if (shouldCloseTransaction) {
             commit();
         }
@@ -218,8 +220,8 @@ public class TableQuery implements QueryDelegate,
         }
         /* Generate query */
         StatementHelper sh = sqlGenerator.generateInsertQuery(tableName, row);
-        PreparedStatement pstmt = activeConnection.prepareStatement(sh
-                .getQueryString(), primaryKeyColumns.toArray(new String[0]));
+        PreparedStatement pstmt = activeConnection.prepareStatement(
+                sh.getQueryString(), primaryKeyColumns.toArray(new String[0]));
         sh.setParameterValuesToStatement(pstmt);
         debug("DB -> " + sh.getQueryString());
         int result = pstmt.executeUpdate();
@@ -228,10 +230,16 @@ public class TableQuery implements QueryDelegate,
              * If affected rows exist, we'll get the new RowId, commit the
              * transaction and return the new RowId.
              */
-            RowId newId = getNewRowId(row, pstmt.getGeneratedKeys());
+            ResultSet generatedKeys = pstmt.getGeneratedKeys();
+            RowId newId = getNewRowId(row, generatedKeys);
+            generatedKeys.close();
+            pstmt.clearParameters();
+            pstmt.close();
             commit();
             return newId;
         } else {
+            pstmt.clearParameters();
+            pstmt.close();
             /* On failure return null */
             return null;
         }
@@ -403,17 +411,23 @@ public class TableQuery implements QueryDelegate,
      */
     private int executeUpdate(StatementHelper sh) throws SQLException {
         Connection c = null;
+        PreparedStatement pstmt = null;
         try {
             if (transactionOpen && activeConnection != null) {
                 c = activeConnection;
             } else {
                 c = connectionPool.reserveConnection();
             }
-            PreparedStatement pstmt = c.prepareStatement(sh.getQueryString());
+            pstmt = c.prepareStatement(sh.getQueryString());
             sh.setParameterValuesToStatement(pstmt);
             debug("DB -> " + sh.getQueryString());
-            return pstmt.executeUpdate();
+            int retval = pstmt.executeUpdate();
+            return retval;
         } finally {
+            if (pstmt != null) {
+                pstmt.clearParameters();
+                pstmt.close();
+            }
             if (!transactionOpen) {
                 connectionPool.releaseConnection(c);
             }
@@ -435,21 +449,31 @@ public class TableQuery implements QueryDelegate,
     private int executeUpdateReturnKeys(StatementHelper sh, RowItem row)
             throws SQLException {
         Connection c = null;
+        PreparedStatement pstmt = null;
+        ResultSet genKeys = null;
         try {
             if (transactionOpen && activeConnection != null) {
                 c = activeConnection;
             } else {
                 c = connectionPool.reserveConnection();
             }
-            PreparedStatement pstmt = c.prepareStatement(sh.getQueryString(),
+            pstmt = c.prepareStatement(sh.getQueryString(),
                     primaryKeyColumns.toArray(new String[0]));
             sh.setParameterValuesToStatement(pstmt);
             debug("DB -> " + sh.getQueryString());
             int result = pstmt.executeUpdate();
-            RowId newId = getNewRowId(row, pstmt.getGeneratedKeys());
+            genKeys = pstmt.getGeneratedKeys();
+            RowId newId = getNewRowId(row, genKeys);
             bufferedEvents.add(new RowIdChangeEvent(row.getId(), newId));
             return result;
         } finally {
+            if (genKeys != null) {
+                genKeys.close();
+            }
+            if (pstmt != null) {
+                pstmt.clearParameters();
+                pstmt.close();
+            }
             if (!transactionOpen) {
                 connectionPool.releaseConnection(c);
             }
@@ -481,11 +505,13 @@ public class TableQuery implements QueryDelegate,
                         tableName = tableName.toUpperCase();
                     }
                 }
+                tables.close();
                 ResultSet rs = dbmd.getPrimaryKeys(null, null, tableName);
                 List<String> names = new ArrayList<String>();
                 while (rs.next()) {
                     names.add(rs.getString("COLUMN_NAME"));
                 }
+                rs.close();
                 if (!names.isEmpty()) {
                     primaryKeyColumns = names;
                 }
@@ -594,12 +620,16 @@ public class TableQuery implements QueryDelegate,
             shouldCloseTransaction = true;
             beginTransaction();
         }
+        ResultSet rs = null;
         try {
-            ResultSet rs = executeQuery(sh);
+            rs = executeQuery(sh);
             boolean contains = rs.next();
-            rs.close();
             return contains;
         } finally {
+            if (rs != null) {
+                rs.getStatement().close();
+                rs.close();
+            }
             if (shouldCloseTransaction) {
                 commit();
             }
@@ -642,8 +672,8 @@ public class TableQuery implements QueryDelegate,
      */
     public class RowIdChangeEvent extends EventObject implements
             QueryDelegate.RowIdChangeEvent {
-        private RowId oldId;
-        private RowId newId;
+        private final RowId oldId;
+        private final RowId newId;
 
         private RowIdChangeEvent(RowId oldId, RowId newId) {
             super(oldId);

@@ -21,6 +21,21 @@
     <servlet-name>SQLContainer Demo</servlet-name>
     <url-pattern>/simple/*</url-pattern>
   </servlet-mapping>
+
+  <servlet>
+    <servlet-name>Memleak</servlet-name>
+    <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
+    <init-param>
+        <description>
+        Vaadin application class to start</description>
+        <param-name>application</param-name>
+        <param-value>com.vaadin.addon.sqlcontainer.demo.MassInsertMemoryLeakTestApp</param-value>
+    </init-param>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>Memleak</servlet-name>
+    <url-pattern>/memleak/*</url-pattern>
+  </servlet-mapping>
   
   <servlet>
     <servlet-name>SQLContainer AddressBook Demo</servlet-name>

@@ -135,6 +135,7 @@ public class FreeformQuery implements QueryDelegate {
                 rs.next();
                 count = rs.getInt(1);
                 rs.close();
+                pstmt.clearParameters();
                 pstmt.close();
                 releaseConnection(c);
                 return count;
@@ -376,6 +377,7 @@ public class FreeformQuery implements QueryDelegate {
                     ResultSet rs = pstmt.executeQuery();
                     contains = rs.next();
                     rs.close();
+                    pstmt.clearParameters();
                     pstmt.close();
                     releaseConnection(c);
                     return contains;
