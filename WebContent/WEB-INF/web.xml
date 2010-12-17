@@ -29,7 +29,7 @@
         <description>
         Vaadin application class to start</description>
         <param-name>application</param-name>
-        <param-value>com.vaadin.addon.sqlcontainer.demo.MassInsertMemoryLeakTestApp</param-value>
+        <param-value>com.vaadin.addon.sqlcontainer.testapps.MassInsertMemoryLeakTestApp</param-value>
     </init-param>
   </servlet>
   <servlet-mapping>

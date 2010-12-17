@@ -1,4 +1,4 @@
-package com.vaadin.addon.sqlcontainer.demo;
+package com.vaadin.addon.sqlcontainer.testapps;
 
 import java.sql.SQLException;
 
