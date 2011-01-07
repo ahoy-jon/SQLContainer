@@ -2,7 +2,6 @@ package com.vaadin.addon.sqlcontainer;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -43,7 +42,7 @@ public class SQLContainerTableQueryTest {
             Assert.fail(e.getMessage());
         }
 
-        addPeopleToDatabase();
+        DataGenerator.addPeopleToDatabase(connectionPool);
     }
 
     @After
@@ -51,72 +50,6 @@ public class SQLContainerTableQueryTest {
         if (connectionPool != null) {
             connectionPool.destroy();
         }
-    }
-
-    private void addPeopleToDatabase() {
-        try {
-            Connection conn = connectionPool.reserveConnection();
-            Statement statement = conn.createStatement();
-            try {
-                statement.execute("drop table PEOPLE");
-                if (AllTests.db == DB.ORACLE) {
-                    statement.execute("drop sequence people_seq");
-                }
-            } catch (SQLException e) {
-                // Will fail if table doesn't exist, which is OK.
-                conn.rollback();
-            }
-            statement.execute(AllTests.peopleFirst);
-            if (AllTests.peopleSecond != null) {
-                statement.execute(AllTests.peopleSecond);
-            }
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute(AllTests.peopleThird);
-            }
-            if (AllTests.db == DB.MSSQL) {
-                statement.executeUpdate("insert into people values('Ville')");
-                statement.executeUpdate("insert into people values('Kalle')");
-                statement.executeUpdate("insert into people values('Pelle')");
-                statement.executeUpdate("insert into people values('Börje')");
-            } else {
-                statement
-                        .executeUpdate("insert into people values(default, 'Ville')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Kalle')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Pelle')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Börje')");
-            }
-            statement.close();
-            statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery("select * from PEOPLE");
-            Assert.assertTrue(rs.next());
-            statement.close();
-            conn.commit();
-            connectionPool.releaseConnection(conn);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
-        }
-    }
-
-    public void addFiveThousand() throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == DB.MSSQL) {
-                statement.executeUpdate("insert into people values('Person "
-                        + i + "')");
-            } else {
-                statement
-                        .executeUpdate("insert into people values(default, 'Person "
-                                + i + "')");
-            }
-        }
-        statement.close();
-        conn.commit();
-        connectionPool.releaseConnection(conn);
     }
 
     @Test
@@ -221,7 +154,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void getItem_table5000RowsWithParameter1337_returnsItemWithId1337()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
@@ -230,12 +163,15 @@ public class SQLContainerTableQueryTest {
         if (AllTests.db == DB.ORACLE) {
             item = container.getItem(new RowId(new Object[] { new BigDecimal(
                     1337 + offset) }));
+            Assert.assertNotNull(item);
+            Assert.assertEquals(new BigDecimal(1337 + offset), item
+                    .getItemProperty("ID").getValue());
         } else {
             item = container.getItem(new RowId(new Object[] { 1337 + offset }));
+            Assert.assertNotNull(item);
+            Assert.assertEquals(1337 + offset, item.getItemProperty("ID")
+                    .getValue());
         }
-        Assert.assertNotNull(item);
-        Assert.assertEquals(1337 + offset, item.getItemProperty("ID")
-                .getValue());
         Assert.assertEquals("Person 1337", item.getItemProperty("NAME")
                 .getValue());
     }
@@ -333,7 +269,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void indexOfId_table5000RowsWithParameter1337_returns1337()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         TableQuery q = new TableQuery("people", connectionPool, AllTests.sqlGen);
         SQLContainer container = new SQLContainer(q);
         if (AllTests.db == DB.ORACLE) {
@@ -351,7 +287,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void getIdByIndex_table5000rowsIndex1337_returnsRowId1337()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.getIdByIndex(1337);
@@ -368,7 +304,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void getIdByIndex_tableWithPaging5000rowsIndex1337_returnsRowId1337()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         TableQuery query = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
         SQLContainer container = new SQLContainer(query);
@@ -386,7 +322,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void nextItemId_tableCurrentItem1337_returnsItem1338()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.getIdByIndex(1337);
@@ -403,7 +339,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void prevItemId_tableCurrentItem1337_returns1336()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Object itemId = container.getIdByIndex(1337);
@@ -434,7 +370,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void lastItemId_table5000Rows_returnsItemId4999()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
 
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
@@ -502,7 +438,7 @@ public class SQLContainerTableQueryTest {
 
     @Test
     public void isLastId_table5000RowsLastId_returnsTrue() throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         if (AllTests.db == DB.ORACLE) {
@@ -517,7 +453,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void allIdsFound_table5000RowsLastId_shouldSucceed()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         for (int i = 0; i < 5000; i++) {
@@ -528,7 +464,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void allIdsFound_table5000RowsLastId_autoCommit_shouldSucceed()
             throws SQLException {
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         container.setAutoCommit(true);
@@ -542,7 +478,7 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Assert.assertEquals(4, container.size());
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         container.refresh();
         Assert.assertEquals(5000, container.size());
     }
@@ -557,7 +493,7 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Assert.assertEquals(4, container.size());
-        addFiveThousand();
+        DataGenerator.addFiveThousandPeople(connectionPool);
         Assert.assertEquals(4, container.size());
     }
 

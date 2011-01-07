@@ -57,7 +57,7 @@ public class AllTests {
             dbURL = "jdbc:hsqldb:mem:sqlcontainer";
             dbUser = "SA";
             dbPwd = "";
-            peopleFirst = "create table people (id integer generated always as identity, name varchar(32))";
+            peopleFirst = "create table people (id integer generated always as identity, name varchar(32), AGE INTEGER)";
             peopleSecond = "alter table people add primary key (id)";
             break;
         case MYSQL:
@@ -67,7 +67,7 @@ public class AllTests {
             dbURL = "jdbc:mysql:///sqlcontainer";
             dbUser = "sqlcontainer";
             dbPwd = "sqlcontainer";
-            peopleFirst = "create table PEOPLE (ID integer auto_increment not null, NAME varchar(32), primary key(ID))";
+            peopleFirst = "create table PEOPLE (ID integer auto_increment not null, NAME varchar(32), AGE INTEGER, primary key(ID))";
             peopleSecond = null;
             break;
         case POSTGRESQL:
@@ -77,7 +77,7 @@ public class AllTests {
             dbURL = "jdbc:postgresql://localhost:5432/test";
             dbUser = "postgres";
             dbPwd = "postgres";
-            peopleFirst = "create table PEOPLE (\"ID\" serial primary key, \"NAME\" VARCHAR(32))";
+            peopleFirst = "create table PEOPLE (\"ID\" serial primary key, \"NAME\" VARCHAR(32), \"AGE\" INTEGER)";
             peopleSecond = null;
             break;
         case MSSQL:
@@ -87,7 +87,7 @@ public class AllTests {
             dbURL = "jdbc:sqlserver://localhost:1433;databaseName=tempdb;";
             dbUser = "sa";
             dbPwd = "sa";
-            peopleFirst = "create table PEOPLE (\"ID\" int identity(1,1) primary key, \"NAME\" VARCHAR(32))";
+            peopleFirst = "create table PEOPLE (\"ID\" int identity(1,1) primary key, \"NAME\" VARCHAR(32), \"AGE\" INTEGER)";
             peopleSecond = null;
             sqlGen = new MSSQLGenerator();
             break;
@@ -100,7 +100,7 @@ public class AllTests {
             dbURL = "jdbc:oracle:thin:test/test@localhost:1521:XE";
             dbUser = "test";
             dbPwd = "test";
-            peopleFirst = "create table PEOPLE (\"ID\" integer primary key, \"NAME\" VARCHAR2(32))";
+            peopleFirst = "create table PEOPLE (\"ID\" integer primary key, \"NAME\" VARCHAR2(32), \"AGE\" INTEGER)";
             peopleSecond = "create sequence people_seq start with 1 increment by 1 nomaxvalue";
             peopleThird = "create trigger people_trigger before insert on PEOPLE for each row begin select people_seq.nextval into :new.ID from dual; end;";
             sqlGen = new OracleGenerator();
