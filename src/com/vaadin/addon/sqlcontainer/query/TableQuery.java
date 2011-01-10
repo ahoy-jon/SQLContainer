@@ -174,25 +174,21 @@ public class TableQuery implements QueryDelegate,
         }
         StatementHelper sh;
         if (row.getId() instanceof TemporaryRowId) {
-            try {
-                ((ColumnProperty) row.getItemProperty(versionColumn))
-                        .setVersionColumn(true);
-            } catch (Exception e) {
-                throw new IllegalStateException(
-                        "Version column not set or does not exist.", e);
-            }
+            setVersionColumnFlagInProperty(row);
             sh = sqlGenerator.generateInsertQuery(tableName, row);
             return executeUpdateReturnKeys(sh, row);
         } else {
-            try {
-                ((ColumnProperty) row.getItemProperty(versionColumn))
-                        .setVersionColumn(true);
-            } catch (Exception e) {
-                throw new IllegalStateException(
-                        "Version column not set or does not exist.", e);
-            }
+            setVersionColumnFlagInProperty(row);
             sh = sqlGenerator.generateUpdateQuery(tableName, row);
             return executeUpdate(sh);
+        }
+    }
+
+    private void setVersionColumnFlagInProperty(RowItem row) {
+        ColumnProperty versionProperty = (ColumnProperty) row
+                .getItemProperty(versionColumn);
+        if (versionProperty != null) {
+            versionProperty.setVersionColumn(true);
         }
     }
 
@@ -210,14 +206,8 @@ public class TableQuery implements QueryDelegate,
      */
     public RowId storeRowImmediately(RowItem row) throws SQLException {
         beginTransaction();
-        /* Set version column */
-        try {
-            ((ColumnProperty) row.getItemProperty(versionColumn))
-                    .setVersionColumn(true);
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Version column not set or does not exist.", e);
-        }
+        /* Set version column, if one is provided */
+        setVersionColumnFlagInProperty(row);
         /* Generate query */
         StatementHelper sh = sqlGenerator.generateInsertQuery(tableName, row);
         PreparedStatement pstmt = activeConnection.prepareStatement(
@@ -364,8 +354,8 @@ public class TableQuery implements QueryDelegate,
         return versionColumn;
     }
 
-    public void setVersionColumn(String versionColumn) {
-        this.versionColumn = versionColumn;
+    public void setVersionColumn(String column) {
+        this.versionColumn = column;
     }
 
     public String getTableName() {

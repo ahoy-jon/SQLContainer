@@ -26,7 +26,7 @@ public class AllTests {
     }
 
     /* 0 = HSQLDB, 1 = MYSQL, 2 = POSTGRESQL, 3 = MSSQL, 4 = ORACLE */
-    public static final DB db = DB.HSQLDB;
+    public static final DB db = DB.MYSQL;
 
     /* Auto-increment column offset (HSQLDB = 0, MYSQL = 1, POSTGRES = 1) */
     public static int offset;
