@@ -231,4 +231,11 @@ final public class ColumnProperty implements Property {
             super(cause);
         }
     }
+
+    public void commit() {
+        if (isModified()) {
+            modified = false;
+            value = changedValue;
+        }
+    }
 }

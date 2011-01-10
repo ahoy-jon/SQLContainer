@@ -114,4 +114,12 @@ public final class RowItem implements Item {
         }
         return s.toString();
     }
+
+    public void commit() {
+        if (properties != null) {
+            for (ColumnProperty p : properties) {
+                p.commit();
+            }
+        }
+    }
 }

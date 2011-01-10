@@ -863,7 +863,13 @@ public class SQLContainer implements Container, Container.Filterable,
             }
             /* Perform buffered modifications */
             for (RowItem item : modifiedItems) {
-                if (delegate.storeRow(item) == 0) {
+                if (delegate.storeRow(item) > 0) {
+                    /*
+                     * Also reset the modified state in the item in case it is
+                     * reused e.g. in a form.
+                     */
+                    item.commit();
+                } else {
                     delegate.rollback();
                     refresh();
                     throw new ConcurrentModificationException(

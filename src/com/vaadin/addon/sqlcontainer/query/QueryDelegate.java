@@ -95,6 +95,7 @@ public interface QueryDelegate extends Serializable {
      * @param columnToValueMap
      *            A map containing the values for all columns to be stored or
      *            updated.
+     * @return the number of affected rows in the database table
      * @throws UnsupportedOperationException
      *             if the implementation is read only.
      */
