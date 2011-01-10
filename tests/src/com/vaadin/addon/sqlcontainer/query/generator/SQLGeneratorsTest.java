@@ -1,9 +1,6 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,7 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.addon.sqlcontainer.AllTests;
-import com.vaadin.addon.sqlcontainer.AllTests.DB;
+import com.vaadin.addon.sqlcontainer.DataGenerator;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
@@ -39,61 +36,13 @@ public class SQLGeneratorsTest {
             Assert.fail(e.getMessage());
         }
 
-        addPeopleToDatabase();
+        DataGenerator.addPeopleToDatabase(connectionPool);
     }
 
     @After
     public void tearDown() {
         if (connectionPool != null) {
             connectionPool.destroy();
-        }
-    }
-
-    private void addPeopleToDatabase() {
-        try {
-            Connection conn = connectionPool.reserveConnection();
-            Statement statement = conn.createStatement();
-            try {
-                statement.execute("drop table PEOPLE");
-                if (AllTests.db == DB.ORACLE) {
-                    statement.execute("drop sequence people_seq");
-                }
-            } catch (SQLException e) {
-                // Will fail if table doesn't exist, which is OK.
-                conn.rollback();
-            }
-            statement.execute(AllTests.peopleFirst);
-            if (AllTests.peopleSecond != null) {
-                statement.execute(AllTests.peopleSecond);
-            }
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute(AllTests.peopleThird);
-            }
-            if (AllTests.db == DB.MSSQL) {
-                statement.executeUpdate("insert into people values('Ville')");
-                statement.executeUpdate("insert into people values('Kalle')");
-                statement.executeUpdate("insert into people values('Pelle')");
-                statement.executeUpdate("insert into people values('Börje')");
-            } else {
-                statement
-                        .executeUpdate("insert into people values(default, 'Ville')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Kalle')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Pelle')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Börje')");
-            }
-            statement.close();
-            statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery("select * from PEOPLE");
-            Assert.assertTrue(rs.next());
-            statement.close();
-            conn.commit();
-            connectionPool.releaseConnection(conn);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
         }
     }
 
@@ -163,8 +112,9 @@ public class SQLGeneratorsTest {
                 "people",
                 (RowItem) container.getItem(container.getItemIds().iterator()
                         .next()));
-        Assert.assertEquals(sh.getQueryString(),
-                "DELETE FROM people WHERE \"ID\" = ? AND \"NAME\" = ?");
+        Assert.assertEquals(
+                "DELETE FROM people WHERE \"ID\" = ? AND \"NAME\" = ? AND \"AGE\" = ?",
+                sh.getQueryString());
     }
 
     @Test
@@ -187,8 +137,9 @@ public class SQLGeneratorsTest {
         ri.getItemProperty("NAME").setValue("Viljami");
 
         StatementHelper sh = sg.generateUpdateQuery("people", ri);
-        Assert.assertEquals(sh.getQueryString(),
-                "UPDATE people SET \"NAME\" = ? WHERE \"ID\" = ?");
+        Assert.assertEquals(
+                "UPDATE people SET \"NAME\" = ?, \"AGE\" = ? WHERE \"ID\" = ?",
+                sh.getQueryString());
     }
 
     @Test
@@ -211,8 +162,9 @@ public class SQLGeneratorsTest {
 
         StatementHelper sh = sg.generateInsertQuery("people", ri);
 
-        Assert.assertEquals(sh.getQueryString(),
-                "INSERT INTO people (\"NAME\") VALUES (?)");
+        Assert.assertEquals(
+                "INSERT INTO people (\"NAME\", \"AGE\") VALUES (?, ?)",
+                sh.getQueryString());
     }
 
     @Test

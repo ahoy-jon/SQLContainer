@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import com.vaadin.addon.sqlcontainer.AllTests;
 import com.vaadin.addon.sqlcontainer.AllTests.DB;
+import com.vaadin.addon.sqlcontainer.DataGenerator;
 import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
@@ -39,61 +40,13 @@ public class FreeformQueryTest {
             Assert.fail(e.getMessage());
         }
 
-        addPeopleToDatabase();
+        DataGenerator.addPeopleToDatabase(connectionPool);
     }
 
     @After
     public void tearDown() {
         if (connectionPool != null) {
             connectionPool.destroy();
-        }
-    }
-
-    private void addPeopleToDatabase() {
-        try {
-            Connection conn = connectionPool.reserveConnection();
-            Statement statement = conn.createStatement();
-            try {
-                statement.execute("drop table PEOPLE");
-                if (AllTests.db == AllTests.DB.ORACLE) {
-                    statement.execute("drop sequence people_seq");
-                }
-            } catch (SQLException e) {
-                // Will fail if table doesn't exist, which is OK.
-                conn.rollback();
-            }
-            statement.execute(AllTests.peopleFirst);
-            if (AllTests.peopleSecond != null) {
-                statement.execute(AllTests.peopleSecond);
-            }
-            if (AllTests.db == AllTests.DB.ORACLE) {
-                statement.execute(AllTests.peopleThird);
-            }
-            if (AllTests.db == AllTests.DB.MSSQL) {
-                statement.executeUpdate("insert into people values('Ville')");
-                statement.executeUpdate("insert into people values('Kalle')");
-                statement.executeUpdate("insert into people values('Pelle')");
-                statement.executeUpdate("insert into people values('Börje')");
-            } else {
-                statement
-                        .executeUpdate("insert into people values(default, 'Ville')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Kalle')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Pelle')");
-                statement
-                        .executeUpdate("insert into people values(default, 'Börje')");
-            }
-            statement.close();
-            statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery("select * from PEOPLE");
-            Assert.assertTrue(rs.next());
-            statement.close();
-            conn.commit();
-            connectionPool.releaseConnection(conn);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Assert.fail(e.getMessage());
         }
     }
 
@@ -147,13 +100,13 @@ public class FreeformQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         if (AllTests.db == DB.MSSQL) {
-            statement.executeUpdate("insert into people values('Bengt')");
-            statement.executeUpdate("insert into people values('Ingvar')");
+            statement.executeUpdate("insert into people values('Bengt', 30)");
+            statement.executeUpdate("insert into people values('Ingvar', 50)");
         } else {
             statement
-                    .executeUpdate("insert into people values(default, 'Bengt')");
+                    .executeUpdate("insert into people values(default, 'Bengt', 30)");
             statement
-                    .executeUpdate("insert into people values(default, 'Ingvar')");
+                    .executeUpdate("insert into people values(default, 'Ingvar', 50)");
         }
         statement.close();
         conn.commit();
@@ -287,20 +240,7 @@ public class FreeformQueryTest {
     @Test
     public void getResults_noDelegate5000Rows_returns5000rows()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == DB.MSSQL) {
-                statement.executeUpdate("insert into people values('Person "
-                        + i + "')");
-            } else {
-                statement
-                        .executeUpdate("insert into people values(default, 'Person "
-                                + i + "')");
-            }
-        }
-        conn.commit();
-        connectionPool.releaseConnection(conn);
+        DataGenerator.addFiveThousandPeople(connectionPool);
 
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
@@ -550,22 +490,7 @@ public class FreeformQueryTest {
     @Test
     public void getResults_delegateRegistered5000Rows_returns100rows()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        for (int i = 4; i < 5000; i++) {
-            if (AllTests.db == DB.MSSQL) {
-                statement.executeUpdate("insert into people values('Person "
-                        + i + "')");
-            } else {
-                statement
-                        .executeUpdate("insert into people values(default, 'Person "
-                                + i + "')");
-            }
-        }
-        statement.close();
-        conn.commit();
-        connectionPool.releaseConnection(conn);
-
+        DataGenerator.addFiveThousandPeople(connectionPool);
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock

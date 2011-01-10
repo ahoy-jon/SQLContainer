@@ -121,19 +121,9 @@ public class SQLContainerTableQueryTest {
         SQLContainer container = new SQLContainer(new TableQuery("people",
                 connectionPool, AllTests.sqlGen));
         Collection<?> propertyIds = container.getContainerPropertyIds();
-        if (AllTests.db == DB.MSSQL) {
-            Assert.assertEquals(2, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME" },
-                    propertyIds.toArray());
-        } else if (AllTests.db == DB.ORACLE) {
-            Assert.assertEquals(2, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME" },
-                    propertyIds.toArray());
-        } else {
-            Assert.assertEquals(2, propertyIds.size());
-            Assert.assertArrayEquals(new String[] { "ID", "NAME" },
-                    propertyIds.toArray());
-        }
+        Assert.assertEquals(3, propertyIds.size());
+        Assert.assertArrayEquals(new String[] { "ID", "NAME", "AGE" },
+                propertyIds.toArray());
     }
 
     @Test
@@ -238,10 +228,10 @@ public class SQLContainerTableQueryTest {
         Connection conn = connectionPool.reserveConnection();
         Statement statement = conn.createStatement();
         if (AllTests.db == DB.MSSQL) {
-            statement.executeUpdate("insert into people values('Bengt')");
+            statement.executeUpdate("insert into people values('Bengt', 30)");
         } else {
             statement
-                    .executeUpdate("insert into people values(default, 'Bengt')");
+                    .executeUpdate("insert into people values(default, 'Bengt', 30)");
         }
         statement.close();
         conn.commit();
@@ -1317,11 +1307,10 @@ public class SQLContainerTableQueryTest {
         Collection<?> sortableIds = container.getSortableContainerPropertyIds();
         Assert.assertTrue(sortableIds.contains("ID"));
         Assert.assertTrue(sortableIds.contains("NAME"));
+        Assert.assertTrue(sortableIds.contains("AGE"));
+        Assert.assertEquals(3, sortableIds.size());
         if (AllTests.db == DB.MSSQL || AllTests.db == DB.ORACLE) {
-            Assert.assertEquals(2, sortableIds.size());
             Assert.assertFalse(sortableIds.contains("rownum"));
-        } else {
-            Assert.assertEquals(2, sortableIds.size());
         }
     }
 

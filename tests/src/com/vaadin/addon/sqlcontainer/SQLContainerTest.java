@@ -127,8 +127,8 @@ public class SQLContainerTest {
         SQLContainer container = new SQLContainer(new FreeformQuery(
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Collection<?> propertyIds = container.getContainerPropertyIds();
-        Assert.assertEquals(2, propertyIds.size());
-        Assert.assertArrayEquals(new String[] { "ID", "NAME" },
+        Assert.assertEquals(3, propertyIds.size());
+        Assert.assertArrayEquals(new String[] { "ID", "NAME", "AGE" },
                 propertyIds.toArray());
     }
 
@@ -1629,7 +1629,8 @@ public class SQLContainerTest {
         Collection<?> sortableIds = container.getSortableContainerPropertyIds();
         Assert.assertTrue(sortableIds.contains("ID"));
         Assert.assertTrue(sortableIds.contains("NAME"));
-        Assert.assertEquals(2, sortableIds.size());
+        Assert.assertTrue(sortableIds.contains("AGE"));
+        Assert.assertEquals(3, sortableIds.size());
     }
 
     @SuppressWarnings("unchecked")
