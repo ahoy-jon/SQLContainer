@@ -21,12 +21,10 @@ import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
 
 public class SQLGeneratorsTest {
-
-    private static final int offset = AllTests.offset;
     private JDBCConnectionPool connectionPool;
 
     @Before
-    public void setUp() {
+    public void setUp() throws SQLException {
 
         try {
             connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,

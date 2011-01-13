@@ -32,7 +32,7 @@ public class SQLContainerTableQueryTest {
     private JDBCConnectionPool connectionPool;
 
     @Before
-    public void setUp() {
+    public void setUp() throws SQLException {
 
         try {
             connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
@@ -702,23 +702,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void firstItemId_tableEmptyResultSet_returnsFirstAddedItem()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        try {
-            statement.execute("drop table GARBAGE");
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute("drop sequence garbage_seq");
-            }
-        } catch (SQLException e) {
-            // Will fail if table doesn't exist, which is OK.
-        }
-        statement.execute(createGarbage);
-        if (AllTests.db == DB.ORACLE) {
-            statement.execute(AllTests.createGarbageSecond);
-            statement.execute(AllTests.createGarbageThird);
-        }
-        conn.commit();
-        connectionPool.releaseConnection(conn);
+        DataGenerator.createGarbage(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("garbage",
                 connectionPool, AllTests.sqlGen));
         Object id = container.addItem();
@@ -728,23 +712,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void isFirstId_tableEmptyResultSet_returnsFirstAddedItem()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        try {
-            statement.execute("drop table GARBAGE");
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute("drop sequence garbage_seq");
-            }
-        } catch (SQLException e) {
-            // Will fail if table doesn't exist, which is OK.
-        }
-        statement.execute(createGarbage);
-        if (AllTests.db == DB.ORACLE) {
-            statement.execute(AllTests.createGarbageSecond);
-            statement.execute(AllTests.createGarbageThird);
-        }
-        conn.commit();
-        connectionPool.releaseConnection(conn);
+        DataGenerator.createGarbage(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("garbage",
                 connectionPool, AllTests.sqlGen));
         Object id = container.addItem();
@@ -936,23 +904,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void firstItemId_tableNewlyAddedFirstItemRemoved_resultChanges()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        try {
-            statement.execute("drop table GARBAGE");
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute("drop sequence garbage_seq");
-            }
-        } catch (SQLException e) {
-            // Will fail if table doesn't exist, which is OK.
-        }
-        statement.execute(createGarbage);
-        if (AllTests.db == DB.ORACLE) {
-            statement.execute(AllTests.createGarbageSecond);
-            statement.execute(AllTests.createGarbageThird);
-        }
-        conn.commit();
-        connectionPool.releaseConnection(conn);
+        DataGenerator.createGarbage(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("garbage",
                 connectionPool, AllTests.sqlGen));
         Object first = container.addItem();
@@ -996,23 +948,7 @@ public class SQLContainerTableQueryTest {
     @Test
     public void isFirstId_tableAddedFirstItemRemoved_returnsFalse()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        try {
-            statement.execute("drop table GARBAGE");
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute("drop sequence garbage_seq");
-            }
-        } catch (SQLException e) {
-            // Will fail if table doesn't exist, which is OK.
-        }
-        statement.execute(createGarbage);
-        if (AllTests.db == DB.ORACLE) {
-            statement.execute(AllTests.createGarbageSecond);
-            statement.execute(AllTests.createGarbageThird);
-        }
-        conn.commit();
-        connectionPool.releaseConnection(conn);
+        DataGenerator.createGarbage(connectionPool);
         SQLContainer container = new SQLContainer(new TableQuery("garbage",
                 connectionPool, AllTests.sqlGen));
         Object first = container.addItem();

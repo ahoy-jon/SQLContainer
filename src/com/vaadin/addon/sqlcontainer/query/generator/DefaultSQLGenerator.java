@@ -209,6 +209,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
             }
             count++;
         }
+
         /* Make sure that the where clause does not end with an AND */
         if (" AND".equals(query.substring(query.length() - 4))) {
             sh.setQueryString(query.substring(0, query.length() - 4));
@@ -321,8 +322,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
      */
     protected StringBuffer generateLimits(StringBuffer sb, int offset,
             int pagelength) {
-        sb.append(" LIMIT ").append(pagelength).append(" OFFSET ").append(
-                offset);
+        sb.append(" LIMIT ").append(pagelength).append(" OFFSET ")
+                .append(offset);
         return sb;
     }
 

@@ -1,10 +1,12 @@
 package com.vaadin.addon.sqlcontainer.query;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 
 import org.junit.After;
@@ -27,7 +29,7 @@ public class TableQueryTest {
     private JDBCConnectionPool connectionPool;
 
     @Before
-    public void setUp() {
+    public void setUp() throws SQLException {
 
         try {
             connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
@@ -464,4 +466,143 @@ public class TableQueryTest {
         tQuery.setFilters(filters);
         Assert.assertEquals(1, tQuery.getCount());
     }
+
+    @Test
+    public void storeRow_noVersionColumn_shouldSucceed()
+            throws UnsupportedOperationException, SQLException {
+        TableQuery tQuery = new TableQuery("people", connectionPool,
+                AllTests.sqlGen);
+        SQLContainer container = new SQLContainer(tQuery);
+        Object id = container.addItem();
+        RowItem row = (RowItem) container.getItem(id);
+        row.getItemProperty("NAME").setValue("R2D2");
+        row.getItemProperty("AGE").setValue(123);
+        tQuery.beginTransaction();
+        tQuery.storeRow(row);
+        tQuery.commit();
+
+        Connection conn = connectionPool.reserveConnection();
+        PreparedStatement stmt = conn
+                .prepareStatement("SELECT * FROM PEOPLE WHERE \"NAME\" = ?");
+        stmt.setString(1, "R2D2");
+        ResultSet rs = stmt.executeQuery();
+        Assert.assertTrue(rs.next());
+        rs.close();
+        stmt.close();
+        connectionPool.releaseConnection(conn);
+    }
+
+    @Test
+    public void storeRow_versionSetAndEqualToDBValue_shouldSucceed()
+            throws SQLException {
+        DataGenerator.addVersionedData(connectionPool);
+
+        TableQuery tQuery = new TableQuery("versioned", connectionPool,
+                AllTests.sqlGen);
+        tQuery.setVersionColumn("VERSION");
+        SQLContainer container = new SQLContainer(tQuery);
+        RowItem row = (RowItem) container.getItem(container.firstItemId());
+        Assert.assertEquals("Junk", row.getItemProperty("TEXT").getValue());
+
+        row.getItemProperty("TEXT").setValue("asdf");
+        container.commit();
+
+        Connection conn = connectionPool.reserveConnection();
+        PreparedStatement stmt = conn
+                .prepareStatement("SELECT * FROM VERSIONED WHERE \"TEXT\" = ?");
+        stmt.setString(1, "asdf");
+        ResultSet rs = stmt.executeQuery();
+        Assert.assertTrue(rs.next());
+        rs.close();
+        stmt.close();
+        conn.commit();
+        connectionPool.releaseConnection(conn);
+    }
+
+    @Test(expected = ConcurrentModificationException.class)
+    public void storeRow_versionSetAndLessThanDBValue_shouldThrowException()
+            throws SQLException {
+        if (AllTests.db == DB.HSQLDB) {
+            throw new ConcurrentModificationException(
+                    "HSQLDB doesn't support row versioning for optimistic locking - don't run this test.");
+        }
+        DataGenerator.addVersionedData(connectionPool);
+
+        TableQuery tQuery = new TableQuery("versioned", connectionPool,
+                AllTests.sqlGen);
+        tQuery.setVersionColumn("VERSION");
+        SQLContainer container = new SQLContainer(tQuery);
+        RowItem row = (RowItem) container.getItem(container.firstItemId());
+        Assert.assertEquals("Junk", row.getItemProperty("TEXT").getValue());
+
+        row.getItemProperty("TEXT").setValue("asdf");
+
+        // Update the version using another connection.
+        Connection conn = connectionPool.reserveConnection();
+        PreparedStatement stmt = conn
+                .prepareStatement("UPDATE VERSIONED SET \"TEXT\" = ? WHERE \"ID\" = ?");
+        stmt.setString(1, "foo");
+        stmt.setObject(2, row.getItemProperty("ID").getValue());
+        stmt.executeUpdate();
+        stmt.close();
+        conn.commit();
+        connectionPool.releaseConnection(conn);
+
+        container.commit();
+    }
+
+    @Test
+    public void removeRow_versionSetAndEqualToDBValue_shouldSucceed()
+            throws SQLException {
+        DataGenerator.addVersionedData(connectionPool);
+
+        TableQuery tQuery = new TableQuery("versioned", connectionPool,
+                AllTests.sqlGen);
+        tQuery.setVersionColumn("VERSION");
+        SQLContainer container = new SQLContainer(tQuery);
+        RowItem row = (RowItem) container.getItem(container.firstItemId());
+        Assert.assertEquals("Junk", row.getItemProperty("TEXT").getValue());
+
+        container.removeItem(container.firstItemId());
+        container.commit();
+
+        Connection conn = connectionPool.reserveConnection();
+        PreparedStatement stmt = conn
+                .prepareStatement("SELECT * FROM VERSIONED WHERE \"TEXT\" = ?");
+        stmt.setString(1, "Junk");
+        ResultSet rs = stmt.executeQuery();
+        Assert.assertFalse(rs.next());
+        rs.close();
+        stmt.close();
+        conn.commit();
+        connectionPool.releaseConnection(conn);
+    }
+
+    @Test(expected = ConcurrentModificationException.class)
+    public void removeRow_versionSetAndLessThanDBValue_shouldThrowException()
+            throws SQLException {
+        DataGenerator.addVersionedData(connectionPool);
+
+        TableQuery tQuery = new TableQuery("versioned", connectionPool,
+                AllTests.sqlGen);
+        tQuery.setVersionColumn("VERSION");
+        SQLContainer container = new SQLContainer(tQuery);
+        RowItem row = (RowItem) container.getItem(container.firstItemId());
+        Assert.assertEquals("Junk", row.getItemProperty("TEXT").getValue());
+
+        // Update the version using another connection.
+        Connection conn = connectionPool.reserveConnection();
+        PreparedStatement stmt = conn
+                .prepareStatement("UPDATE VERSIONED SET \"TEXT\" = ? WHERE \"ID\" = ?");
+        stmt.setString(1, "asdf");
+        stmt.setObject(2, row.getItemProperty("ID").getValue());
+        stmt.executeUpdate();
+        stmt.close();
+        conn.commit();
+        connectionPool.releaseConnection(conn);
+
+        container.removeItem(container.firstItemId());
+        container.commit();
+    }
+
 }

@@ -9,6 +9,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.EventObject;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -180,7 +181,12 @@ public class TableQuery implements QueryDelegate,
         } else {
             setVersionColumnFlagInProperty(row);
             sh = sqlGenerator.generateUpdateQuery(tableName, row);
-            return executeUpdate(sh);
+            int result = executeUpdate(sh);
+            if (versionColumn != null && result == 0) {
+                throw new ConcurrentModificationException(
+                        "Someone else changed the row that was being updated.");
+            }
+            return result;
         }
     }
 
@@ -355,7 +361,7 @@ public class TableQuery implements QueryDelegate,
     }
 
     public void setVersionColumn(String column) {
-        this.versionColumn = column;
+        versionColumn = column;
     }
 
     public String getTableName() {
@@ -393,6 +399,8 @@ public class TableQuery implements QueryDelegate,
      * Executes the given update query string using either the active connection
      * if a transaction is already open, or a new connection from this query's
      * connection pool.
+     * 
+     * @param row
      * 
      * @param query
      *            Query to execute
@@ -580,6 +588,10 @@ public class TableQuery implements QueryDelegate,
         debug("Removing row with id: " + row.getId().getId()[0].toString());
         if (executeUpdate(sqlGenerator.generateDeleteQuery(getTableName(), row)) == 1) {
             return true;
+        }
+        if (versionColumn != null) {
+            throw new ConcurrentModificationException(
+                    "Someone else changed the row that was being updated.");
         }
         return false;
     }

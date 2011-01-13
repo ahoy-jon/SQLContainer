@@ -26,11 +26,10 @@ import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 public class FreeformQueryTest {
 
     private static final int offset = AllTests.offset;
-    private static final String createGarbage = AllTests.createGarbage;
     private JDBCConnectionPool connectionPool;
 
     @Before
-    public void setUp() {
+    public void setUp() throws SQLException {
 
         try {
             connectionPool = new SimpleJDBCConnectionPool(AllTests.dbDriver,
@@ -154,24 +153,7 @@ public class FreeformQueryTest {
     @Test
     public void getCount_delegateRegisteredZeroRows_returnsZero()
             throws SQLException {
-        Connection conn = connectionPool.reserveConnection();
-        Statement statement = conn.createStatement();
-        try {
-            statement.execute("drop table GARBAGE");
-            if (AllTests.db == DB.ORACLE) {
-                statement.execute("drop sequence garbage_seq");
-            }
-        } catch (SQLException e) {
-            // Will fail if table doesn't exist, which is OK.
-        }
-        statement.execute(createGarbage);
-        if (AllTests.db == DB.ORACLE) {
-            statement.execute(AllTests.createGarbageSecond);
-            statement.execute(AllTests.createGarbageThird);
-        }
-        conn.commit();
-        connectionPool.releaseConnection(conn);
-
+        DataGenerator.createGarbage(connectionPool);
         FreeformQuery query = new FreeformQuery("SELECT * FROM GARBAGE",
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock

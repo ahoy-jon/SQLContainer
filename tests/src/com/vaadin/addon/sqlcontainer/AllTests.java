@@ -43,6 +43,8 @@ public class AllTests {
     public static String peopleFirst;
     public static String peopleSecond;
     public static String peopleThird;
+    /* Versioned -test table createion statement(s) */
+    public static String[] versionStatements;
     /* SQL Generator used during the testing */
     public static SQLGenerator sqlGen;
 
@@ -59,6 +61,9 @@ public class AllTests {
             dbPwd = "";
             peopleFirst = "create table people (id integer generated always as identity, name varchar(32), AGE INTEGER)";
             peopleSecond = "alter table people add primary key (id)";
+            versionStatements = new String[] {
+                    "create table versioned (id integer generated always as identity, text varchar(255), version tinyint default 0)",
+                    "alter table versioned add primary key (id)" };
             break;
         case MYSQL:
             offset = 1;
@@ -69,6 +74,10 @@ public class AllTests {
             dbPwd = "sqlcontainer";
             peopleFirst = "create table PEOPLE (ID integer auto_increment not null, NAME varchar(32), AGE INTEGER, primary key(ID))";
             peopleSecond = null;
+            versionStatements = new String[] {
+                    "create table VERSIONED (ID integer auto_increment not null, TEXT varchar(255), VERSION tinyint default 0, primary key(ID))",
+                    "CREATE TRIGGER upd_version BEFORE UPDATE ON VERSIONED"
+                            + " FOR EACH ROW SET NEW.VERSION = @VERSION+1" };
             break;
         case POSTGRESQL:
             offset = 1;
@@ -79,6 +88,20 @@ public class AllTests {
             dbPwd = "postgres";
             peopleFirst = "create table PEOPLE (\"ID\" serial primary key, \"NAME\" VARCHAR(32), \"AGE\" INTEGER)";
             peopleSecond = null;
+            versionStatements = new String[] {
+                    "create table VERSIONED (\"ID\" serial primary key, \"TEXT\" VARCHAR(255), \"VERSION\" INTEGER DEFAULT 0)",
+                    "CREATE OR REPLACE FUNCTION zz_row_version() RETURNS TRIGGER AS $$"
+                            + "BEGIN"
+                            + "   IF TG_OP = 'UPDATE'"
+                            + "       AND NEW.\"VERSION\" = old.\"VERSION\""
+                            + "       AND ROW(NEW.*) IS DISTINCT FROM ROW (old.*)"
+                            + "   THEN"
+                            + "       NEW.\"VERSION\" := NEW.\"VERSION\" + 1;"
+                            + "   END IF;" + "   RETURN NEW;" + "END;"
+                            + "$$ LANGUAGE plpgsql;",
+                    "CREATE TRIGGER \"mytable_modify_dt_tr\" BEFORE UPDATE"
+                            + "   ON VERSIONED FOR EACH ROW"
+                            + "   EXECUTE PROCEDURE \"public\".\"zz_row_version\"();" };
             break;
         case MSSQL:
             offset = 1;
@@ -89,6 +112,7 @@ public class AllTests {
             dbPwd = "sa";
             peopleFirst = "create table PEOPLE (\"ID\" int identity(1,1) primary key, \"NAME\" VARCHAR(32), \"AGE\" INTEGER)";
             peopleSecond = null;
+            versionStatements = new String[] { "create table VERSIONED (\"ID\" int identity(1,1) primary key, \"TEXT\" VARCHAR(255), \"VERSION\" rowversion not null)" };
             sqlGen = new MSSQLGenerator();
             break;
         case ORACLE:
@@ -103,6 +127,12 @@ public class AllTests {
             peopleFirst = "create table PEOPLE (\"ID\" integer primary key, \"NAME\" VARCHAR2(32), \"AGE\" INTEGER)";
             peopleSecond = "create sequence people_seq start with 1 increment by 1 nomaxvalue";
             peopleThird = "create trigger people_trigger before insert on PEOPLE for each row begin select people_seq.nextval into :new.ID from dual; end;";
+            versionStatements = new String[] {
+                    "create table VERSIONED (\"ID\" integer primary key, \"TEXT\" VARCHAR(255), \"VERSION\" INTEGER DEFAULT 0)",
+                    "create sequence versioned_seq start with 1 increment by 1 nomaxvalue",
+                    "create trigger versioned_trigger before insert on VERSIONED for each row begin select versioned_seq.nextval into :new.ID from dual; end;",
+                    "create sequence versioned_version start with 1 increment by 1 nomaxvalue",
+                    "create trigger versioned_version_trigger before insert or update on VERSIONED for each row begin select versioned_version.nextval into :new.VERSION from dual; end;" };
             sqlGen = new OracleGenerator();
             break;
         }
