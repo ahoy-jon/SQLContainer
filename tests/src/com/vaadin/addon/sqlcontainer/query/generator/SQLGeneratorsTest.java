@@ -135,9 +135,10 @@ public class SQLGeneratorsTest {
         ri.getItemProperty("NAME").setValue("Viljami");
 
         StatementHelper sh = sg.generateUpdateQuery("people", ri);
-        Assert.assertEquals(
-                "UPDATE people SET \"NAME\" = ?, \"AGE\" = ? WHERE \"ID\" = ?",
-                sh.getQueryString());
+        Assert.assertTrue("UPDATE people SET \"NAME\" = ?, \"AGE\" = ? WHERE \"ID\" = ?"
+                .equals(sh.getQueryString())
+                || "UPDATE people SET \"AGE\" = ?, \"NAME\" = ? WHERE \"ID\" = ?"
+                        .equals(sh.getQueryString()));
     }
 
     @Test
@@ -160,9 +161,10 @@ public class SQLGeneratorsTest {
 
         StatementHelper sh = sg.generateInsertQuery("people", ri);
 
-        Assert.assertEquals(
-                "INSERT INTO people (\"NAME\", \"AGE\") VALUES (?, ?)",
-                sh.getQueryString());
+        Assert.assertTrue("INSERT INTO people (\"NAME\", \"AGE\") VALUES (?, ?)"
+                .equals(sh.getQueryString())
+                || "INSERT INTO people (\"AGE\", \"NAME\") VALUES (?, ?)"
+                        .equals(sh.getQueryString()));
     }
 
     @Test

@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
-import java.util.ConcurrentModificationException;
 import java.util.List;
 
 import org.junit.After;
@@ -17,6 +16,7 @@ import org.junit.Test;
 import com.vaadin.addon.sqlcontainer.AllTests;
 import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.DataGenerator;
+import com.vaadin.addon.sqlcontainer.OptimisticLockException;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
@@ -519,12 +519,13 @@ public class TableQueryTest {
         connectionPool.releaseConnection(conn);
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test(expected = OptimisticLockException.class)
     public void storeRow_versionSetAndLessThanDBValue_shouldThrowException()
             throws SQLException {
         if (AllTests.db == DB.HSQLDB) {
-            throw new ConcurrentModificationException(
-                    "HSQLDB doesn't support row versioning for optimistic locking - don't run this test.");
+            throw new OptimisticLockException(
+                    "HSQLDB doesn't support row versioning for optimistic locking - don't run this test.",
+                    null);
         }
         DataGenerator.addVersionedData(connectionPool);
 
@@ -578,7 +579,7 @@ public class TableQueryTest {
         connectionPool.releaseConnection(conn);
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test(expected = OptimisticLockException.class)
     public void removeRow_versionSetAndLessThanDBValue_shouldThrowException()
             throws SQLException {
         DataGenerator.addVersionedData(connectionPool);
