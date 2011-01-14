@@ -9,7 +9,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.ConcurrentModificationException;
 import java.util.EventObject;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.vaadin.addon.sqlcontainer.ColumnProperty;
+import com.vaadin.addon.sqlcontainer.OptimisticLockException;
 import com.vaadin.addon.sqlcontainer.RowId;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
@@ -174,20 +174,21 @@ public class TableQuery implements QueryDelegate,
             throw new IllegalArgumentException("Row argument must be non-null.");
         }
         StatementHelper sh;
+        int result = 0;
         if (row.getId() instanceof TemporaryRowId) {
             setVersionColumnFlagInProperty(row);
             sh = sqlGenerator.generateInsertQuery(tableName, row);
-            return executeUpdateReturnKeys(sh, row);
+            result = executeUpdateReturnKeys(sh, row);
         } else {
             setVersionColumnFlagInProperty(row);
             sh = sqlGenerator.generateUpdateQuery(tableName, row);
-            int result = executeUpdate(sh);
-            if (versionColumn != null && result == 0) {
-                throw new ConcurrentModificationException(
-                        "Someone else changed the row that was being updated.");
-            }
-            return result;
+            result = executeUpdate(sh);
         }
+        if (versionColumn != null && result == 0) {
+            throw new OptimisticLockException(
+                    "Someone else changed the row that was being updated.");
+        }
+        return result;
     }
 
     private void setVersionColumnFlagInProperty(RowItem row) {
@@ -377,8 +378,9 @@ public class TableQuery implements QueryDelegate,
      * transaction is already open, or a new connection from this query's
      * connection pool.
      * 
-     * @param query
-     *            Query to execute
+     * @param sh
+     *            an instance of StatementHelper, containing the query string
+     *            and parameter values.
      * @return ResultSet of the query
      * @throws SQLException
      */
@@ -400,10 +402,9 @@ public class TableQuery implements QueryDelegate,
      * if a transaction is already open, or a new connection from this query's
      * connection pool.
      * 
-     * @param row
-     * 
-     * @param query
-     *            Query to execute
+     * @param sh
+     *            an instance of StatementHelper, containing the query string
+     *            and parameter values.
      * @return Number of affected rows
      * @throws SQLException
      */
@@ -439,8 +440,11 @@ public class TableQuery implements QueryDelegate,
      * 
      * Additionally adds a new RowIdChangeEvent to the event buffer.
      * 
-     * @param query
-     *            Query to execute
+     * @param sh
+     *            an instance of StatementHelper, containing the query string
+     *            and parameter values.
+     * @param row
+     *            the row item to update
      * @return Number of affected rows
      * @throws SQLException
      */
@@ -590,8 +594,8 @@ public class TableQuery implements QueryDelegate,
             return true;
         }
         if (versionColumn != null) {
-            throw new ConcurrentModificationException(
-                    "Someone else changed the row that was being updated.");
+            throw new OptimisticLockException(
+                    "Someone else changed the row that was being deleted.");
         }
         return false;
     }
