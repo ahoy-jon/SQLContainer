@@ -186,7 +186,8 @@ public class TableQuery implements QueryDelegate,
         }
         if (versionColumn != null && result == 0) {
             throw new OptimisticLockException(
-                    "Someone else changed the row that was being updated.");
+                    "Someone else changed the row that was being updated.",
+                    row.getId());
         }
         return result;
     }
@@ -595,7 +596,8 @@ public class TableQuery implements QueryDelegate,
         }
         if (versionColumn != null) {
             throw new OptimisticLockException(
-                    "Someone else changed the row that was being deleted.");
+                    "Someone else changed the row that was being deleted.",
+                    row.getId());
         }
         return false;
     }

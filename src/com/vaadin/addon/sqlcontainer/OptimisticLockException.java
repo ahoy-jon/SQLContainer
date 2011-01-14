@@ -15,11 +15,19 @@ package com.vaadin.addon.sqlcontainer;
  */
 public class OptimisticLockException extends RuntimeException {
 
-    public OptimisticLockException() {
+    private final RowId rowId;
+
+    public OptimisticLockException(RowId rowId) {
         super();
+        this.rowId = rowId;
     }
 
-    public OptimisticLockException(String msg) {
+    public OptimisticLockException(String msg, RowId rowId) {
         super(msg);
+        this.rowId = rowId;
+    }
+
+    public RowId getRowId() {
+        return rowId;
     }
 }
