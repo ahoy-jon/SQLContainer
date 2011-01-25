@@ -200,7 +200,7 @@
     <target name="javadoc" depends="init">
         <property name="javadoc.destdir" value="${result-path}/docs/api"/>
     	
-        <javadoc destdir="${javadoc.destdir}" author="true" version="true" use="true" windowtitle="${addon.name}">
+        <javadoc destdir="${javadoc.destdir}" author="true" version="true" use="true" windowtitle="${addon.name}" classpathref="compile.classpath">
             <packageset dir="src">
                 <include name="com/vaadin/addon/**" />
             </packageset>
