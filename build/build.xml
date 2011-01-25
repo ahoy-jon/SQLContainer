@@ -260,7 +260,7 @@ Implementation-Vendor: ${addon.vendor}
             <zipfileset prefix="" file="${result-path}/${jar.name}" />              
             <zipfileset prefix="" file="doc/README.TXT" />
             <zipfileset prefix="doc" file="${manual.pdf}" />
-        	<zipfileset prefix="doc/api" dir="${result-path}/docs/api" />
+            <zipfileset prefix="doc/api" dir="${result-path}/docs/api" />
             <zipfileset prefix="doc" dir="doc">
                 <patternset>
                 	<include name="licensing.txt" />
