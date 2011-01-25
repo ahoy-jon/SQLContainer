@@ -2,7 +2,7 @@
 <project name="Calendar" basedir="../" default="all">
 
     <!-- Main target that does all -->
-    <target name="all" depends="compile, tests, manual, package-jar, package-zip, demo.war"/>
+    <target name="all" depends="compile, tests, manual, javadoc, package-jar, package-zip, demo.war"/>
 
     <!-- Non-project specific settings. -->
 	<property file="build/build.properties" />
@@ -170,12 +170,11 @@
     <!-- ================================================================== -->
     <!-- Documentation                                                      -->
     <!-- ================================================================== -->
-
+	
     <!-- Manual and tutorial -->
     <target name="manual" unless="run.no-manual">
         <!-- Must delete the old version or conversion fails -->
         <delete file="${manual.pdf}"/>
-        <delete file="${tutorial.pdf}"/>
 
         <!-- Start OpenOffice service -->
         <exec executable="python" searchpath="true" failonerror="true" >
@@ -191,20 +190,29 @@
             <arg value="${manual.pdf}"/>
         </java>
 
-        <echo>Converting the tutorial from ${tutorial.odt} to ${tutorial.pdf}...</echo>
-
-        <!-- Convert the ODF text document to PDF -->
-        <java jar="build/lib/jodconverter/jodconverter-cli-2.2.2.jar" fork="true">
-            <arg value="${tutorial.odt}"/>
-            <arg value="${tutorial.pdf}"/>
-        </java>
-
         <!-- Stop OpenOffice service -->
         <exec executable="python" searchpath="true" failonerror="true" >
             <arg value="build/odf-converter.py"/>
             <arg value="stop"/>
         </exec>
+	</target>
+        	
+    <target name="javadoc" depends="init">
+        <property name="javadoc.destdir" value="${result-path}/docs/api"/>
+    	
+        <javadoc destdir="${javadoc.destdir}" author="true" version="true" use="true" windowtitle="${addon.name}">
+            <packageset dir="src">
+                <include name="com/vaadin/addon/**" />
+            </packageset>
+            <doctitle>${javadoc.doctitle}</doctitle>
+            <!-- <header><![CDATA[<script type="text/javascript" src=".html-style/style.js"></script>]]></header> -->
+            <bottom>${javadoc.bottom}</bottom>
+            <link offline="true" href="http://java.sun.com/j2se/1.5.0/docs/api/" packagelistLoc="build/javadoc/j2se-1.5.0" />
+            <link offline="true" href="http://java.sun.com/j2ee/1.4/docs/api/" packagelistLoc="build/javadoc/j2ee-1.4" />
+            <link offline="true" href="http://demo.vaadin.com/docs/api/" packagelistLoc="build/javadoc/vaadin" />
+        </javadoc>
     </target>
+
 
     <!-- ================================================================== -->
     <!-- Packaging                                                          -->
@@ -234,7 +242,7 @@
 	</target>		
 
     <!-- Create the ZIP distribution package. -->
-    <target name="package-zip" depends="package-jar, manual" unless="run.no-package-zip">
+    <target name="package-zip" depends="package-jar, manual, javadoc" unless="run.no-package-zip">
         <property name="zip.name" value="${result-path}/${addon.name}-${version}.zip"/>
         <echo>Packaging Zip ${zip.name}</echo>
 
@@ -252,7 +260,7 @@ Implementation-Vendor: ${addon.vendor}
             <zipfileset prefix="" file="${result-path}/${jar.name}" />              
             <zipfileset prefix="" file="doc/README.TXT" />
             <zipfileset prefix="doc" file="${manual.pdf}" />
-            <zipfileset prefix="doc" file="${tutorial.pdf}" />
+        	<zipfileset prefix="doc/api" dir="${result-path}/docs/api" />
             <zipfileset prefix="doc" dir="doc">
                 <patternset>
                 	<include name="licensing.txt" />
@@ -262,7 +270,7 @@ Implementation-Vendor: ${addon.vendor}
         </zip>
     </target>
 
-	<target name="demo.war" depends="compile-demo,package-jar">
+	<target name="demo.war" depends="javadoc, compile-demo,package-jar">
 		<war destfile="${result-path}/${addon.name}.war" webxml="WebContent/WEB-INF/web.xml">
 			<classes dir="${result.demo-classes}"/>
 			<lib dir="WebContent/WEB-INF/lib" excludes="*src*" />
@@ -274,6 +282,7 @@ Implementation-Vendor: ${addon.vendor}
 					<include name="*.html" />
 				</patternset>
 			</fileset>
+			<fileset dir="${result-path}/docs/" includes="api/**/*" />
 		</war>
 	</target>
 	
