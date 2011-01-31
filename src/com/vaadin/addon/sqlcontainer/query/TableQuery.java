@@ -635,7 +635,9 @@ public class TableQuery implements QueryDelegate,
             return contains;
         } finally {
             if (rs != null) {
-                rs.getStatement().close();
+                if (rs.getStatement() != null) {
+                    rs.getStatement().close();
+                }
                 rs.close();
             }
             if (shouldCloseTransaction) {
