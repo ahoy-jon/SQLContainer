@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="var" path="VAADIN_DOWNLOAD/gwt-user/2.1.1/gwt-user.jar"/>
+	<classpathentry kind="var" path="VAADIN_DOWNLOAD/gwt-dev/2.1.1/gwt-dev.jar"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="demo/src"/>
 	<classpathentry kind="src" path="tests/src"/>
