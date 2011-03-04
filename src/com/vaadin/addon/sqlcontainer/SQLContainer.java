@@ -1010,8 +1010,10 @@ public class SQLContainer implements Container, Container.Filterable,
     /**
      * Fetches property id's (column names and their types) from the data
      * source.
+     * 
+     * @throws SQLException
      */
-    private void getPropertyIds() {
+    private void getPropertyIds() throws SQLException {
         propertyIds.clear();
         propertyTypes.clear();
         delegate.setFilters(null);
@@ -1083,7 +1085,7 @@ public class SQLContainer implements Container, Container.Filterable,
             } catch (SQLException e1) {
                 debug(e1, null);
             }
-            throw new RuntimeException("Failed to fetch property id's.", e);
+            throw e;
         }
     }
 
