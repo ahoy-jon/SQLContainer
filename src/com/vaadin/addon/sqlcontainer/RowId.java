@@ -33,8 +33,12 @@ public class RowId implements Serializable {
     @Override
     public int hashCode() {
         int result = 31;
-        for (Object o : id) {
-            result += o.hashCode();
+        if (id != null) {
+            for (Object o : id) {
+                if (o != null) {
+                    result += o.hashCode();
+                }
+            }
         }
         return result;
     }
