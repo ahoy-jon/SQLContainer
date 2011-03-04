@@ -304,6 +304,10 @@ public class SQLContainer implements Container, Container.Filterable,
             debug(e, null);
             try {
                 delegate.rollback();
+            } catch (SQLException e1) {
+                debug(e1, null);
+            }
+            try {
                 rs.getStatement().close();
                 rs.close();
             } catch (SQLException e1) {
@@ -1076,6 +1080,10 @@ public class SQLContainer implements Container, Container.Filterable,
             debug(e, null);
             try {
                 delegate.rollback();
+            } catch (SQLException e1) {
+                debug(e1, null);
+            }
+            try {
                 if (rs != null) {
                     if (rs.getStatement() != null) {
                         rs.getStatement().close();
@@ -1182,6 +1190,10 @@ public class SQLContainer implements Container, Container.Filterable,
             debug(e, null);
             try {
                 delegate.rollback();
+            } catch (SQLException e1) {
+                debug(e1, null);
+            }
+            try {
                 if (rs != null) {
                     if (rs.getStatement() != null) {
                         rs.getStatement().close();
