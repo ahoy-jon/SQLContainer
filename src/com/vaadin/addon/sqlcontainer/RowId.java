@@ -49,11 +49,15 @@ public class RowId implements Serializable {
             return false;
         }
         Object[] compId = ((RowId) obj).getId();
+        if (id == null && compId == null) {
+            return true;
+        }
         if (id.length != compId.length) {
             return false;
         }
         for (int i = 0; i < id.length; i++) {
-            if (!id[i].equals(compId[i])) {
+            if ((id[i] == null && compId[i] != null)
+                    || (id[i] != null && !id[i].equals(compId[i]))) {
                 return false;
             }
         }
