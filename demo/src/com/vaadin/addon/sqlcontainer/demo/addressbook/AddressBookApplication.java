@@ -11,15 +11,16 @@ import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonForm;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.PersonList;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SearchView;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.ui.SharingOptions;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeEvent;
+import com.vaadin.data.Container.Filter;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
+import com.vaadin.data.util.filter.Compare.Equal;
+import com.vaadin.data.util.filter.Or;
 import com.vaadin.event.ItemClickEvent;
 import com.vaadin.event.ItemClickEvent.ItemClickListener;
 import com.vaadin.terminal.ThemeResource;
@@ -30,7 +31,7 @@ import com.vaadin.ui.Button.ClickListener;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Embedded;
 import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.SplitPanel;
+import com.vaadin.ui.HorizontalSplitPanel;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 import com.vaadin.ui.Window.Notification;
@@ -46,8 +47,7 @@ public class AddressBookApplication extends Application implements
     private final Button search = new Button("Search");
     private final Button share = new Button("Share");
     private final Button help = new Button("Help");
-    private final SplitPanel horizontalSplit = new SplitPanel(
-            SplitPanel.ORIENTATION_HORIZONTAL);
+    private final HorizontalSplitPanel horizontalSplit = new HorizontalSplitPanel();
 
     // Lazily created UI references
     private ListView listView = null;
@@ -79,7 +79,8 @@ public class AddressBookApplication extends Application implements
         layout.addComponent(horizontalSplit);
         layout.setExpandRatio(horizontalSplit, 1);
 
-        horizontalSplit.setSplitPosition(200, SplitPanel.UNITS_PIXELS);
+        horizontalSplit
+                .setSplitPosition(200, HorizontalSplitPanel.UNITS_PIXELS);
         horizontalSplit.setFirstComponent(tree);
 
         getMainWindow().setContent(layout);
@@ -232,30 +233,27 @@ public class AddressBookApplication extends Application implements
 
         /* Clear all filters from person container. */
         getDbHelp().getPersonContainer().removeAllContainerFilters();
-        /*
-         * Set the exclusive filtering mode. In this application, multiple
-         * filters are only used to filter for more than one city since they are
-         * actually filtered by their keys. This filter has to be of the
-         * exclusive type.
-         */
-        c.setFilteringMode(FilteringMode.FILTERING_MODE_EXCLUSIVE);
 
-        /* Add the filter(s) to the person container. */
+        /* Build an array of filters */
+        Filter[] filters = new Filter[searchFilters.length];
+        int ix = 0;
         for (SearchFilter searchFilter : searchFilters) {
-            Filter f = new Filter((String) searchFilter.getPropertyId(),
-                    ComparisonType.CONTAINS, searchFilter.getTerm());
             if (Integer.class.equals(c.getType(searchFilter.getPropertyId()))) {
                 try {
-                    f = new Filter((String) searchFilter.getPropertyId(),
-                            ComparisonType.EQUALS,
+                    filters[ix] = new Equal(searchFilter.getPropertyId(),
                             Integer.parseInt(searchFilter.getTerm()));
                 } catch (NumberFormatException nfe) {
                     getMainWindow().showNotification("Invalid search term!");
                     return;
                 }
+            } else {
+                filters[ix] = new Like((String) searchFilter.getPropertyId(),
+                        "%" + searchFilter.getTerm() + "%");
             }
-            c.addFilter(f);
+            ix++;
         }
+        /* Add the filter(s) to the person container. */
+        c.addContainerFilter(new Or(filters));
         showListView();
 
         getMainWindow().showNotification(

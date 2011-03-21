@@ -2,7 +2,6 @@ package com.vaadin.addon.sqlcontainer.demo.addressbook.ui;
 
 import com.vaadin.addon.sqlcontainer.demo.addressbook.AddressBookApplication;
 import com.vaadin.addon.sqlcontainer.demo.addressbook.data.DatabaseHelper;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.terminal.ExternalResource;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Label;
@@ -25,8 +24,6 @@ public class PersonList extends Table {
          * inclusive. (These are default values but set here just in case)
          */
         app.getDbHelp().getPersonContainer().removeAllContainerFilters();
-        app.getDbHelp().getPersonContainer().setFilteringMode(
-                FilteringMode.FILTERING_MODE_INCLUSIVE);
 
         setColumnCollapsingAllowed(true);
         setColumnReorderingAllowed(true);
