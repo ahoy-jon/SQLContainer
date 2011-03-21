@@ -9,9 +9,8 @@ import com.vaadin.addon.sqlcontainer.ColumnProperty;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
+import com.vaadin.data.Container.Filter;
 
 /**
  * Generates generic SQL that is supported by HSQLDB, MySQL and PostgreSQL.
@@ -25,13 +24,12 @@ public class DefaultSQLGenerator implements SQLGenerator {
      * (non-Javadoc)
      * 
      * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
-     * generateSelectQuery(java.lang.String, java.util.List,
-     * com.vaadin.addon.sqlcontainer.query.FilteringMode, java.util.List, int,
-     * int, java.lang.String)
+     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
+     * int, int, java.lang.String)
      */
     public StatementHelper generateSelectQuery(String tableName,
-            List<Filter> filters, FilteringMode filterMode,
-            List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
+            List<Filter> filters, List<OrderBy> orderBys, int offset,
+            int pagelength, String toSelect) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
@@ -41,10 +39,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
         query.append("SELECT " + toSelect + " FROM ").append(
                 Util.escapeSQL(tableName));
         if (filters != null) {
-            for (Filter f : filters) {
-                generateFilter(query, f, filters.indexOf(f) == 0, filterMode,
-                        sh);
-            }
+            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                    filters, sh));
         }
         if (orderBys != null) {
             for (OrderBy o : orderBys) {
@@ -56,21 +52,6 @@ public class DefaultSQLGenerator implements SQLGenerator {
         }
         sh.setQueryString(query.toString());
         return sh;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator#
-     * generateSelectQuery(java.lang.String, java.util.List, java.util.List,
-     * int, int, java.lang.String)
-     */
-    public StatementHelper generateSelectQuery(String tableName,
-            List<Filter> filters, List<OrderBy> orderBys, int offset,
-            int pagelength, String toSelect) {
-        return generateSelectQuery(tableName, filters,
-                FilteringMode.FILTERING_MODE_INCLUSIVE, orderBys, offset,
-                pagelength, toSelect);
     }
 
     /*
@@ -217,69 +198,6 @@ public class DefaultSQLGenerator implements SQLGenerator {
             sh.setQueryString(query.toString());
         }
         return sh;
-    }
-
-    /**
-     * Creates filtering as a WHERE -clause. Uses default filtering mode.
-     * 
-     * @param sb
-     *            StringBuffer to which the clause is appended.
-     * @param f
-     *            Filter to be added to the sb.
-     * @param firstFilter
-     *            If true, this is the first Filter to be added.
-     * @return
-     */
-    protected StringBuffer generateFilter(StringBuffer sb, Filter f,
-            boolean firstFilter, StatementHelper sh) {
-        return generateFilter(sb, f, firstFilter,
-                FilteringMode.FILTERING_MODE_INCLUSIVE, sh);
-    }
-
-    /**
-     * Creates filtering as a WHERE -clause
-     * 
-     * @param sb
-     *            StringBuffer to which the clause is appended.
-     * @param f
-     *            Filter to be added to the sb.
-     * @param firstFilter
-     *            If true, this is the first Filter to be added.
-     * @param filterMode
-     *            FilteringMode for this set of filters.
-     * @return
-     */
-    protected StringBuffer generateFilter(StringBuffer sb, Filter f,
-            boolean firstFilter, FilteringMode filterMode, StatementHelper sh) {
-        if (f.getValue() == null) {
-            return sb;
-        }
-        if (Filter.ComparisonType.BETWEEN.equals(f.getComparisonType())) {
-            if (f.getValue() != null && f.getSecondValue() != null) {
-                sh.addParameterValue(f.getValue());
-                sh.addParameterValue(f.getSecondValue());
-            } else {
-                return sb;
-            }
-        } else {
-            if (f.getValue() != null) {
-                sh.addParameterValue(f.getPreparedStatementValue());
-            } else {
-                return sb;
-            }
-        }
-        if (firstFilter) {
-            sb.append(" WHERE ");
-        } else {
-            if (FilteringMode.FILTERING_MODE_INCLUSIVE.equals(filterMode)) {
-                sb.append(" AND ");
-            } else if (FilteringMode.FILTERING_MODE_EXCLUSIVE
-                    .equals(filterMode)) {
-                sb.append(" OR ");
-            }
-        }
-        sb.append(f.toPreparedStatementString());
-        return sb;
     }
 
     /**

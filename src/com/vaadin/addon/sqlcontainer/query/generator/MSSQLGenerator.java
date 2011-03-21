@@ -2,9 +2,8 @@ package com.vaadin.addon.sqlcontainer.query.generator;
 
 import java.util.List;
 
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
+import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
 public class MSSQLGenerator extends DefaultSQLGenerator {
@@ -19,8 +18,8 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
      */
     @Override
     public StatementHelper generateSelectQuery(String tableName,
-            List<Filter> filters, FilteringMode filterMode,
-            List<OrderBy> orderBys, int offset, int pagelength, String toSelect) {
+            List<Filter> filters, List<OrderBy> orderBys, int offset,
+            int pagelength, String toSelect) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
@@ -33,13 +32,12 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
 
         /* Row count request is handled here */
         if ("COUNT(*)".equalsIgnoreCase(toSelect)) {
-            query.append("SELECT COUNT(*)").append(
-                    " AS \"rowcount\" FROM (SELECT * FROM ").append(tableName);
+            query.append("SELECT COUNT(*)")
+                    .append(" AS \"rowcount\" FROM (SELECT * FROM ")
+                    .append(tableName);
             if (filters != null && !filters.isEmpty()) {
-                for (Filter f : filters) {
-                    generateFilter(query, f, filters.indexOf(f) == 0,
-                            filterMode, sh);
-                }
+                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                        filters, sh));
             }
             query.append(") AS t");
             sh.setQueryString(query.toString());
@@ -48,13 +46,11 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
 
         /* SELECT without row number constraints */
         if (offset == 0 && pagelength == 0) {
-            query.append("SELECT ").append(toSelect).append(" FROM ").append(
-                    tableName);
+            query.append("SELECT ").append(toSelect).append(" FROM ")
+                    .append(tableName);
             if (filters != null) {
-                for (Filter f : filters) {
-                    generateFilter(query, f, filters.indexOf(f) == 0,
-                            filterMode, sh);
-                }
+                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                        filters, sh));
             }
             if (orderBys != null) {
                 for (OrderBy o : orderBys) {
@@ -74,13 +70,11 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
         }
         query.append(") AS rownum, " + toSelect + " FROM ").append(tableName);
         if (filters != null) {
-            for (Filter f : filters) {
-                generateFilter(query, f, filters.indexOf(f) == 0, filterMode,
-                        sh);
-            }
+            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                    filters, sh));
         }
-        query.append(") AS a WHERE a.rownum BETWEEN ").append(offset).append(
-                " AND ").append(Integer.toString(offset + pagelength));
+        query.append(") AS a WHERE a.rownum BETWEEN ").append(offset)
+                .append(" AND ").append(Integer.toString(offset + pagelength));
         sh.setQueryString(query.toString());
         return sh;
     }

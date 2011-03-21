@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -21,7 +22,8 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.filters.Like;
+import com.vaadin.data.Container.Filter;
 
 public class FreeformQueryTest {
 
@@ -239,8 +241,9 @@ public class FreeformQueryTest {
     public void setFilters_noDelegate_shouldFail() {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        query.setFilters(Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle")));
+        ArrayList<Filter> filters = new ArrayList<Filter>();
+        filters.add(new Like("name", "%lle"));
+        query.setFilters(filters);
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -511,9 +514,9 @@ public class FreeformQueryTest {
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        List<Filter> filters = Arrays.asList(new Filter("name",
-                ComparisonType.ENDS_WITH, "lle"));
-        delegate.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        List<Filter> filters = new ArrayList<Filter>();
+        filters.add(new Like("name", "%lle"));
+        delegate.setFilters(filters);
 
         EasyMock.replay(delegate);
         query.setDelegate(delegate);
@@ -529,9 +532,9 @@ public class FreeformQueryTest {
                 Arrays.asList("ID"), connectionPool);
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
-        List<Filter> filters = Arrays.asList(new Filter("name",
-                ComparisonType.ENDS_WITH, "lle"));
-        delegate.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        List<Filter> filters = new ArrayList<Filter>();
+        filters.add(new Like("name", "%lle"));
+        delegate.setFilters(filters);
         EasyMock.expectLastCall().andThrow(new UnsupportedOperationException());
         EasyMock.replay(delegate);
         query.setDelegate(delegate);

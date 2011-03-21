@@ -4,9 +4,8 @@ import java.io.Serializable;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
+import com.vaadin.data.Container.Filter;
 
 /**
  * The SQLGenerator interface is meant to be implemented for each different SQL
@@ -38,30 +37,6 @@ public interface SQLGenerator extends Serializable {
     public StatementHelper generateSelectQuery(String tableName,
             List<Filter> filters, List<OrderBy> orderBys, int offset,
             int pagelength, String toSelect);
-
-    /**
-     * Generates a SELECT query with the provided parameters.
-     * 
-     * @param tableName
-     *            Name of the table queried
-     * @param filters
-     *            The filters, converted into a WHERE clause
-     * @param filterMode
-     *            Sets the filtering mode for this query. See FilteringMode.
-     * @param orderBys
-     *            The the ordering conditions, converted into an ORDER BY clause
-     * @param offset
-     *            The offset of the first row to be included
-     * @param pagelength
-     *            The number of rows to be returned when the query executes
-     * @param toSelect
-     *            String containing what to select, e.g. "*", "COUNT(*)"
-     * @return StatementHelper instance containing the query string for a
-     *         PreparedStatement and the values required for the parameters
-     */
-    public StatementHelper generateSelectQuery(String tableName,
-            List<Filter> filters, FilteringMode filterMode,
-            List<OrderBy> orderBys, int offset, int pagelength, String toSelect);
 
     /**
      * Generates an UPDATE query with the provided parameters.

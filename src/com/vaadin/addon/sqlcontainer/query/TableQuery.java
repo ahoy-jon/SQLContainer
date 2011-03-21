@@ -22,17 +22,16 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
+import com.vaadin.data.Container.Filter;
+import com.vaadin.data.util.filter.Compare.Equal;
 
 @SuppressWarnings("serial")
 public class TableQuery implements QueryDelegate,
         QueryDelegate.RowIdChangeNotifier {
-    /** Currently set filtering mode */
-    private FilteringMode filterMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
     /** Table name, primary key column name(s) and version column name */
     private String tableName;
@@ -110,7 +109,7 @@ public class TableQuery implements QueryDelegate,
     public int getCount() throws SQLException {
         debug("Fetching count...");
         StatementHelper sh = sqlGenerator.generateSelectQuery(tableName,
-                filters, filterMode, null, 0, 0, "COUNT(*)");
+                filters, null, 0, 0, "COUNT(*)");
         boolean shouldCloseTransaction = false;
         if (!transactionOpen) {
             shouldCloseTransaction = true;
@@ -142,11 +141,11 @@ public class TableQuery implements QueryDelegate,
         if (orderBys == null || orderBys.isEmpty()) {
             List<OrderBy> ob = new ArrayList<OrderBy>();
             ob.add(new OrderBy(primaryKeyColumns.get(0), true));
-            sh = sqlGenerator.generateSelectQuery(tableName, filters,
-                    filterMode, ob, offset, pagelength, null);
+            sh = sqlGenerator.generateSelectQuery(tableName, filters, ob,
+                    offset, pagelength, null);
         } else {
-            sh = sqlGenerator.generateSelectQuery(tableName, filters,
-                    filterMode, orderBys, offset, pagelength, null);
+            sh = sqlGenerator.generateSelectQuery(tableName, filters, orderBys,
+                    offset, pagelength, null);
         }
         return executeQuery(sh);
     }
@@ -250,26 +249,13 @@ public class TableQuery implements QueryDelegate,
      * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setFilters(java.util
      * .List)
      */
-    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
+    public void setFilters(List<Filter> filters)
             throws UnsupportedOperationException {
-        filterMode = filteringMode;
         if (filters == null) {
             this.filters = null;
             return;
         }
         this.filters = Collections.unmodifiableList(filters);
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * com.vaadin.addon.sqlcontainer.query.QueryDelegate#setFilters(java.util
-     * .List)
-     */
-    public void setFilters(List<Filter> filters)
-            throws UnsupportedOperationException {
-        this.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
     }
 
     /*
@@ -616,8 +602,7 @@ public class TableQuery implements QueryDelegate,
         }
         int ix = 0;
         for (String colName : primaryKeyColumns) {
-            filtersAndKeys.add(new Filter(colName, ComparisonType.EQUALS,
-                    keys[ix]));
+            filtersAndKeys.add(new Equal(colName, keys[ix]));
             ix++;
         }
         StatementHelper sh = sqlGenerator.generateSelectQuery(tableName,

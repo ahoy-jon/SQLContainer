@@ -15,11 +15,10 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
+import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
 public class FreeformQuery implements QueryDelegate {
-
-    private FilteringMode filterMode;
 
     FreeformQueryDelegate delegate = null;
     private String queryString;
@@ -239,17 +238,6 @@ public class FreeformQuery implements QueryDelegate {
         }
     }
 
-    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
-            throws UnsupportedOperationException {
-        if (delegate != null) {
-            filterMode = filteringMode;
-            delegate.setFilters(filters, filterMode);
-        } else if (filters != null) {
-            throw new UnsupportedOperationException(
-                    "FreeFormQueryDelegate not set!");
-        }
-    }
-
     /*
      * (non-Javadoc)
      * 
@@ -259,7 +247,12 @@ public class FreeformQuery implements QueryDelegate {
      */
     public void setFilters(List<Filter> filters)
             throws UnsupportedOperationException {
-        this.setFilters(filters, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        if (delegate != null) {
+            delegate.setFilters(filters);
+        } else if (filters != null) {
+            throw new UnsupportedOperationException(
+                    "FreeFormQueryDelegate not set!");
+        }
     }
 
     public void setOrderBy(List<OrderBy> orderBys)

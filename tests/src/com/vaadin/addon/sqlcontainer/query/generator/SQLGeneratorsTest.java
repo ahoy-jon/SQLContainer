@@ -1,6 +1,7 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,10 +16,11 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
+import com.vaadin.data.Container.Filter;
+import com.vaadin.data.util.filter.Or;
 
 public class SQLGeneratorsTest {
     private JDBCConnectionPool connectionPool;
@@ -67,8 +69,8 @@ public class SQLGeneratorsTest {
     @Test
     public void generateSelectQuery_filtersAndOrderingSet_shouldSucceed() {
         SQLGenerator sg = new DefaultSQLGenerator();
-        List<Filter> f = Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle"));
+        List<com.vaadin.data.Container.Filter> f = new ArrayList<Filter>();
+        f.add(new Like("name", "%lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 0, 0, null);
         Assert.assertEquals(sh.getQueryString(),
@@ -78,16 +80,14 @@ public class SQLGeneratorsTest {
     @Test
     public void generateSelectQuery_filtersAndOrderingSet_exclusiveFilteringMode_shouldSucceed() {
         SQLGenerator sg = new DefaultSQLGenerator();
-        List<Filter> f = Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
-                Filter.ComparisonType.STARTS_WITH, "vi"));
+        List<Filter> f = new ArrayList<Filter>();
+        f.add(new Or(new Like("name", "%lle"), new Like("name", "vi%")));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        StatementHelper sh = sg.generateSelectQuery("TABLE", f,
-                FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 0, 0, null);
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 0, 0, null);
         // TODO
         Assert.assertEquals(sh.getQueryString(),
-                "SELECT * FROM TABLE WHERE \"name\" LIKE ? "
-                        + "OR \"name\" LIKE ? ORDER BY \"name\" ASC");
+                "SELECT * FROM TABLE WHERE (\"name\" LIKE ? "
+                        + "OR \"name\" LIKE ?) ORDER BY \"name\" ASC");
     }
 
     @Test
@@ -171,8 +171,8 @@ public class SQLGeneratorsTest {
     public void generateComplexSelectQuery_forOracle_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new OracleGenerator();
-        List<Filter> f = Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle"));
+        List<Filter> f = new ArrayList<Filter>();
+        f.add(new Like("name", "%lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
                 "NAME, ID");
@@ -187,8 +187,8 @@ public class SQLGeneratorsTest {
     public void generateComplexSelectQuery_forMSSQL_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new MSSQLGenerator();
-        List<Filter> f = Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle"));
+        List<Filter> f = new ArrayList<Filter>();
+        f.add(new Like("name", "%lle"));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
         StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
                 "NAME, ID");
@@ -203,17 +203,16 @@ public class SQLGeneratorsTest {
     public void generateComplexSelectQuery_forOracle_exclusiveFilteringMode_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new OracleGenerator();
-        List<Filter> f = Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
-                Filter.ComparisonType.STARTS_WITH, "vi"));
+        List<Filter> f = new ArrayList<Filter>();
+        f.add(new Or(new Like("name", "%lle"), new Like("name", "vi%")));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        StatementHelper sh = sg.generateSelectQuery("TABLE", f,
-                FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
+                "NAME, ID");
         Assert.assertEquals(
                 sh.getQueryString(),
                 "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
-                        + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
-                        + " OR \"name\" LIKE ? "
+                        + " (SELECT NAME, ID FROM TABLE WHERE (\"name\" LIKE ?"
+                        + " OR \"name\" LIKE ?) "
                         + "ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
     }
 
@@ -221,17 +220,16 @@ public class SQLGeneratorsTest {
     public void generateComplexSelectQuery_forMSSQL_exclusiveFilteringMode_shouldSucceed()
             throws SQLException {
         SQLGenerator sg = new MSSQLGenerator();
-        List<Filter> f = Arrays.asList(new Filter("name",
-                Filter.ComparisonType.ENDS_WITH, "lle"), new Filter("name",
-                Filter.ComparisonType.STARTS_WITH, "vi"));
+        List<Filter> f = new ArrayList<Filter>();
+        f.add(new Or(new Like("name", "%lle"), new Like("name", "vi%")));
         List<OrderBy> ob = Arrays.asList(new OrderBy("name", true));
-        StatementHelper sh = sg.generateSelectQuery("TABLE", f,
-                FilteringMode.FILTERING_MODE_EXCLUSIVE, ob, 4, 8, "NAME, ID");
+        StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
+                "NAME, ID");
         Assert.assertEquals(sh.getQueryString(),
                 "SELECT * FROM (SELECT row_number() OVER "
                         + "( ORDER BY \"name\" ASC) AS rownum, NAME, ID "
-                        + "FROM TABLE WHERE \"name\" LIKE ? "
-                        + "OR \"name\" LIKE ?) "
+                        + "FROM TABLE WHERE (\"name\" LIKE ? "
+                        + "OR \"name\" LIKE ?)) "
                         + "AS a WHERE a.rownum BETWEEN 5 AND 12");
     }
 }
