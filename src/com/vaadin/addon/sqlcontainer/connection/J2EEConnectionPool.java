@@ -7,30 +7,43 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-@SuppressWarnings("serial")
 public class J2EEConnectionPool implements JDBCConnectionPool {
 
     private String dataSourceJndiName;
+
+    private DataSource dataSource = null;
+
+    public J2EEConnectionPool(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
     public J2EEConnectionPool(String dataSourceJndiName) {
         this.dataSourceJndiName = dataSourceJndiName;
     }
 
     public Connection reserveConnection() throws SQLException {
-        Connection conn = null;
-        DataSource ds = null;
+        Connection conn = getDataSource().getConnection();
+        conn.setAutoCommit(false);
 
+        return conn;
+    }
+
+    private DataSource getDataSource() throws SQLException {
+        if (dataSource == null) {
+            dataSource = lookupDataSource();
+        }
+        return dataSource;
+    }
+
+    private DataSource lookupDataSource() throws SQLException {
         try {
             InitialContext ic = new InitialContext();
-            ds = (DataSource) ic.lookup(dataSourceJndiName);
-            conn = ds.getConnection();
-            conn.setAutoCommit(false);
+            return (DataSource) ic.lookup(dataSourceJndiName);
         } catch (NamingException e) {
             throw new SQLException(
                     "NamingException - Cannot connect to the database. Cause: "
                             + e.getMessage());
         }
-        return conn;
     }
 
     public void releaseConnection(Connection conn) {
@@ -42,7 +55,7 @@ public class J2EEConnectionPool implements JDBCConnectionPool {
     }
 
     public void destroy() {
-        // Nothing to do.
+        dataSource = null;
     }
 
 }
