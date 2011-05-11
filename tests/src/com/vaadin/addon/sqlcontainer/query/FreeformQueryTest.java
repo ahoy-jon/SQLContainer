@@ -99,6 +99,14 @@ public class FreeformQueryTest {
         Assert.assertEquals(4, query.getCount());
     }
 
+    @Test(expected = SQLException.class)
+    public void getCount_illegalQuery_shouldThrowSQLException()
+            throws SQLException {
+        FreeformQuery query = new FreeformQuery("SELECT * FROM asdf",
+                Arrays.asList("ID"), connectionPool);
+        query.getResults(0, 50);
+    }
+
     @Test
     public void getCount_simpleQueryTwoMorePeopleAdded_returnsSix()
             throws SQLException {
@@ -882,6 +890,5 @@ public class FreeformQueryTest {
         Assert.assertTrue(query.containsRowWithKey(1));
 
         EasyMock.verify(delegate);
-
     }
 }

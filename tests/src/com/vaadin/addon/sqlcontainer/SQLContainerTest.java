@@ -66,6 +66,14 @@ public class SQLContainerTest {
                 Arrays.asList("ID"), connectionPool));
     }
 
+    @Test(expected = SQLException.class)
+    public void constructor_withIllegalFreeformQuery_shouldFail()
+            throws SQLException {
+        SQLContainer c = new SQLContainer(new FreeformQuery(
+                "SELECT * FROM asdf", Arrays.asList("ID"), connectionPool));
+        c.getItem(c.firstItemId());
+    }
+
     @Test
     public void containsId_withFreeformQueryAndExistingId_returnsTrue()
             throws SQLException {
