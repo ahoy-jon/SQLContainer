@@ -11,6 +11,7 @@ import com.vaadin.addon.sqlcontainer.filters.Between;
 import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.StringDecorator;
 import com.vaadin.data.Container.Filter;
 import com.vaadin.data.util.filter.And;
 import com.vaadin.data.util.filter.Compare.Equal;
@@ -298,4 +299,14 @@ public class FilterToWhereTranslatorTest {
                         new StatementHelper()));
     }
 
+    @Test
+    public void getWhereStringForFilters_customStringDecorator() {
+        FilterToWhereTranslator
+                .setStringDecorator(new StringDecorator("[", "]"));
+        ArrayList<Filter> filters = new ArrayList<Filter>();
+        filters.add(new Not(new IsNull("NAME")));
+        Assert.assertEquals(" WHERE [NAME] IS NOT NULL",
+                FilterToWhereTranslator.getWhereStringForFilters(filters,
+                        new StatementHelper()));
+    }
 }

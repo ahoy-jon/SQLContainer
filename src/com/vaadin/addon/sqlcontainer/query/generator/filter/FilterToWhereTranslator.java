@@ -10,6 +10,8 @@ import com.vaadin.data.Container.Filter;
 public class FilterToWhereTranslator {
 
     private static ArrayList<FilterTranslator> filterTranslators = new ArrayList<FilterTranslator>();
+    private static StringDecorator stringDecorator = new StringDecorator("\"",
+            "\"");
 
     static {
         /* Register all default filter translators */
@@ -28,12 +30,23 @@ public class FilterToWhereTranslator {
         filterTranslators.add(translator);
     }
 
-    protected static String quote(Object str) {
-        return "\"" + str + "\"";
+    /**
+     * Allows specification of a custom ColumnQuoter instance that handles
+     * quoting of column names for the current DB dialect.
+     * 
+     * @param decorator
+     *            the ColumnQuoter instance to use.
+     */
+    public static void setStringDecorator(StringDecorator decorator) {
+        stringDecorator = decorator;
     }
 
-    protected static String parens(String str) {
-        return "(" + str + ")";
+    protected static String quote(Object str) {
+        return stringDecorator.quote(str);
+    }
+
+    protected static String group(String str) {
+        return stringDecorator.group(str);
     }
 
     /**

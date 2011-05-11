@@ -11,7 +11,7 @@ public class AndTranslator implements FilterTranslator {
     }
 
     public String getWhereStringForFilter(Filter filter, StatementHelper sh) {
-        return FilterToWhereTranslator.parens(FilterToWhereTranslator
+        return FilterToWhereTranslator.group(FilterToWhereTranslator
                 .getJoinedFilterString(((And) filter).getFilters(), "AND", sh));
     }
 

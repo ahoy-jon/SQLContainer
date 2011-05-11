@@ -9,6 +9,25 @@ import com.vaadin.data.Container.Filter;
 @SuppressWarnings("serial")
 public class MSSQLGenerator extends DefaultSQLGenerator {
 
+    public MSSQLGenerator() {
+
+    }
+
+    /**
+     * Construct a MSSQLGenerator with the specified identifiers for start and
+     * end of quoted strings. The identifiers may be different depending on the
+     * database engine and it's settings.
+     * 
+     * @param quoteStart
+     *            the identifier (character) denoting the start of a quoted
+     *            string
+     * @param quoteEnd
+     *            the identifier (character) denoting the end of a quoted string
+     */
+    public MSSQLGenerator(String quoteStart, String quoteEnd) {
+        super(quoteStart, quoteEnd);
+    }
+
     /*
      * (non-Javadoc)
      * 

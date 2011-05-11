@@ -11,6 +11,7 @@ import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.StringDecorator;
 import com.vaadin.data.Container.Filter;
 
 /**
@@ -20,6 +21,26 @@ import com.vaadin.data.Container.Filter;
  */
 @SuppressWarnings("serial")
 public class DefaultSQLGenerator implements SQLGenerator {
+
+    public DefaultSQLGenerator() {
+
+    }
+
+    /**
+     * Construct a DefaultSQLGenerator with the specified identifiers for start
+     * and end of quoted strings. The identifiers may be different depending on
+     * the database engine and it's settings.
+     * 
+     * @param quoteStart
+     *            the identifier (character) denoting the start of a quoted
+     *            string
+     * @param quoteEnd
+     *            the identifier (character) denoting the end of a quoted string
+     */
+    public DefaultSQLGenerator(String quoteStart, String quoteEnd) {
+        FilterToWhereTranslator.setStringDecorator(new StringDecorator(
+                quoteStart, quoteEnd));
+    }
 
     /*
      * (non-Javadoc)
