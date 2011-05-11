@@ -33,6 +33,7 @@ import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTransla
 import com.vaadin.data.Container.Filter;
 import com.vaadin.data.Container.ItemSetChangeListener;
 import com.vaadin.data.Item;
+import com.vaadin.data.util.filter.Compare.Equal;
 
 public class SQLContainerTest {
     private static final int offset = AllTests.offset;
@@ -681,6 +682,26 @@ public class SQLContainerTest {
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Object id = container.addItem();
         Assert.assertNotNull(container.getItem(id));
+    }
+
+    @Test
+    public void getItem_freeformNewlyAddedItemAndFiltered_returnsNull()
+            throws SQLException {
+        SQLContainer container = new SQLContainer(new FreeformQuery(
+                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+        container.addContainerFilter(new Equal("NAME", "asdf"));
+        Object id = container.addItem();
+        Assert.assertNull(container.getItem(id));
+    }
+
+    @Test
+    public void getItemUnfiltered_freeformNewlyAddedItemAndFiltered_returnsNewlyAdded()
+            throws SQLException {
+        SQLContainer container = new SQLContainer(new FreeformQuery(
+                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+        container.addContainerFilter(new Equal("NAME", "asdf"));
+        Object id = container.addItem();
+        Assert.assertNotNull(container.getItemUnfiltered(id));
     }
 
     @Test

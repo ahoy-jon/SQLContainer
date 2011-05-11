@@ -263,6 +263,25 @@ public class SQLContainer implements Container, Container.Filterable,
     }
 
     /**
+     * Bypasses in-memory filtering to return items that are cached in memory.
+     * <em>NOTE</em>: This does not bypass database-level filtering.
+     * 
+     * @param itemId
+     *            the id of the item to retrieve.
+     * @return the item represented by itemId.
+     */
+    public Item getItemUnfiltered(Object itemId) {
+        if (!cachedItems.containsKey(itemId)) {
+            for (RowItem item : addedItems) {
+                if (item.getId().equals(itemId)) {
+                    return item;
+                }
+            }
+        }
+        return cachedItems.get(itemId);
+    }
+
+    /**
      * NOTE! Do not use this method if in any way avoidable. This method doesn't
      * (and cannot) use lazy loading, which means that all rows in the database
      * will be loaded into memory.
