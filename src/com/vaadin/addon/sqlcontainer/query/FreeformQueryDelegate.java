@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.RowItem;
+import com.vaadin.data.Container.Filter;
 
 public interface FreeformQueryDelegate extends Serializable {
     /**
@@ -48,24 +49,6 @@ public interface FreeformQueryDelegate extends Serializable {
      *             if the implementation doesn't support filtering.
      */
     public void setFilters(List<Filter> filters)
-            throws UnsupportedOperationException;
-
-    /**
-     * Sets the filters to apply when performing the SQL query. These are
-     * translated into a WHERE clause.
-     * 
-     * @param filters
-     *            The filters to apply.
-     * @param filteringMode
-     *            Filtering mode.
-     *            <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code> =
-     *            Inclusive (AND).
-     *            <code>FilteringMode.FILTERING_MODE_EXCLUSIVE</code> =
-     *            Exclusive (OR)
-     * @throws UnsupportedOperationException
-     *             if the implementation doesn't support filtering.
-     */
-    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
             throws UnsupportedOperationException;
 
     /**

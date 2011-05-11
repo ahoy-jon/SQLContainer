@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -21,8 +22,10 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
+import com.vaadin.data.Container.Filter;
+import com.vaadin.data.util.filter.Compare.Equal;
 
 public class TableQueryTest {
     private static final int offset = AllTests.offset;
@@ -290,8 +293,8 @@ public class TableQueryTest {
     public void setFilters_shouldReturnCorrectCount() throws SQLException {
         TableQuery tQuery = new TableQuery("people", connectionPool,
                 AllTests.sqlGen);
-        List<Filter> filters = Arrays.asList(new Filter("NAME",
-                ComparisonType.ENDS_WITH, "lle"));
+        List<Filter> filters = new ArrayList<Filter>();
+        filters.add(new Like("NAME", "%lle"));
         tQuery.setFilters(filters);
         Assert.assertEquals(3, tQuery.getCount());
     }
@@ -443,8 +446,8 @@ public class TableQueryTest {
 
         /* Check that the container size is correct and there is no 'Viljami' */
         Assert.assertEquals(4, container.size());
-        List<Filter> filters = Arrays.asList(new Filter("NAME",
-                ComparisonType.EQUALS, "Viljami"));
+        List<Filter> filters = new ArrayList<Filter>();
+        filters.add(new Equal("NAME", "Viljami"));
         tQuery.setFilters(filters);
         Assert.assertEquals(0, tQuery.getCount());
         tQuery.setFilters(null);

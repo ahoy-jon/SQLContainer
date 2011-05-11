@@ -18,8 +18,7 @@ import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.SQLContainer.ItemSetChangeEvent;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
+import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
 import com.vaadin.data.Container.ItemSetChangeListener;
@@ -1310,8 +1309,7 @@ public class SQLContainerTableQueryTest {
                 container.getContainerProperty(container.lastItemId(), "NAME")
                         .getValue());
 
-        container
-                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
+        container.addContainerFilter(new Like("NAME", "%lle"));
         // Ville, Kalle, Pelle
         Assert.assertEquals(3, container.size());
         Assert.assertEquals("Pelle",
@@ -1420,8 +1418,7 @@ public class SQLContainerTableQueryTest {
         Object id2 = container.addItem();
         container.getContainerProperty(id2, "NAME").setValue("Bengt");
 
-        container
-                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
+        container.addContainerFilter(new Like("NAME", "%lle"));
 
         // Ville, Kalle, Pelle, Palle
         Assert.assertEquals(4, container.size());

@@ -16,10 +16,6 @@ import java.util.Set;
 @SuppressWarnings("serial")
 public class SimpleJDBCConnectionPool implements JDBCConnectionPool {
 
-    public static class NoFreeConnectionException extends Exception {
-        private static final long serialVersionUID = -2575886583616358485L;
-    }
-
     private int initialConnections = 5;
     private int maxConnections = 20;
 

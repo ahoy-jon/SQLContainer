@@ -20,21 +20,23 @@ import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.SQLContainer.ItemSetChangeEvent;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPool;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryDelegate;
+import com.vaadin.addon.sqlcontainer.query.FreeformStatementDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
+import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.data.Container.Filter;
 import com.vaadin.data.Container.ItemSetChangeListener;
 import com.vaadin.data.Item;
+import com.vaadin.data.util.filter.Compare.Equal;
 
 public class SQLContainerTest {
     private static final int offset = AllTests.offset;
-    private static final String createGarbage = AllTests.createGarbage;
     private JDBCConnectionPool connectionPool;
 
     @Before
@@ -63,6 +65,14 @@ public class SQLContainerTest {
             throws SQLException {
         new SQLContainer(new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool));
+    }
+
+    @Test(expected = SQLException.class)
+    public void constructor_withIllegalFreeformQuery_shouldFail()
+            throws SQLException {
+        SQLContainer c = new SQLContainer(new FreeformQuery(
+                "SELECT * FROM asdf", Arrays.asList("ID"), connectionPool));
+        c.getItem(c.firstItemId());
     }
 
     @Test
@@ -340,10 +350,9 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -673,6 +682,26 @@ public class SQLContainerTest {
                 "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
         Object id = container.addItem();
         Assert.assertNotNull(container.getItem(id));
+    }
+
+    @Test
+    public void getItem_freeformNewlyAddedItemAndFiltered_returnsNull()
+            throws SQLException {
+        SQLContainer container = new SQLContainer(new FreeformQuery(
+                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+        container.addContainerFilter(new Equal("NAME", "asdf"));
+        Object id = container.addItem();
+        Assert.assertNull(container.getItem(id));
+    }
+
+    @Test
+    public void getItemUnfiltered_freeformNewlyAddedItemAndFiltered_returnsNewlyAdded()
+            throws SQLException {
+        SQLContainer container = new SQLContainer(new FreeformQuery(
+                "SELECT * FROM people", Arrays.asList("ID"), connectionPool));
+        container.addContainerFilter(new Equal("NAME", "asdf"));
+        Object id = container.addItem();
+        Assert.assertNotNull(container.getItemUnfiltered(id));
     }
 
     @Test
@@ -1129,10 +1158,9 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1229,10 +1257,9 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1320,10 +1347,9 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1401,10 +1427,9 @@ public class SQLContainerTest {
                         }
                     }
                 }).anyTimes();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1577,10 +1602,9 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1690,10 +1714,9 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
@@ -1793,17 +1816,16 @@ public class SQLContainerTest {
     public void addFilter_freeform_filtersResults() throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        FreeformQueryDelegate delegate = EasyMock
-                .createMock(FreeformQueryDelegate.class);
+        FreeformStatementDelegate delegate = EasyMock
+                .createMock(FreeformStatementDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -1814,33 +1836,29 @@ public class SQLContainerTest {
             }
         }).anyTimes();
         EasyMock.expect(
-                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
-                .andAnswer(new IAnswer<String>() {
-                    public String answer() throws Throwable {
+                delegate.getQueryStatement(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return FreeformQueryUtil.getQueryStringWithFilters(
-                                filters, offset, limit);
+                        return FreeformQueryUtil.getQueryWithFilters(filters,
+                                offset, limit);
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountStatement())
+                .andAnswer(new IAnswer<StatementHelper>() {
                     @SuppressWarnings("deprecation")
-                    public String answer() throws Throwable {
+                    public StatementHelper answer() throws Throwable {
+                        StatementHelper sh = new StatementHelper();
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
-                                }
-                            }
+                            query.append(FilterToWhereTranslator
+                                    .getWhereStringForFilters(filters, sh));
                         }
-                        return query.toString();
+                        sh.setQueryString(query.toString());
+                        return sh;
                     }
                 }).anyTimes();
 
@@ -1853,8 +1871,7 @@ public class SQLContainerTest {
                 container.getContainerProperty(container.lastItemId(), "NAME")
                         .getValue());
 
-        container
-                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
+        container.addContainerFilter(new Like("NAME", "%lle"));
         // Ville, Kalle, Pelle
         Assert.assertEquals(3, container.size());
         Assert.assertEquals("Pelle",
@@ -1869,17 +1886,16 @@ public class SQLContainerTest {
     public void addContainerFilter_filtersResults() throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        FreeformQueryDelegate delegate = EasyMock
-                .createMock(FreeformQueryDelegate.class);
+        FreeformStatementDelegate delegate = EasyMock
+                .createMock(FreeformStatementDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -1890,33 +1906,29 @@ public class SQLContainerTest {
             }
         }).anyTimes();
         EasyMock.expect(
-                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
-                .andAnswer(new IAnswer<String>() {
-                    public String answer() throws Throwable {
+                delegate.getQueryStatement(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return FreeformQueryUtil.getQueryStringWithFilters(
-                                filters, offset, limit);
+                        return FreeformQueryUtil.getQueryWithFilters(filters,
+                                offset, limit);
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountStatement())
+                .andAnswer(new IAnswer<StatementHelper>() {
                     @SuppressWarnings("deprecation")
-                    public String answer() throws Throwable {
+                    public StatementHelper answer() throws Throwable {
+                        StatementHelper sh = new StatementHelper();
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
-                                }
-                            }
+                            query.append(FilterToWhereTranslator
+                                    .getWhereStringForFilters(filters, sh));
                         }
-                        return query.toString();
+                        sh.setQueryString(query.toString());
+                        return sh;
                     }
                 }).anyTimes();
 
@@ -1943,17 +1955,16 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        FreeformQueryDelegate delegate = EasyMock
-                .createMock(FreeformQueryDelegate.class);
+        FreeformStatementDelegate delegate = EasyMock
+                .createMock(FreeformStatementDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -1964,33 +1975,28 @@ public class SQLContainerTest {
             }
         }).anyTimes();
         EasyMock.expect(
-                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
-                .andAnswer(new IAnswer<String>() {
-                    public String answer() throws Throwable {
+                delegate.getQueryStatement(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return FreeformQueryUtil.getQueryStringWithFilters(
-                                filters, offset, limit);
+                        return FreeformQueryUtil.getQueryWithFilters(filters,
+                                offset, limit);
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
-                    @SuppressWarnings("deprecation")
-                    public String answer() throws Throwable {
+        EasyMock.expect(delegate.getCountStatement())
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
+                        StatementHelper sh = new StatementHelper();
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
-                                }
-                            }
+                            query.append(FilterToWhereTranslator
+                                    .getWhereStringForFilters(filters, sh));
                         }
-                        return query.toString();
+                        sh.setQueryString(query.toString());
+                        return sh;
                     }
                 }).anyTimes();
 
@@ -2000,7 +2006,8 @@ public class SQLContainerTest {
         // Ville, Kalle, Pelle, Börje
         Assert.assertEquals(4, container.size());
 
-        container.addContainerFilter("NAME", "vi", true, false);
+        // FIXME LIKE %asdf% doesn't match a string that begins with asdf
+        container.addContainerFilter("NAME", "vi", true, true);
 
         // Ville
         Assert.assertEquals(1, container.size());
@@ -2017,17 +2024,16 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        FreeformQueryDelegate delegate = EasyMock
-                .createMock(FreeformQueryDelegate.class);
+        FreeformStatementDelegate delegate = EasyMock
+                .createMock(FreeformStatementDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2038,33 +2044,29 @@ public class SQLContainerTest {
             }
         }).anyTimes();
         EasyMock.expect(
-                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
-                .andAnswer(new IAnswer<String>() {
-                    public String answer() throws Throwable {
+                delegate.getQueryStatement(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return FreeformQueryUtil.getQueryStringWithFilters(
-                                filters, offset, limit);
+                        return FreeformQueryUtil.getQueryWithFilters(filters,
+                                offset, limit);
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountStatement())
+                .andAnswer(new IAnswer<StatementHelper>() {
                     @SuppressWarnings("deprecation")
-                    public String answer() throws Throwable {
+                    public StatementHelper answer() throws Throwable {
+                        StatementHelper sh = new StatementHelper();
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
-                                }
-                            }
+                            query.append(FilterToWhereTranslator
+                                    .getWhereStringForFilters(filters, sh));
                         }
-                        return query.toString();
+                        sh.setQueryString(query.toString());
+                        return sh;
                     }
                 }).anyTimes();
 
@@ -2098,17 +2100,16 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        FreeformQueryDelegate delegate = EasyMock
-                .createMock(FreeformQueryDelegate.class);
+        FreeformStatementDelegate delegate = EasyMock
+                .createMock(FreeformStatementDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2119,33 +2120,29 @@ public class SQLContainerTest {
             }
         }).anyTimes();
         EasyMock.expect(
-                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
-                .andAnswer(new IAnswer<String>() {
-                    public String answer() throws Throwable {
+                delegate.getQueryStatement(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return FreeformQueryUtil.getQueryStringWithFilters(
-                                filters, offset, limit);
+                        return FreeformQueryUtil.getQueryWithFilters(filters,
+                                offset, limit);
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountStatement())
+                .andAnswer(new IAnswer<StatementHelper>() {
                     @SuppressWarnings("deprecation")
-                    public String answer() throws Throwable {
+                    public StatementHelper answer() throws Throwable {
+                        StatementHelper sh = new StatementHelper();
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
-                                }
-                            }
+                            query.append(FilterToWhereTranslator
+                                    .getWhereStringForFilters(filters, sh));
                         }
-                        return query.toString();
+                        sh.setQueryString(query.toString());
+                        return sh;
                     }
                 }).anyTimes();
 
@@ -2155,7 +2152,7 @@ public class SQLContainerTest {
         // Ville, Kalle, Pelle, Börje
         Assert.assertEquals(4, container.size());
 
-        container.addContainerFilter("NAME", "Vi", false, false);
+        container.addContainerFilter("NAME", "Vi", false, true);
 
         // Ville
         Assert.assertEquals(1, container.size());
@@ -2179,17 +2176,16 @@ public class SQLContainerTest {
             throws SQLException {
         FreeformQuery query = new FreeformQuery("SELECT * FROM people",
                 Arrays.asList("ID"), connectionPool);
-        FreeformQueryDelegate delegate = EasyMock
-                .createMock(FreeformQueryDelegate.class);
+        FreeformStatementDelegate delegate = EasyMock
+                .createMock(FreeformStatementDelegate.class);
         final ArrayList<Filter> filters = new ArrayList<Filter>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 List<Filter> orders = (List<Filter>) EasyMock
@@ -2200,33 +2196,29 @@ public class SQLContainerTest {
             }
         }).anyTimes();
         EasyMock.expect(
-                delegate.getQueryString(EasyMock.anyInt(), EasyMock.anyInt()))
-                .andAnswer(new IAnswer<String>() {
-                    public String answer() throws Throwable {
+                delegate.getQueryStatement(EasyMock.anyInt(), EasyMock.anyInt()))
+                .andAnswer(new IAnswer<StatementHelper>() {
+                    public StatementHelper answer() throws Throwable {
                         Object[] args = EasyMock.getCurrentArguments();
                         int offset = (Integer) (args[0]);
                         int limit = (Integer) (args[1]);
-                        return FreeformQueryUtil.getQueryStringWithFilters(
-                                filters, offset, limit);
+                        return FreeformQueryUtil.getQueryWithFilters(filters,
+                                offset, limit);
                     }
                 }).anyTimes();
-        EasyMock.expect(delegate.getCountQuery())
-                .andAnswer(new IAnswer<String>() {
+        EasyMock.expect(delegate.getCountStatement())
+                .andAnswer(new IAnswer<StatementHelper>() {
                     @SuppressWarnings("deprecation")
-                    public String answer() throws Throwable {
+                    public StatementHelper answer() throws Throwable {
+                        StatementHelper sh = new StatementHelper();
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            Filter lastFilter = filters.get(filters.size() - 1);
-                            query.append(" WHERE ");
-                            for (Filter filter : filters) {
-                                query.append(filter.toWhereString());
-                                if (lastFilter != filter) {
-                                    query.append(" AND ");
-                                }
-                            }
+                            query.append(FilterToWhereTranslator
+                                    .getWhereStringForFilters(filters, sh));
                         }
-                        return query.toString();
+                        sh.setQueryString(query.toString());
+                        return sh;
                     }
                 }).anyTimes();
 
@@ -2244,8 +2236,7 @@ public class SQLContainerTest {
         Object id2 = container.addItem();
         container.getContainerProperty(id2, "NAME").setValue("Bengt");
 
-        container
-                .addFilter(new Filter("NAME", ComparisonType.ENDS_WITH, "lle"));
+        container.addContainerFilter(new Like("NAME", "%lle"));
 
         // Ville, Kalle, Pelle, Palle
         Assert.assertEquals(4, container.size());
@@ -2290,10 +2281,9 @@ public class SQLContainerTest {
         FreeformQueryDelegate delegate = EasyMock
                 .createMock(FreeformQueryDelegate.class);
         final ArrayList<OrderBy> orderBys = new ArrayList<OrderBy>();
-        delegate.setFilters(null, FilteringMode.FILTERING_MODE_INCLUSIVE);
+        delegate.setFilters(null);
         EasyMock.expectLastCall().anyTimes();
-        delegate.setFilters(EasyMock.isA(List.class),
-                EasyMock.eq(FilteringMode.FILTERING_MODE_INCLUSIVE));
+        delegate.setFilters(EasyMock.isA(List.class));
         EasyMock.expectLastCall().anyTimes();
         delegate.setOrderBy(null);
         EasyMock.expectLastCall().anyTimes();

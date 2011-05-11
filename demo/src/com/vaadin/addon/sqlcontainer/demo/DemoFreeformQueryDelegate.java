@@ -8,11 +8,11 @@ import java.util.List;
 import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
 import com.vaadin.addon.sqlcontainer.query.FreeformStatementDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
 public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
@@ -31,10 +31,8 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer("SELECT * FROM PEOPLE ");
         if (filters != null) {
-            for (Filter f : filters) {
-                generateFilter(query, f, filters.indexOf(f) == 0,
-                        FilteringMode.FILTERING_MODE_INCLUSIVE, sh);
-            }
+            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                    filters, sh));
         }
         query.append(getOrderByString());
         if (offset != 0 || limit != 0) {
@@ -75,22 +73,11 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer("SELECT COUNT(*) FROM PEOPLE ");
         if (filters != null) {
-            for (Filter f : filters) {
-                generateFilter(query, f, filters.indexOf(f) == 0,
-                        FilteringMode.FILTERING_MODE_INCLUSIVE, sh);
-            }
+            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                    filters, sh));
         }
         sh.setQueryString(query.toString());
         return sh;
-    }
-
-    /**
-     * Note: Only default filtering mode supported. FilteringMode parameter is
-     * ignored.
-     */
-    public void setFilters(List<Filter> filters, FilteringMode filteringMode)
-            throws UnsupportedOperationException {
-        setFilters(filters);
     }
 
     public void setFilters(List<Filter> filters)
@@ -166,8 +153,6 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException(
                 "Please use getContainsRowQueryStatement method.");
-        // return "SELECT * FROM people WHERE ID = "
-        // + Util.escapeSQL(String.valueOf(keys[0]));
     }
 
     public StatementHelper getContainsRowQueryStatement(Object... keys)
@@ -178,38 +163,5 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
         sh.addParameterValue(keys[0]);
         sh.setQueryString(query.toString());
         return sh;
-    }
-
-    protected StringBuffer generateFilter(StringBuffer sb, Filter f,
-            boolean firstFilter, FilteringMode filterMode, StatementHelper sh) {
-        if (f.getValue() == null) {
-            return sb;
-        }
-        if (Filter.ComparisonType.BETWEEN.equals(f.getComparisonType())) {
-            if (f.getValue() != null && f.getSecondValue() != null) {
-                sh.addParameterValue(f.getValue());
-                sh.addParameterValue(f.getSecondValue());
-            } else {
-                return sb;
-            }
-        } else {
-            if (f.getValue() != null) {
-                sh.addParameterValue(f.getPreparedStatementValue());
-            } else {
-                return sb;
-            }
-        }
-        if (firstFilter) {
-            sb.append(" WHERE ");
-        } else {
-            if (FilteringMode.FILTERING_MODE_INCLUSIVE.equals(filterMode)) {
-                sb.append(" AND ");
-            } else if (FilteringMode.FILTERING_MODE_EXCLUSIVE
-                    .equals(filterMode)) {
-                sb.append(" OR ");
-            }
-        }
-        sb.append(f.toPreparedStatementString());
-        return sb;
     }
 }

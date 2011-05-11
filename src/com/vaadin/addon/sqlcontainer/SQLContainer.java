@@ -14,9 +14,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import com.vaadin.addon.sqlcontainer.query.Filter;
-import com.vaadin.addon.sqlcontainer.query.Filter.ComparisonType;
-import com.vaadin.addon.sqlcontainer.query.FilteringMode;
+import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate;
 import com.vaadin.addon.sqlcontainer.query.QueryDelegate.RowIdChangeListener;
@@ -26,6 +24,8 @@ import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.data.Container;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
+import com.vaadin.data.util.filter.Compare.Equal;
+import com.vaadin.data.util.filter.UnsupportedFilterException;
 
 public class SQLContainer implements Container, Container.Filterable,
         Container.Indexed, Container.Sortable, Container.ItemSetChangeNotifier {
@@ -56,8 +56,6 @@ public class SQLContainer implements Container, Container.Filterable,
     /** Filters (WHERE) and sorters (ORDER BY) */
     private final List<Filter> filters = new ArrayList<Filter>();
     private final List<OrderBy> sorters = new ArrayList<OrderBy>();
-    /** Filtering mode setting. Default mode = FILTERING_MODE_INCLUSIVE */
-    private FilteringMode currentFilteringMode = FilteringMode.FILTERING_MODE_INCLUSIVE;
 
     /**
      * Total number of items available in the data source using the current
@@ -265,6 +263,25 @@ public class SQLContainer implements Container, Container.Filterable,
     }
 
     /**
+     * Bypasses in-memory filtering to return items that are cached in memory.
+     * <em>NOTE</em>: This does not bypass database-level filtering.
+     * 
+     * @param itemId
+     *            the id of the item to retrieve.
+     * @return the item represented by itemId.
+     */
+    public Item getItemUnfiltered(Object itemId) {
+        if (!cachedItems.containsKey(itemId)) {
+            for (RowItem item : addedItems) {
+                if (item.getId().equals(itemId)) {
+                    return item;
+                }
+            }
+        }
+        return cachedItems.get(itemId);
+    }
+
+    /**
      * NOTE! Do not use this method if in any way avoidable. This method doesn't
      * (and cannot) use lazy loading, which means that all rows in the database
      * will be loaded into memory.
@@ -450,8 +467,24 @@ public class SQLContainer implements Container, Container.Filterable,
 
     /**
      * {@inheritDoc}
-     * 
-     * NOTE! This method only adds string type filters
+     */
+    public void addContainerFilter(Filter filter)
+            throws UnsupportedFilterException {
+        // filter.setCaseSensitive(!ignoreCase);
+
+        filters.add(filter);
+        refresh();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void removeContainerFilter(Filter filter) {
+        filters.remove(filter);
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public void addContainerFilter(Object propertyId, String filterString,
             boolean ignoreCase, boolean onlyMatchPrefix) {
@@ -460,46 +493,34 @@ public class SQLContainer implements Container, Container.Filterable,
         }
 
         /* Generate Filter -object */
-        Filter.ComparisonType ct = Filter.ComparisonType.CONTAINS;
-        if (onlyMatchPrefix) {
-            ct = Filter.ComparisonType.STARTS_WITH;
-        }
-        Filter f = new Filter((String) propertyId, ct, filterString);
-        f.setCaseSensitive(!ignoreCase);
-        filters.add(f);
+        String likeStr = onlyMatchPrefix ? filterString + "%" : "%"
+                + filterString + "%";
+        Like like = new Like(propertyId.toString(), likeStr);
+        like.setCaseSensitive(!ignoreCase);
+        filters.add(like);
         refresh();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.vaadin.data.Container.Filterable#removeAllContainerFilters()
+    /**
+     * {@inheritDoc}
+     */
+    public void removeContainerFilters(Object propertyId) {
+        ArrayList<Filter> toRemove = new ArrayList<Filter>();
+        for (Filter f : filters) {
+            if (f.appliesToProperty(propertyId)) {
+                toRemove.add(f);
+            }
+        }
+        filters.removeAll(toRemove);
+        refresh();
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public void removeAllContainerFilters() {
         filters.clear();
         refresh();
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * com.vaadin.data.Container.Filterable#removeContainerFilters(java.lang
-     * .Object)
-     */
-    public void removeContainerFilters(Object propertyId) {
-        List<Filter> toRemove = new ArrayList<Filter>();
-        for (Filter f : filters) {
-            if (f.getColumn().equals(propertyId)) {
-                toRemove.add(f);
-            }
-        }
-        if (!toRemove.isEmpty()) {
-            for (Filter f : toRemove) {
-                filters.remove(f);
-            }
-            refresh();
-        }
     }
 
     /**********************************************/
@@ -713,20 +734,6 @@ public class SQLContainer implements Container, Container.Filterable,
     /**************************************/
 
     /**
-     * Sets the current filtering mode of the container. Possible values are
-     * <code>FilteringMode.FILTERING_MODE_INCLUSIVE</code> and
-     * <code>FilteringMode.FILTERING_MODE_EXCLUSIVE</code>.
-     * 
-     * @param filteringMode
-     *            Filtering mode to set.
-     */
-    public void setFilteringMode(FilteringMode filteringMode) {
-        currentFilteringMode = filteringMode == FilteringMode.FILTERING_MODE_EXCLUSIVE ? FilteringMode.FILTERING_MODE_EXCLUSIVE
-                : FilteringMode.FILTERING_MODE_INCLUSIVE;
-        refresh();
-    }
-
-    /**
      * Refreshes the container - clears all caches and resets size and offset.
      * Does NOT remove sorting or filtering rules!
      */
@@ -801,28 +808,6 @@ public class SQLContainer implements Container, Container.Filterable,
     private void setPageLengthInternal(int pageLength) {
         this.pageLength = pageLength > 0 ? pageLength : DEFAULT_PAGE_LENGTH;
         cachedItems.setCacheLimit(CACHE_RATIO * getPageLength());
-    }
-
-    /**
-     * Adds the given Filter to this container and refreshes the container
-     * contents with the new filtering rules.
-     * 
-     * Note that filter.getColumn() must return a column name that exists in
-     * this container.
-     * 
-     * @param filter
-     *            Filter to be added to the set of filters of this container
-     */
-    public void addFilter(Filter filter) {
-        if (filter == null) {
-            return;
-        }
-        if (!propertyIds.contains(filter.getColumn())) {
-            throw new IllegalArgumentException(
-                    "The column given for sorting does not exist in this container.");
-        }
-        filters.add(filter);
-        refresh();
     }
 
     /**
@@ -987,7 +972,7 @@ public class SQLContainer implements Container, Container.Filterable,
         }
         try {
             try {
-                delegate.setFilters(filters, currentFilteringMode);
+                delegate.setFilters(filters);
             } catch (UnsupportedOperationException e) {
                 /* The query delegate doesn't support filtering. */
                 debug(e, null);
@@ -1225,8 +1210,7 @@ public class SQLContainer implements Container, Container.Filterable,
 
     private boolean itemPassesFilters(RowItem item) {
         for (Filter filter : filters) {
-            if (!filter.passes(item.getItemProperty(filter.getColumn())
-                    .getValue())) {
+            if (!filter.passesFilter(item.getId(), item)) {
                 return false;
             }
         }
@@ -1581,8 +1565,7 @@ public class SQLContainer implements Container, Container.Filterable,
                 .getValue();
 
         refdCont.removeAllContainerFilters();
-        refdCont.addFilter(new Filter(r.getReferencedColumn(),
-                ComparisonType.EQUALS, refKey));
+        refdCont.addContainerFilter(new Equal(r.getReferencedColumn(), refKey));
         Object toReturn = refdCont.firstItemId();
         refdCont.removeAllContainerFilters();
         return toReturn;
@@ -1600,4 +1583,5 @@ public class SQLContainer implements Container, Container.Filterable,
     public Item getReferencedItem(Object itemId, SQLContainer refdCont) {
         return refdCont.getItem(getReferencedItemId(itemId, refdCont));
     }
+
 }
