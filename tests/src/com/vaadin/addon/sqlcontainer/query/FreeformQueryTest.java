@@ -72,6 +72,11 @@ public class FreeformQueryTest {
     }
 
     @Test
+    public void construction_nullPrimaryKeys2_shouldSucceed() {
+        new FreeformQuery("SELECT * FROM foo", connectionPool);
+    }
+
+    @Test
     public void construction_emptyPrimaryKeys_shouldSucceed() {
         new FreeformQuery("SELECT * FROM foo", connectionPool);
     }

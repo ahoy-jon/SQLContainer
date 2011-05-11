@@ -77,8 +77,8 @@ public class FreeformQuery implements QueryDelegate {
      *            the JDBCConnectionPool to use to open connections to the SQL
      *            database.
      * @param primaryKeyColumns
-     *            The primary key columns. Read-only mode is forced if this is
-     *            null or empty.
+     *            The primary key columns. Read-only mode is forced if none are
+     *            provided.
      */
     public FreeformQuery(String queryString, JDBCConnectionPool connectionPool,
             String... primaryKeyColumns) {
