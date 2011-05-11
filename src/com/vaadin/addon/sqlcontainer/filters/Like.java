@@ -9,9 +9,7 @@ public class Like implements Filter {
     private boolean caseSensitive;
 
     public Like(String propertyId, String value) {
-        this.propertyId = propertyId;
-        this.value = value;
-        setCaseSensitive(true);
+        this(propertyId, value, true);
     }
 
     public Like(String propertyId, String value, boolean caseSensitive) {

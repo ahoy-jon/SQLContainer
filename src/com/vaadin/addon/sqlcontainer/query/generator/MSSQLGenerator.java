@@ -3,6 +3,7 @@ package com.vaadin.addon.sqlcontainer.query.generator;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
 import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")

@@ -10,8 +10,8 @@ import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.FreeformStatementDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
-import com.vaadin.addon.sqlcontainer.query.generator.FilterToWhereTranslator;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
 import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
