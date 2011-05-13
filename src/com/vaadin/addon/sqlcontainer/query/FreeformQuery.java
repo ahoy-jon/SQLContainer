@@ -416,12 +416,11 @@ public class FreeformQuery implements QueryDelegate {
         // Build the where rules for the provided keys
         StringBuffer where = new StringBuffer();
         for (int ix = 0; ix < primaryKeyColumns.size(); ix++) {
-            where.append(QueryBuilder.quote(primaryKeyColumns.get(ix))).append(
-                    "=");
+            where.append(QueryBuilder.quote(primaryKeyColumns.get(ix)));
             if (keys[ix] == null) {
-                where.append("null");
+                where.append(" IS NULL");
             } else {
-                where.append("'").append(keys[ix]).append("'");
+                where.append(" = '").append(keys[ix]).append("'");
             }
             if (ix < primaryKeyColumns.size() - 1) {
                 where.append(" AND ");
