@@ -15,6 +15,7 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.SQLContainer;
 import com.vaadin.addon.sqlcontainer.connection.JDBCConnectionPool;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
@@ -415,7 +416,8 @@ public class FreeformQuery implements QueryDelegate {
         // Build the where rules for the provided keys
         StringBuffer where = new StringBuffer();
         for (int ix = 0; ix < primaryKeyColumns.size(); ix++) {
-            where.append("\"" + primaryKeyColumns.get(ix) + "\"").append("=");
+            where.append(QueryBuilder.quote(primaryKeyColumns.get(ix))).append(
+                    "=");
             if (keys[ix] == null) {
                 where.append("null");
             } else {
