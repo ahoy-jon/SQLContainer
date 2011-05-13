@@ -29,7 +29,7 @@ import com.vaadin.addon.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.OracleGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.SQLGenerator;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.data.Container.Filter;
 import com.vaadin.data.Container.ItemSetChangeListener;
 import com.vaadin.data.Item;
@@ -1854,7 +1854,7 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
+                            query.append(QueryBuilder
                                     .getWhereStringForFilters(filters, sh));
                         }
                         sh.setQueryString(query.toString());
@@ -1924,7 +1924,7 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
+                            query.append(QueryBuilder
                                     .getWhereStringForFilters(filters, sh));
                         }
                         sh.setQueryString(query.toString());
@@ -1992,7 +1992,7 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
+                            query.append(QueryBuilder
                                     .getWhereStringForFilters(filters, sh));
                         }
                         sh.setQueryString(query.toString());
@@ -2062,7 +2062,7 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
+                            query.append(QueryBuilder
                                     .getWhereStringForFilters(filters, sh));
                         }
                         sh.setQueryString(query.toString());
@@ -2138,7 +2138,7 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
+                            query.append(QueryBuilder
                                     .getWhereStringForFilters(filters, sh));
                         }
                         sh.setQueryString(query.toString());
@@ -2214,7 +2214,7 @@ public class SQLContainerTest {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
+                            query.append(QueryBuilder
                                     .getWhereStringForFilters(filters, sh));
                         }
                         sh.setQueryString(query.toString());

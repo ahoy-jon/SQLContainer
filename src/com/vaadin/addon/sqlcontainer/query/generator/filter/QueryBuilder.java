@@ -7,7 +7,7 @@ import java.util.List;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
 import com.vaadin.data.Container.Filter;
 
-public class FilterToWhereTranslator {
+public class QueryBuilder {
 
     private static ArrayList<FilterTranslator> filterTranslators = new ArrayList<FilterTranslator>();
     private static StringDecorator stringDecorator = new StringDecorator("\"",
@@ -41,20 +41,23 @@ public class FilterToWhereTranslator {
         stringDecorator = decorator;
     }
 
-    protected static String quote(Object str) {
+    public static String quote(Object str) {
         return stringDecorator.quote(str);
     }
 
-    protected static String group(String str) {
+    public static String group(String str) {
         return stringDecorator.group(str);
     }
 
     /**
-     * Constructs and returns a string representing
+     * Constructs and returns a string representing the filter that can be used
+     * in a WHERE clause.
      * 
      * @param filter
+     *            the filter to translate
      * @param sh
-     * @return
+     *            the statement helper to update with the value(s) of the filter
+     * @return a string representing the filter.
      */
     public synchronized static String getWhereStringForFilter(Filter filter,
             StatementHelper sh) {

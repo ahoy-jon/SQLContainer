@@ -10,7 +10,7 @@ import com.vaadin.addon.sqlcontainer.RowItem;
 import com.vaadin.addon.sqlcontainer.TemporaryRowId;
 import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.addon.sqlcontainer.query.generator.filter.StringDecorator;
 import com.vaadin.data.Container.Filter;
 
@@ -38,8 +38,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
      *            the identifier (character) denoting the end of a quoted string
      */
     public DefaultSQLGenerator(String quoteStart, String quoteEnd) {
-        FilterToWhereTranslator.setStringDecorator(new StringDecorator(
-                quoteStart, quoteEnd));
+        QueryBuilder.setStringDecorator(new StringDecorator(quoteStart,
+                quoteEnd));
     }
 
     /*
@@ -61,8 +61,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         query.append("SELECT " + toSelect + " FROM ").append(
                 Util.escapeSQL(tableName));
         if (filters != null) {
-            query.append(FilterToWhereTranslator.getWhereStringForFilters(
-                    filters, sh));
+            query.append(QueryBuilder.getWhereStringForFilters(filters, sh));
         }
         if (orderBys != null) {
             for (OrderBy o : orderBys) {
@@ -101,9 +100,9 @@ public class DefaultSQLGenerator implements SQLGenerator {
         boolean first = true;
         for (String column : columnToValueMap.keySet()) {
             if (first) {
-                query.append(" \"" + column + "\" = ?");
+                query.append(" " + QueryBuilder.quote(column) + " = ?");
             } else {
-                query.append(", \"" + column + "\" = ?");
+                query.append(", " + QueryBuilder.quote(column) + " = ?");
             }
             sh.addParameterValue(columnToValueMap.get(column), item
                     .getItemProperty(column).getType());
@@ -113,9 +112,9 @@ public class DefaultSQLGenerator implements SQLGenerator {
         first = true;
         for (String column : rowIdentifiers.keySet()) {
             if (first) {
-                query.append(" WHERE \"" + column + "\" = ?");
+                query.append(" WHERE " + QueryBuilder.quote(column) + " = ?");
             } else {
-                query.append(" AND \"" + column + "\" = ?");
+                query.append(" AND " + QueryBuilder.quote(column) + " = ?");
             }
             sh.addParameterValue(rowIdentifiers.get(column), item
                     .getItemProperty(column).getType());
@@ -155,7 +154,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
             if (!first) {
                 query.append(", ");
             }
-            query.append("\"" + column + "\"");
+            query.append(QueryBuilder.quote(column));
             first = false;
         }
 
@@ -240,7 +239,7 @@ public class DefaultSQLGenerator implements SQLGenerator {
         } else {
             sb.append(", ");
         }
-        sb.append("\"" + o.getColumn() + "\"");
+        sb.append(QueryBuilder.quote(o.getColumn()));
         if (o.isAscending()) {
             sb.append(" ASC");
         } else {

@@ -11,7 +11,7 @@ public class OrTranslator implements FilterTranslator {
     }
 
     public String getWhereStringForFilter(Filter filter, StatementHelper sh) {
-        return FilterToWhereTranslator.group(FilterToWhereTranslator
+        return QueryBuilder.group(QueryBuilder
                 .getJoinedFilterString(((Or) filter).getFilters(), "OR", sh));
     }
 

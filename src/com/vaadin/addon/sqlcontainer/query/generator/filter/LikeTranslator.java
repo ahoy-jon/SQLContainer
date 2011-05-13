@@ -14,12 +14,12 @@ public class LikeTranslator implements FilterTranslator {
         Like like = (Like) filter;
         if (like.isCaseSensitive()) {
             sh.addParameterValue(like.getValue());
-            return FilterToWhereTranslator.quote(like.getPropertyId())
+            return QueryBuilder.quote(like.getPropertyId())
                     + " LIKE ?";
         } else {
             sh.addParameterValue(like.getValue().toUpperCase());
             return "UPPER("
-                    + FilterToWhereTranslator.quote(like.getPropertyId())
+                    + QueryBuilder.quote(like.getPropertyId())
                     + ") LIKE ?";
         }
     }

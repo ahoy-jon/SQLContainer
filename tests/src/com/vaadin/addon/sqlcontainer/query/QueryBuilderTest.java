@@ -10,7 +10,7 @@ import org.junit.Test;
 import com.vaadin.addon.sqlcontainer.filters.Between;
 import com.vaadin.addon.sqlcontainer.filters.Like;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.addon.sqlcontainer.query.generator.filter.StringDecorator;
 import com.vaadin.data.Container.Filter;
 import com.vaadin.data.util.filter.And;
@@ -24,7 +24,7 @@ import com.vaadin.data.util.filter.Not;
 import com.vaadin.data.util.filter.Or;
 import com.vaadin.data.util.filter.SimpleStringFilter;
 
-public class FilterToWhereTranslatorTest {
+public class QueryBuilderTest {
 
     private StatementHelper mockedStatementHelper(Object... values) {
         StatementHelper sh = EasyMock.createMock(StatementHelper.class);
@@ -43,7 +43,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("Fido");
         Equal f = new Equal("NAME", "Fido");
         Assert.assertEquals("\"NAME\" = ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -52,7 +52,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper(18);
         Greater f = new Greater("AGE", 18);
         Assert.assertEquals("\"AGE\" > ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -61,7 +61,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper(65);
         Less f = new Less("AGE", 65);
         Assert.assertEquals("\"AGE\" < ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -70,7 +70,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper(18);
         GreaterOrEqual f = new GreaterOrEqual("AGE", 18);
         Assert.assertEquals("\"AGE\" >= ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -79,7 +79,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper(65);
         LessOrEqual f = new LessOrEqual("AGE", 65);
         Assert.assertEquals("\"AGE\" <= ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -88,7 +88,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("Vi%");
         SimpleStringFilter f = new SimpleStringFilter("NAME", "Vi", false, true);
         Assert.assertEquals("\"NAME\" LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -98,7 +98,7 @@ public class FilterToWhereTranslatorTest {
         SimpleStringFilter f = new SimpleStringFilter("NAME", "Vi", false,
                 false);
         Assert.assertEquals("\"NAME\" LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -107,7 +107,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("%VI%");
         SimpleStringFilter f = new SimpleStringFilter("NAME", "Vi", true, false);
         Assert.assertEquals("UPPER(\"NAME\") LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -116,7 +116,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("Vi%");
         Like f = new Like("NAME", "Vi%");
         Assert.assertEquals("\"NAME\" LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -125,7 +125,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("1%");
         Like f = new Like("AGE", "1%");
         Assert.assertEquals("\"AGE\" LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -134,7 +134,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("%lle");
         Like f = new Like("NAME", "%lle");
         Assert.assertEquals("\"NAME\" LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -143,7 +143,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper("%ill%");
         Like f = new Like("NAME", "%ill%");
         Assert.assertEquals("\"NAME\" LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -152,7 +152,7 @@ public class FilterToWhereTranslatorTest {
         StatementHelper sh = mockedStatementHelper(18, 65);
         Between f = new Between("AGE", 18, 65);
         Assert.assertEquals("\"AGE\" BETWEEN ? AND ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -162,7 +162,7 @@ public class FilterToWhereTranslatorTest {
         Like f = new Like("NAME", "Fido");
         f.setCaseSensitive(false);
         Assert.assertEquals("UPPER(\"NAME\") LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -172,7 +172,7 @@ public class FilterToWhereTranslatorTest {
         Like f = new Like("NAME", "Vi%");
         f.setCaseSensitive(false);
         Assert.assertEquals("UPPER(\"NAME\") LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -182,7 +182,7 @@ public class FilterToWhereTranslatorTest {
         Like f = new Like("NAME", "%lle");
         f.setCaseSensitive(false);
         Assert.assertEquals("UPPER(\"NAME\") LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -192,7 +192,7 @@ public class FilterToWhereTranslatorTest {
         Like f = new Like("NAME", "%ill%");
         f.setCaseSensitive(false);
         Assert.assertEquals("UPPER(\"NAME\") LIKE ?",
-                FilterToWhereTranslator.getWhereStringForFilter(f, sh));
+                QueryBuilder.getWhereStringForFilter(f, sh));
         EasyMock.verify(sh);
     }
 
@@ -203,7 +203,7 @@ public class FilterToWhereTranslatorTest {
         filters.add(new Like("NAME", "%lle"));
         filters.add(new Greater("AGE", 18));
         Assert.assertEquals(" WHERE \"NAME\" LIKE ? AND \"AGE\" > ?",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
@@ -213,7 +213,7 @@ public class FilterToWhereTranslatorTest {
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new And(new Like("NAME", "%lle"), new Greater("AGE", 18)));
         Assert.assertEquals(" WHERE (\"NAME\" LIKE ? AND \"AGE\" > ?)",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
@@ -223,7 +223,7 @@ public class FilterToWhereTranslatorTest {
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new Or(new Like("NAME", "%lle"), new Greater("AGE", 18)));
         Assert.assertEquals(" WHERE (\"NAME\" LIKE ? OR \"AGE\" > ?)",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
@@ -236,7 +236,7 @@ public class FilterToWhereTranslatorTest {
                 new Equal("NAME", "Pelle")));
         Assert.assertEquals(
                 " WHERE ((\"NAME\" LIKE ? AND (\"AGE\" < ? OR \"AGE\" > ?)) OR \"NAME\" = ?)",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
@@ -251,15 +251,15 @@ public class FilterToWhereTranslatorTest {
         filters.add(new Equal("LASTNAME", "Virtanen"));
         Assert.assertEquals(
                 " WHERE ((\"NAME\" LIKE ? AND (\"AGE\" < ? OR \"AGE\" > ?)) OR \"NAME\" = ?) AND \"LASTNAME\" = ?",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
     @Test
     public void getWhereStringForFilters_emptyList_shouldReturnEmptyString() {
         ArrayList<Filter> filters = new ArrayList<Filter>();
-        Assert.assertEquals("", FilterToWhereTranslator
-                .getWhereStringForFilters(filters, new StatementHelper()));
+        Assert.assertEquals("", QueryBuilder.getWhereStringForFilters(filters,
+                new StatementHelper()));
     }
 
     @Test
@@ -268,7 +268,7 @@ public class FilterToWhereTranslatorTest {
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new Not(new Equal("AGE", 18)));
         Assert.assertEquals(" WHERE NOT \"AGE\" = ?",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
@@ -278,7 +278,7 @@ public class FilterToWhereTranslatorTest {
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new Not(new Or(new Equal("AGE", 65), new Equal("AGE", 18))));
         Assert.assertEquals(" WHERE NOT (\"AGE\" = ? OR \"AGE\" = ?)",
-                FilterToWhereTranslator.getWhereStringForFilters(filters, sh));
+                QueryBuilder.getWhereStringForFilters(filters, sh));
         EasyMock.verify(sh);
     }
 
@@ -286,7 +286,7 @@ public class FilterToWhereTranslatorTest {
     public void getWhereStringForFilters_isNull() {
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new IsNull("NAME"));
-        Assert.assertEquals(" WHERE \"NAME\" IS NULL", FilterToWhereTranslator
+        Assert.assertEquals(" WHERE \"NAME\" IS NULL", QueryBuilder
                 .getWhereStringForFilters(filters, new StatementHelper()));
     }
 
@@ -294,19 +294,18 @@ public class FilterToWhereTranslatorTest {
     public void getWhereStringForFilters_isNotNull() {
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new Not(new IsNull("NAME")));
-        Assert.assertEquals(" WHERE \"NAME\" IS NOT NULL",
-                FilterToWhereTranslator.getWhereStringForFilters(filters,
-                        new StatementHelper()));
+        Assert.assertEquals(" WHERE \"NAME\" IS NOT NULL", QueryBuilder
+                .getWhereStringForFilters(filters, new StatementHelper()));
     }
 
     @Test
     public void getWhereStringForFilters_customStringDecorator() {
-        FilterToWhereTranslator
-                .setStringDecorator(new StringDecorator("[", "]"));
+        QueryBuilder.setStringDecorator(new StringDecorator("[", "]"));
         ArrayList<Filter> filters = new ArrayList<Filter>();
         filters.add(new Not(new IsNull("NAME")));
-        Assert.assertEquals(" WHERE [NAME] IS NOT NULL",
-                FilterToWhereTranslator.getWhereStringForFilters(filters,
-                        new StatementHelper()));
+        Assert.assertEquals(" WHERE [NAME] IS NOT NULL", QueryBuilder
+                .getWhereStringForFilters(filters, new StatementHelper()));
+        // Reset the default string decorator
+        QueryBuilder.setStringDecorator(new StringDecorator("\"", "\""));
     }
 }

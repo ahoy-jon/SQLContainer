@@ -14,7 +14,7 @@ public class BetweenTranslator implements FilterTranslator {
         Between between = (Between) filter;
         sh.addParameterValue(between.getStartValue());
         sh.addParameterValue(between.getEndValue());
-        return FilterToWhereTranslator.quote(between.getPropertyId())
+        return QueryBuilder.quote(between.getPropertyId())
                 + " BETWEEN ? AND ?";
     }
 

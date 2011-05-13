@@ -3,7 +3,7 @@ package com.vaadin.addon.sqlcontainer.query.generator;
 import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
@@ -52,11 +52,11 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
 
         /* Row count request is handled here */
         if ("COUNT(*)".equalsIgnoreCase(toSelect)) {
-            query.append("SELECT COUNT(*)")
-                    .append(" AS \"rowcount\" FROM (SELECT * FROM ")
-                    .append(tableName);
+            query.append(String.format(
+                    "SELECT COUNT(*) AS %s FROM (SELECT * FROM %s",
+                    QueryBuilder.quote("rowcount"), tableName));
             if (filters != null && !filters.isEmpty()) {
-                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                query.append(QueryBuilder.getWhereStringForFilters(
                         filters, sh));
             }
             query.append(") AS t");
@@ -69,7 +69,7 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
             query.append("SELECT ").append(toSelect).append(" FROM ")
                     .append(tableName);
             if (filters != null) {
-                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                query.append(QueryBuilder.getWhereStringForFilters(
                         filters, sh));
             }
             if (orderBys != null) {
@@ -90,7 +90,7 @@ public class MSSQLGenerator extends DefaultSQLGenerator {
         }
         query.append(") AS rownum, " + toSelect + " FROM ").append(tableName);
         if (filters != null) {
-            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+            query.append(QueryBuilder.getWhereStringForFilters(
                     filters, sh));
         }
         query.append(") AS a WHERE a.rownum BETWEEN ").append(offset)

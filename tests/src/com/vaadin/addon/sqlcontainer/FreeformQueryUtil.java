@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.vaadin.addon.sqlcontainer.AllTests.DB;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.data.Container.Filter;
 
 public class FreeformQueryUtil {
@@ -23,7 +23,7 @@ public class FreeformQueryUtil {
             query.append(") AS rownum, * FROM \"PEOPLE\"");
 
             if (!filters.isEmpty()) {
-                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                query.append(QueryBuilder.getWhereStringForFilters(
                         filters, sh));
             }
             query.append(") AS a WHERE a.rownum BETWEEN ").append(offset)
@@ -39,7 +39,7 @@ public class FreeformQueryUtil {
             query.append("SELECT * FROM (SELECT x.*, ROWNUM AS "
                     + "\"rownum\" FROM (SELECT * FROM \"PEOPLE\"");
             if (!filters.isEmpty()) {
-                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                query.append(QueryBuilder.getWhereStringForFilters(
                         filters, sh));
             }
             query.append(") x) WHERE \"rownum\" BETWEEN ? AND ?");
@@ -50,7 +50,7 @@ public class FreeformQueryUtil {
         } else {
             StringBuilder query = new StringBuilder("SELECT * FROM people");
             if (!filters.isEmpty()) {
-                query.append(FilterToWhereTranslator.getWhereStringForFilters(
+                query.append(QueryBuilder.getWhereStringForFilters(
                         filters, sh));
             }
             if (limit != 0 || offset != 0) {

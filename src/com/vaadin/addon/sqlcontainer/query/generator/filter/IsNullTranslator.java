@@ -12,6 +12,6 @@ public class IsNullTranslator implements FilterTranslator {
 
     public String getWhereStringForFilter(Filter filter, StatementHelper sh) {
         IsNull in = (IsNull) filter;
-        return FilterToWhereTranslator.quote(in.getPropertyId()) + " IS NULL";
+        return QueryBuilder.quote(in.getPropertyId()) + " IS NULL";
     }
 }

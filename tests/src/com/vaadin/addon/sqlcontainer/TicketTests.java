@@ -18,7 +18,7 @@ import com.vaadin.addon.sqlcontainer.query.FreeformQuery;
 import com.vaadin.addon.sqlcontainer.query.FreeformStatementDelegate;
 import com.vaadin.addon.sqlcontainer.query.TableQuery;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.data.Container.Filter;
 import com.vaadin.data.util.filter.Compare.Equal;
 import com.vaadin.ui.Table;
@@ -89,8 +89,8 @@ public class TicketTests {
                         StringBuffer query = new StringBuffer(
                                 "SELECT COUNT(*) FROM people");
                         if (!filters.isEmpty()) {
-                            query.append(FilterToWhereTranslator
-                                    .getWhereStringForFilters(filters, sh));
+                            query.append(QueryBuilder.getWhereStringForFilters(
+                                    filters, sh));
                         }
                         sh.setQueryString(query.toString());
                         return sh;

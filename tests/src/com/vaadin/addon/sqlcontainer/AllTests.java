@@ -8,7 +8,7 @@ import com.vaadin.addon.sqlcontainer.connection.J2EEConnectionPoolTest;
 import com.vaadin.addon.sqlcontainer.connection.SimpleJDBCConnectionPoolTest;
 import com.vaadin.addon.sqlcontainer.filters.BetweenTest;
 import com.vaadin.addon.sqlcontainer.filters.LikeTest;
-import com.vaadin.addon.sqlcontainer.query.FilterToWhereTranslatorTest;
+import com.vaadin.addon.sqlcontainer.query.QueryBuilderTest;
 import com.vaadin.addon.sqlcontainer.query.FreeformQueryTest;
 import com.vaadin.addon.sqlcontainer.query.TableQueryTest;
 import com.vaadin.addon.sqlcontainer.query.generator.DefaultSQLGenerator;
@@ -20,7 +20,7 @@ import com.vaadin.addon.sqlcontainer.query.generator.SQLGeneratorsTest;
 @RunWith(Suite.class)
 @SuiteClasses({ SimpleJDBCConnectionPoolTest.class,
         J2EEConnectionPoolTest.class, LikeTest.class,
-        FilterToWhereTranslatorTest.class, FreeformQueryTest.class,
+        QueryBuilderTest.class, FreeformQueryTest.class,
         RowIdTest.class, SQLContainerTest.class,
         SQLContainerTableQueryTest.class, ColumnPropertyTest.class,
         TableQueryTest.class, SQLGeneratorsTest.class, UtilTest.class,

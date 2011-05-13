@@ -11,7 +11,7 @@ import com.vaadin.addon.sqlcontainer.Util;
 import com.vaadin.addon.sqlcontainer.query.FreeformStatementDelegate;
 import com.vaadin.addon.sqlcontainer.query.OrderBy;
 import com.vaadin.addon.sqlcontainer.query.generator.StatementHelper;
-import com.vaadin.addon.sqlcontainer.query.generator.filter.FilterToWhereTranslator;
+import com.vaadin.addon.sqlcontainer.query.generator.filter.QueryBuilder;
 import com.vaadin.data.Container.Filter;
 
 @SuppressWarnings("serial")
@@ -31,7 +31,7 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer("SELECT * FROM PEOPLE ");
         if (filters != null) {
-            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+            query.append(QueryBuilder.getWhereStringForFilters(
                     filters, sh));
         }
         query.append(getOrderByString());
@@ -73,7 +73,7 @@ public class DemoFreeformQueryDelegate implements FreeformStatementDelegate {
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer("SELECT COUNT(*) FROM PEOPLE ");
         if (filters != null) {
-            query.append(FilterToWhereTranslator.getWhereStringForFilters(
+            query.append(QueryBuilder.getWhereStringForFilters(
                     filters, sh));
         }
         sh.setQueryString(query.toString());

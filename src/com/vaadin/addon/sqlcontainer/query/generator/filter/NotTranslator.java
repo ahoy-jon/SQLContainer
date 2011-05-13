@@ -15,11 +15,11 @@ public class NotTranslator implements FilterTranslator {
         Not not = (Not) filter;
         if (not.getFilter() instanceof IsNull) {
             IsNull in = (IsNull) not.getFilter();
-            return FilterToWhereTranslator.quote(in.getPropertyId())
+            return QueryBuilder.quote(in.getPropertyId())
                     + " IS NOT NULL";
         }
         return "NOT "
-                + FilterToWhereTranslator.getWhereStringForFilter(
+                + QueryBuilder.getWhereStringForFilter(
                         not.getFilter(), sh);
     }
 

@@ -13,7 +13,7 @@ public class CompareTranslator implements FilterTranslator {
     public String getWhereStringForFilter(Filter filter, StatementHelper sh) {
         Compare compare = (Compare) filter;
         sh.addParameterValue(compare.getValue());
-        String prop = FilterToWhereTranslator.quote(compare.getPropertyId());
+        String prop = QueryBuilder.quote(compare.getPropertyId());
         switch (compare.getOperation()) {
         case EQUAL:
             return prop + " = ?";
