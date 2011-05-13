@@ -69,10 +69,17 @@ public interface SQLGenerator extends Serializable {
      * 
      * @param tableName
      *            Name of the table queried
+     * @param primaryKeyColumns
+     *            the names of the columns holding the primary key. Usually just
+     *            one column, but might be several.
+     * @param versionColumn
+     *            the column containing the version number of the row, null if
+     *            versioning (optimistic locking) not enabled.
      * @param item
      *            Item to be deleted from the database
      * @return StatementHelper instance containing the query string for a
      *         PreparedStatement and the values required for the parameters
      */
-    public StatementHelper generateDeleteQuery(String tableName, RowItem item);
+    public StatementHelper generateDeleteQuery(String tableName,
+            List<String> primaryKeyColumns, String versionColumn, RowItem item);
 }

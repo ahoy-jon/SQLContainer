@@ -108,10 +108,11 @@ public class SQLGeneratorsTest {
 
         StatementHelper sh = sg.generateDeleteQuery(
                 "people",
+                query.getPrimaryKeyColumns(),
+                null,
                 (RowItem) container.getItem(container.getItemIds().iterator()
                         .next()));
-        Assert.assertEquals(
-                "DELETE FROM people WHERE \"ID\" = ? AND \"NAME\" = ? AND \"AGE\" = ?",
+        Assert.assertEquals("DELETE FROM people WHERE \"ID\" = ?",
                 sh.getQueryString());
     }
 
@@ -177,10 +178,10 @@ public class SQLGeneratorsTest {
         StatementHelper sh = sg.generateSelectQuery("TABLE", f, ob, 4, 8,
                 "NAME, ID");
         Assert.assertEquals(
-                sh.getQueryString(),
                 "SELECT * FROM (SELECT x.*, ROWNUM AS \"rownum\" FROM"
                         + " (SELECT NAME, ID FROM TABLE WHERE \"name\" LIKE ?"
-                        + " ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12");
+                        + " ORDER BY \"name\" ASC) x) WHERE \"rownum\" BETWEEN 5 AND 12",
+                sh.getQueryString());
     }
 
     @Test

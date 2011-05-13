@@ -577,7 +577,8 @@ public class TableQuery implements QueryDelegate,
     public boolean removeRow(RowItem row) throws UnsupportedOperationException,
             SQLException {
         debug("Removing row with id: " + row.getId().getId()[0].toString());
-        if (executeUpdate(sqlGenerator.generateDeleteQuery(getTableName(), row)) == 1) {
+        if (executeUpdate(sqlGenerator.generateDeleteQuery(getTableName(),
+                primaryKeyColumns, versionColumn, row)) == 1) {
             return true;
         }
         if (versionColumn != null) {

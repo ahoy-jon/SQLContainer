@@ -1,6 +1,5 @@
 package com.vaadin.addon.sqlcontainer.query.generator;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +181,8 @@ public class DefaultSQLGenerator implements SQLGenerator {
      * generateDeleteQuery(java.lang.String,
      * com.vaadin.addon.sqlcontainer.RowItem)
      */
-    public StatementHelper generateDeleteQuery(String tableName, RowItem item) {
+    public StatementHelper generateDeleteQuery(String tableName,
+            List<String> primaryKeyColumns, String versionColumn, RowItem item) {
         if (tableName == null || tableName.trim().equals("")) {
             throw new IllegalArgumentException("Table name must be given.");
         }
@@ -190,34 +190,39 @@ public class DefaultSQLGenerator implements SQLGenerator {
             throw new IllegalArgumentException(
                     "Item to be deleted must be given.");
         }
+        if (primaryKeyColumns == null || primaryKeyColumns.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Valid keyColumnNames must be provided.");
+        }
         StatementHelper sh = new StatementHelper();
         StringBuffer query = new StringBuffer();
-        query.append("DELETE FROM ").append(tableName).append(" WHERE");
-        Collection<?> propIds = item.getItemPropertyIds();
+        query.append("DELETE FROM ").append(tableName).append(" WHERE ");
         int count = 1;
-        for (Object p : propIds) {
+        for (String keyColName : primaryKeyColumns) {
             if ((this instanceof MSSQLGenerator || this instanceof OracleGenerator)
-                    && p.toString().equalsIgnoreCase("rownum")) {
+                    && keyColName.equalsIgnoreCase("rownum")) {
                 count++;
                 continue;
             }
-            if (item.getItemProperty(p).getValue() != null) {
-                query.append(" \"" + p.toString() + "\" = ?");
-                sh.addParameterValue(item.getItemProperty(p).getValue(), item
-                        .getItemProperty(p).getType());
+            if (count > 1) {
+                query.append(" AND ");
             }
-            if (count < propIds.size()) {
-                query.append(" AND");
+            if (item.getItemProperty(keyColName).getValue() != null) {
+                query.append(QueryBuilder.quote(keyColName) + " = ?");
+                sh.addParameterValue(item.getItemProperty(keyColName)
+                        .getValue(), item.getItemProperty(keyColName).getType());
             }
             count++;
         }
-
-        /* Make sure that the where clause does not end with an AND */
-        if (" AND".equals(query.substring(query.length() - 4))) {
-            sh.setQueryString(query.substring(0, query.length() - 4));
-        } else {
-            sh.setQueryString(query.toString());
+        if (versionColumn != null) {
+            query.append(String.format(" AND %s = ?",
+                    QueryBuilder.quote(versionColumn)));
+            sh.addParameterValue(
+                    item.getItemProperty(versionColumn).getValue(), item
+                            .getItemProperty(versionColumn).getType());
         }
+
+        sh.setQueryString(query.toString());
         return sh;
     }
 
