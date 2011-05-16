@@ -5,46 +5,46 @@
     <target name="all" depends="compile, tests, manual, javadoc, package-jar, package-zip, demo.war"/>
 
     <!-- Non-project specific settings. -->
-	<property file="build/build.properties" />
-	<property name="configure.libs" value="" />
-	<property name="module.junit.dir" value="${basedir}/build/result/unittests" />
+    <property file="build/build.properties" />
+    <property name="configure.libs" value="" />
+    <property name="module.junit.dir" value="${basedir}/build/result/unittests" />
 
     <!-- ================================================================== -->
     <!-- Initialization                                                     -->
     <!-- ================================================================== -->
 
     <!-- Clean old compilation results. -->
-	<target name="clean-all">
-		<delete dir="${result-path}" includes="**/*" followsymlinks="false" includeemptydirs="true" defaultexcludes="false" failonerror="false"/>
-	</target>
+    <target name="clean-all">
+        <delete dir="${result-path}" includes="**/*" followsymlinks="false" includeemptydirs="true" defaultexcludes="false" failonerror="false"/>
+    </target>
 
     <!-- Checks that all the required libraries exist. -->
-	<target name="check-libs">
-		<available file="${gwt.lib.dir}/gwt-user.jar" property="gwt-user.present" />
-		<available file="${gwt.lib.dir}/gwt-dev.jar" property="gwt-dev.present" />
+    <target name="check-libs">
+        <available file="${gwt.lib.dir}/gwt-user.jar" property="gwt-user.present" />
+        <available file="${gwt.lib.dir}/gwt-dev.jar" property="gwt-dev.present" />
 
-		<fail message="${gwt.lib.dir}/gwt-user.jar missing" unless="gwt-user.present" />
-		<fail message="${gwt.lib.dir}/gwt-dev.jar missing" unless="gwt-dev.present" />
-	</target>
+        <fail message="${gwt.lib.dir}/gwt-user.jar missing" unless="gwt-user.present" />
+        <fail message="${gwt.lib.dir}/gwt-dev.jar missing" unless="gwt-dev.present" />
+    </target>
 
     <!-- Initialization -->
-	<target name="init">
-		<echo>Requirements for classpath:</echo>
-		<echo> ${gwt.lib.dir}/gwt-user.jar</echo>
-		<echo> ${gwt.lib.dir}/gwt-dev.jar</echo>
+    <target name="init">
+        <echo>Requirements for classpath:</echo>
+        <echo> ${gwt.lib.dir}/gwt-user.jar</echo>
+        <echo> ${gwt.lib.dir}/gwt-dev.jar</echo>
 
-		<antcall target="check-libs"/>
+        <antcall target="check-libs"/>
 
-	    <path id="test.classpath">
-		    <fileset dir="build/lib">
-			    <include name="**/*.jar" />
+        <path id="test.classpath">
+            <fileset dir="build/lib">
+                <include name="**/*.jar" />
             </fileset>
-	    	
-	    	<fileset dir="tests/lib">
-	    		<include name="**/*.jar" />
-	    	</fileset>
+            
+            <fileset dir="tests/lib">
+                <include name="**/*.jar" />
+            </fileset>
 
-	    	<fileset dir="WebContent/WEB-INF/lib">
+            <fileset dir="WebContent/WEB-INF/lib">
                 <include name="**/*.jar" />
             </fileset>
 
@@ -54,115 +54,115 @@
         </path>
 
         <path id="compile.classpath">
-		    <fileset dir="build/lib">
-			    <include name="**/*.jar" />
+            <fileset dir="build/lib">
+                <include name="**/*.jar" />
             </fileset>
-        	
+            
             <fileset dir="WebContent/WEB-INF/lib">
                 <include name="**/*.jar" />
             </fileset>
         </path>
-	</target>
+    </target>
 
     <!-- Fetch repository changes -->
-	<target name="svn-update" unless="eclipse.running">
-		<exec executable="svn">
-			<arg line="update" />
-		</exec>
-	</target>
+    <target name="svn-update" unless="eclipse.running">
+        <exec executable="svn">
+            <arg line="update" />
+        </exec>
+    </target>
 
     <!-- ================================================================== -->
     <!-- Compilation                                                        -->
     <!-- ================================================================== -->
 
     <!-- Compile server-side Java -->
-	<target name="compile" depends="init" unless="run.no-compile">
+    <target name="compile" depends="init" unless="run.no-compile">
         <property name="result.classes" value="${result-path}/war/WEB-INF/classes"/>
 
         <mkdir dir="${result.classes}"/>
         
-		 <!-- <javac destdir="${result.classes}" target="1.5" source="1.5"> --> 
-		 <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true">
-			<src path="src" />
-			<include name="**/*.*" />
+         <!-- <javac destdir="${result.classes}" target="1.5" source="1.5"> --> 
+         <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true">
+            <src path="src" />
+            <include name="**/*.*" />
 
-			<classpath refid="compile.classpath" />
-			<classpath>
-				<path path="src" />
-				<path path="WebContent/WEB-INF/classes" />
-				<path path="${gwt.lib.dir}/gwt-user.jar" />
-				<path path="${gwt.lib.dir}/gwt-dev.jar" />
-			</classpath>
-		</javac>
+            <classpath refid="compile.classpath" />
+            <classpath>
+                <path path="src" />
+                <path path="WebContent/WEB-INF/classes" />
+                <path path="${gwt.lib.dir}/gwt-user.jar" />
+                <path path="${gwt.lib.dir}/gwt-dev.jar" />
+            </classpath>
+        </javac>
 
-	</target>
-	
-	<target name="compile-tests" depends="init, compile" unless="run.no-compile">
+    </target>
+    
+    <target name="compile-tests" depends="init, compile" unless="run.no-compile">
         <property name="result.test-classes" value="${result-path}/test/classes"/>
 
         <mkdir dir="${result.test-classes}"/>
         
-		 <javac destdir="${result.test-classes}" target="1.5" source="1.5"> 
-		 <!-- <javac destdir="${result.test-classes}" target="1.5" source="1.5" debug="true"> -->
-			<src path="${test.src.base}" />
-			<include name="**/*.*" />
-			<classpath refid="test.classpath" />
-		 	<classpath>
-		 		<path path="${result.classes}" />
-		 	</classpath>
-		</javac>
-	</target>
+         <javac destdir="${result.test-classes}" target="1.5" source="1.5"> 
+         <!-- <javac destdir="${result.test-classes}" target="1.5" source="1.5" debug="true"> -->
+            <src path="${test.src.base}" />
+            <include name="**/*.*" />
+            <classpath refid="test.classpath" />
+            <classpath>
+                <path path="${result.classes}" />
+            </classpath>
+        </javac>
+    </target>
 
-	<target name="compile-demo" depends="init, compile" unless="run.no-compile">
+    <target name="compile-demo" depends="init, compile" unless="run.no-compile">
         <property name="result.demo-classes" value="${result-path}/demo/classes"/>
 
         <mkdir dir="${result.demo-classes}"/>
         
-		 <javac destdir="${result.demo-classes}" target="1.5" source="1.5"> 
-		 <!-- <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true"> -->
-			<src path="${demo.src.base}" />
-			<include name="**/*.*" />
+         <javac destdir="${result.demo-classes}" target="1.5" source="1.5"> 
+         <!-- <javac destdir="${result.classes}" target="1.5" source="1.5" debug="true"> -->
+            <src path="${demo.src.base}" />
+            <include name="**/*.*" />
 
-			<classpath refid="compile.classpath" />
-			<classpath>
-				<path path="${result.classes}" />
-				<path path="src" />
-				<path path="WebContent/WEB-INF/classes" />
-				<path path="${gwt.lib.dir}/gwt-user.jar" />
-				<path path="${gwt.lib.dir}/gwt-dev.jar" />
-			</classpath>
-		</javac>
+            <classpath refid="compile.classpath" />
+            <classpath>
+                <path path="${result.classes}" />
+                <path path="src" />
+                <path path="WebContent/WEB-INF/classes" />
+                <path path="${gwt.lib.dir}/gwt-user.jar" />
+                <path path="${gwt.lib.dir}/gwt-dev.jar" />
+            </classpath>
+        </javac>
 
-	</target>
+    </target>
 
 
     <!-- Refresh the project in a locally running Eclipse. -->
-	<target name="refresh-eclipse" if="eclipse.running">
-		<echo>Refreshing project folder</echo>
-		<eclipse.refreshLocal resource="SQLContainer" depth="infinite" />
-	</target>
+    <target name="refresh-eclipse" if="eclipse.running">
+        <echo>Refreshing project folder</echo>
+        <eclipse.refreshLocal resource="SQLContainer" depth="infinite" />
+    </target>
 
     <!-- ================================================================== -->
     <!-- Testing                                                            -->
     <!-- ================================================================== -->
 
     <!-- Server-side JUnit tests -->
-	<target name="serverside-tests" depends="compile-tests">
+    <target name="serverside-tests" depends="compile-tests">
         <echo>Running JUnit tests in ${test.src.base}/${test.src.dir}</echo>
 
         <echo>Test source base: ${test.src.base}</echo>
         <echo>Test source dir:  ${test.src.dir}</echo>
 
-		<junit printsummary="yes" showoutput="true"> 
-<!--			<formatter type="brief" usefile="false" />-->
-			<classpath>
-				<pathelement path="${result.test-classes}" />
-				<pathelement path="${result.classes}" />
-				<path refid="compile.classpath"/>
+        <junit printsummary="yes" showoutput="true"> 
+<!--            <formatter type="brief" usefile="false" />-->
+            <classpath>
+                <pathelement path="${result.test-classes}" />
+                <pathelement path="${result.classes}" />
+                <path refid="compile.classpath"/>
                 <path refid="test.classpath"/>
-			</classpath>
-		    <test fork="yes" name="com.vaadin.addon.sqlcontainer.AllTests" />
-		</junit>
+            </classpath>
+            <test fork="yes" name="com.vaadin.addon.sqlcontainer.AllTests" />
+        </junit>
     </target>
 
     <target name="tests" depends="serverside-tests" unless="run.no-tests"/>
@@ -170,8 +170,8 @@
     <!-- ================================================================== -->
     <!-- Documentation                                                      -->
     <!-- ================================================================== -->
-	
-    <!-- Manual and tutorial -->
+    
+    <!-- Manual -->
     <target name="manual" unless="run.no-manual">
         <!-- Must delete the old version or conversion fails -->
         <delete file="${manual.pdf}"/>
@@ -195,11 +195,11 @@
             <arg value="build/odf-converter.py"/>
             <arg value="stop"/>
         </exec>
-	</target>
-        	
+    </target>
+            
     <target name="javadoc" depends="init">
         <property name="javadoc.destdir" value="${result-path}/docs/api"/>
-    	
+        
         <javadoc destdir="${javadoc.destdir}" author="true" version="true" use="true" windowtitle="${addon.name}" classpathref="compile.classpath">
             <packageset dir="src">
                 <include name="com/vaadin/addon/**" />
@@ -212,7 +212,7 @@
             <link offline="true" href="http://demo.vaadin.com/docs/api/" packagelistLoc="build/javadoc/vaadin" />
         </javadoc>
     </target>
-
+    
 
     <!-- ================================================================== -->
     <!-- Packaging                                                          -->
@@ -231,61 +231,62 @@
                 <attribute name="Implementation-Version" value="${version}" />
                 <attribute name="Implementation-Vendor" value="${addon.vendor}" />
             </manifest>
-        	
-        	<!-- The built server-side classes and the widget set class are here. -->
+            
+            <!-- The built server-side classes and the widget set class are here. -->
             <fileset dir="${result.classes}" />
 
-        	<!-- Especially all the widget set source files are required. -->
-        	<fileset dir="src" />
-        	
+            <!-- Especially all the widget set source files are required. -->
+            <fileset dir="src" />
+            
         </jar>
-	</target>		
+    </target>       
 
     <!-- Create the ZIP distribution package. -->
     <target name="package-zip" depends="package-jar, manual, javadoc" unless="run.no-package-zip">
         <property name="zip.name" value="${result-path}/${addon.name}-${version}.zip"/>
         <echo>Packaging Zip ${zip.name}</echo>
 
-    	<!-- Make the zip manifest -->
-    	<mkdir dir="${result-path}/META-INF"/>
-    	<echo file="${result-path}/META-INF/MANIFEST.MF">Vaadin-Addon: ${jar.name}
+        <!-- Make the zip manifest -->
+        <mkdir dir="${result-path}/META-INF"/>
+        <echo file="${result-path}/META-INF/MANIFEST.MF">Vaadin-Addon: ${jar.name}
 Vaadin-Package-Version: 1
 Implementation-Title: ${addon.title}
 Implementation-Version: ${version}
 Implementation-Vendor: ${addon.vendor}
        </echo>         
-    	        	
+                    
         <zip destfile="${zip.name}">
-        	<zipfileset dir="${result-path}" includes="META-INF/MANIFEST.MF" />        	
+            <zipfileset dir="${result-path}" includes="META-INF/MANIFEST.MF" />         
             <zipfileset prefix="" file="${result-path}/${jar.name}" />              
             <zipfileset prefix="" file="doc/README.TXT" />
             <zipfileset prefix="doc" file="${manual.pdf}" />
+            <zipfileset prefix="doc" file="${tutorial.pdf}" />
             <zipfileset prefix="doc/api" dir="${result-path}/docs/api" />
             <zipfileset prefix="doc" dir="doc">
                 <patternset>
-                	<include name="licensing.txt" />
+                    <include name="licensing.txt" />
                     <include name="license-asl-2.0.txt" />
                 </patternset>
             </zipfileset>
         </zip>
     </target>
 
-	<target name="demo.war" depends="javadoc, compile-demo,package-jar">
-		<war destfile="${result-path}/${addon.name}.war" webxml="WebContent/WEB-INF/web.xml">
-			<classes dir="${result.demo-classes}"/>
-			<lib dir="WebContent/WEB-INF/lib" excludes="*src*" />
-			<lib file="${jar.path}" />
-			<fileset dir="WebContent">
-				<patternset>
-					<include name="VAADIN/widgetsets/${addon.widgetset}/**/*" />
+    <target name="demo.war" depends="javadoc, compile-demo,package-jar">
+        <war destfile="${result-path}/${addon.name}.war" webxml="WebContent/WEB-INF/web.xml">
+            <classes dir="${result.demo-classes}"/>
+            <lib dir="WebContent/WEB-INF/lib" excludes="*src*" />
+            <lib file="${jar.path}" />
+            <fileset dir="WebContent">
+                <patternset>
+                    <include name="VAADIN/widgetsets/${addon.widgetset}/**/*" />
                     <include name="VAADIN/themes/**/*" />
-					<include name="*.html" />
-				</patternset>
-			</fileset>
-			<fileset dir="${result-path}/docs/" includes="api/**/*" />
-		</war>
-	</target>
-	
+                    <include name="*.html" />
+                </patternset>
+            </fileset>
+            <fileset dir="${result-path}/docs/" includes="api/**/*" />
+        </war>
+    </target>
+    
 </project>
 
 <!-- Keep this comment at the end of the file
