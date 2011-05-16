@@ -46,7 +46,10 @@ public class FreeformQuery implements QueryDelegate {
      * @param connectionPool
      *            the JDBCConnectionPool to use to open connections to the SQL
      *            database.
+     * @deprecated @see
+     *             {@link FreeformQuery#FreeformQuery(String, JDBCConnectionPool, String...)}
      */
+    @Deprecated
     public FreeformQuery(String queryString, List<String> primaryKeyColumns,
             JDBCConnectionPool connectionPool) {
         if (primaryKeyColumns == null) {
@@ -79,7 +82,7 @@ public class FreeformQuery implements QueryDelegate {
      *            database.
      * @param primaryKeyColumns
      *            The primary key columns. Read-only mode is forced if none are
-     *            provided.
+     *            provided. (optional)
      */
     public FreeformQuery(String queryString, JDBCConnectionPool connectionPool,
             String... primaryKeyColumns) {
