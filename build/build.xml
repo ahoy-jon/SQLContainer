@@ -29,7 +29,14 @@
 
     <!-- Initialization -->
     <target name="init">
-        <echo>Requirements for classpath:</echo>
+    	<!-- Might not exist -->
+      	<echo>Using build property file: "${build.properties.file}"</echo>
+        <property file="${build.properties.file}" />
+    	<!-- If not already set by the build system -->
+		<property name="version" value="${sqlcontainer.version}"/>
+      	<echo>Add-on version: "${version}"</echo>
+    	
+    	<echo>Requirements for classpath:</echo>
         <echo> ${gwt.lib.dir}/gwt-user.jar</echo>
         <echo> ${gwt.lib.dir}/gwt-dev.jar</echo>
 
