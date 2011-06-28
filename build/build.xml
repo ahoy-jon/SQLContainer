@@ -4,9 +4,17 @@
     <!-- Main target that does all -->
     <target name="all" depends="compile, tests, manual, javadoc, package-jar, package-zip, demo.war"/>
 
-    <!-- Non-project specific settings. -->
-    <property file="build/build.properties" />
-    <property name="configure.libs" value="" />
+	<!-- Build type specific configuration -->
+    <echo>Using build type specfic property file: "${build.properties.file}"</echo>
+    <property file="${build.properties.file}" />
+
+    <!-- Project specific settings. -->
+	<property file="build/build.properties" />
+
+    <!-- If not already set by the build system -->
+    <property name="version" value="${sqlcontainer.version}" />
+
+	<property name="configure.libs" value="" />
     <property name="module.junit.dir" value="${basedir}/build/result/unittests" />
 
     <!-- ================================================================== -->
@@ -26,15 +34,10 @@
         <fail message="${gwt.lib.dir}/gwt-user.jar missing" unless="gwt-user.present" />
         <fail message="${gwt.lib.dir}/gwt-dev.jar missing" unless="gwt-dev.present" />
     </target>
-
+	
     <!-- Initialization -->
     <target name="init">
-    	<!-- Might not exist -->
-      	<echo>Using build property file: "${build.properties.file}"</echo>
-        <property file="${build.properties.file}" />
-    	<!-- If not already set by the build system -->
-		<property name="version" value="${sqlcontainer.version}"/>
-      	<echo>Add-on version: "${version}"</echo>
+	    <echo>Add-on version: "${version}"</echo>
     	
     	<echo>Requirements for classpath:</echo>
         <echo> ${gwt.lib.dir}/gwt-user.jar</echo>
